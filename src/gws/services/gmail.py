@@ -173,6 +173,15 @@ class GmailService(BaseService):
         except HttpError:
             return {}
 
+    def _unescape_text(self, text: str) -> str:
+        """Remove unnecessary escape sequences from text.
+
+        This handles cases where shell environments escape special characters
+        like exclamation marks (\\! -> !).
+        """
+        # Unescape common shell-escaped characters
+        return text.replace("\\!", "!")
+
     def send_message(
         self,
         to: str,
@@ -186,15 +195,20 @@ class GmailService(BaseService):
     ) -> dict[str, Any]:
         """Send a new email message."""
         try:
+            # Unescape shell-escaped characters
+            subject = self._unescape_text(subject)
+            body = self._unescape_text(body)
+            if signature:
+                signature = self._unescape_text(signature)
+
             # Append signature if provided
             full_body = body
             if signature:
                 full_body = f"{body}\n\n--\n{signature}"
 
-            message = MIMEMultipart() if html else MIMEText(full_body)
-
-            if html:
-                message.attach(MIMEText(full_body, "html"))
+            # Use MIMEText directly - MIMEMultipart only needed for attachments
+            subtype = "html" if html else "plain"
+            message = MIMEText(full_body, subtype, "utf-8")
 
             message["to"] = to
             message["subject"] = subject
@@ -246,6 +260,11 @@ class GmailService(BaseService):
     ) -> dict[str, Any]:
         """Reply to an existing message."""
         try:
+            # Unescape shell-escaped characters
+            body = self._unescape_text(body)
+            if signature:
+                signature = self._unescape_text(signature)
+
             # Get the original message
             original = (
                 self.service.users()
@@ -265,11 +284,9 @@ class GmailService(BaseService):
             if signature:
                 full_body = f"{body}\n\n--\n{signature}"
 
-            # Build reply
-            message = MIMEMultipart() if html else MIMEText(full_body)
-
-            if html:
-                message.attach(MIMEText(full_body, "html"))
+            # Build reply - use MIMEText directly
+            subtype = "html" if html else "plain"
+            message = MIMEText(full_body, subtype, "utf-8")
 
             # Set From with display name if provided
             if from_name:
@@ -358,6 +375,60 @@ class GmailService(BaseService):
             output_error(
                 error_code="API_ERROR",
                 operation="gmail.delete",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def mark_as_read(self, message_id: str) -> dict[str, Any]:
+        """Mark a message as read by removing the UNREAD label."""
+        try:
+            result = (
+                self.service.users()
+                .messages()
+                .modify(
+                    userId="me",
+                    id=message_id,
+                    body={"removeLabelIds": ["UNREAD"]},
+                )
+                .execute()
+            )
+            output_success(
+                operation="gmail.mark-read",
+                message_id=message_id,
+                labels=result.get("labelIds", []),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.mark-read",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def mark_as_unread(self, message_id: str) -> dict[str, Any]:
+        """Mark a message as unread by adding the UNREAD label."""
+        try:
+            result = (
+                self.service.users()
+                .messages()
+                .modify(
+                    userId="me",
+                    id=message_id,
+                    body={"addLabelIds": ["UNREAD"]},
+                )
+                .execute()
+            )
+            output_success(
+                operation="gmail.mark-unread",
+                message_id=message_id,
+                labels=result.get("labelIds", []),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.mark-unread",
                 message=f"Gmail API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)

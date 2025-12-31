@@ -74,9 +74,9 @@ def send_message(
         Optional[str],
         typer.Option("--bcc", help="BCC recipients."),
     ] = None,
-    html: Annotated[
+    plain_text: Annotated[
         bool,
-        typer.Option("--html", help="Send as HTML email."),
+        typer.Option("--plain", help="Send as plain text instead of HTML."),
     ] = False,
     from_name: Annotated[
         Optional[str],
@@ -87,7 +87,7 @@ def send_message(
         typer.Option("--signature", "-s", help="Email signature to append."),
     ] = None,
 ) -> None:
-    """Send an email message."""
+    """Send an email message (HTML by default)."""
     if stdin:
         body = sys.stdin.read()
     elif body is None:
@@ -101,7 +101,7 @@ def send_message(
         body=body,
         cc=cc,
         bcc=bcc,
-        html=html,
+        html=not plain_text,
         from_name=from_name,
         signature=signature,
     )
@@ -118,9 +118,9 @@ def reply_to_message(
         bool,
         typer.Option("--stdin", help="Read body from stdin."),
     ] = False,
-    html: Annotated[
+    plain_text: Annotated[
         bool,
-        typer.Option("--html", help="Send as HTML reply."),
+        typer.Option("--plain", help="Send as plain text instead of HTML."),
     ] = False,
     from_name: Annotated[
         Optional[str],
@@ -131,7 +131,7 @@ def reply_to_message(
         typer.Option("--signature", "-s", help="Email signature to append."),
     ] = None,
 ) -> None:
-    """Reply to an existing message."""
+    """Reply to an existing message (HTML by default)."""
     if stdin:
         body = sys.stdin.read()
     elif body is None:
@@ -142,7 +142,7 @@ def reply_to_message(
     service.reply_to_message(
         message_id=message_id,
         body=body,
-        html=html,
+        html=not plain_text,
         from_name=from_name,
         signature=signature,
     )
@@ -180,3 +180,21 @@ def delete_message(
     """Delete a message (move to trash by default)."""
     service = GmailService()
     service.delete_message(message_id=message_id, permanent=permanent)
+
+
+@app.command("mark-read")
+def mark_read(
+    message_id: Annotated[str, typer.Argument(help="Message ID to mark as read.")],
+) -> None:
+    """Mark a message as read."""
+    service = GmailService()
+    service.mark_as_read(message_id=message_id)
+
+
+@app.command("mark-unread")
+def mark_unread(
+    message_id: Annotated[str, typer.Argument(help="Message ID to mark as unread.")],
+) -> None:
+    """Mark a message as unread."""
+    service = GmailService()
+    service.mark_as_unread(message_id=message_id)
