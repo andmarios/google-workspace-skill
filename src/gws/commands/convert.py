@@ -23,17 +23,25 @@ def md_to_doc(
         Optional[str],
         typer.Option("--folder", "-f", help="Folder ID to create document in."),
     ] = None,
+    render_diagrams: Annotated[
+        bool,
+        typer.Option("--render-diagrams", "-d", help="Render Mermaid/PlantUML diagrams via Kroki API."),
+    ] = False,
 ) -> None:
     """Convert Markdown file to Google Doc.
 
     Uses Google's native Markdown import for high-fidelity conversion.
     Supports headers, lists, code blocks, links, and basic formatting.
+
+    With --render-diagrams, Mermaid, PlantUML, GraphViz and other diagram
+    types are rendered to images via Kroki API and embedded in the document.
     """
     service = ConvertService()
     service.md_to_doc(
         input_path=input_path,
         title=title,
         folder_id=folder_id,
+        render_diagrams=render_diagrams,
     )
 
 
@@ -45,16 +53,24 @@ def md_to_pdf(
         Optional[str],
         typer.Option("--title", "-t", help="Temporary doc title."),
     ] = None,
+    render_diagrams: Annotated[
+        bool,
+        typer.Option("--render-diagrams", "-d", help="Render Mermaid/PlantUML diagrams via Kroki API."),
+    ] = False,
 ) -> None:
     """Convert Markdown file to PDF.
 
     Creates a temporary Google Doc, exports as PDF, then deletes the doc.
+
+    With --render-diagrams, Mermaid, PlantUML, GraphViz and other diagram
+    types are rendered to images via Kroki API and embedded in the PDF.
     """
     service = ConvertService()
     service.md_to_pdf(
         input_path=input_path,
         output_path=output_path,
         title=title,
+        render_diagrams=render_diagrams,
     )
 
 

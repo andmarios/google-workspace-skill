@@ -330,6 +330,26 @@ uv run gws convert md-to-slides /path/to/presentation.md --title "My Presentatio
 uv run gws convert md-to-pdf /path/to/document.md /path/to/output.pdf
 ```
 
+**Markdown formatting requirements**:
+- Bullet lists MUST use asterisks (`*`) not dashes (`-`) for proper rendering
+- Tables, bold, italic, code blocks, and links are supported
+
+**Diagram rendering** (with `--render-diagrams` / `-d` flag):
+```bash
+uv run gws convert md-to-doc report.md --render-diagrams
+uv run gws convert md-to-pdf report.md output.pdf -d
+```
+
+Supported diagram types (rendered via Kroki API):
+- Mermaid (flowcharts, sequence, class, state, ER, Gantt)
+- PlantUML
+- GraphViz/DOT
+- D2, Excalidraw, Ditaa, and 15+ more
+
+Diagrams are automatically resized to fit the page width and height.
+
+Mermaid diagrams use the `neutral` theme by default for professional grayscale output.
+
 **Markdown to Slides parsing**:
 - `# Heading` - New slide with title
 - `## Subheading` - Subtitle
@@ -354,6 +374,23 @@ uv run gws config enable gmail
 
 # Reset to defaults
 uv run gws config reset
+```
+
+### Kroki Server Configuration
+
+By default, diagrams are rendered using the public Kroki server at `https://kroki.io`. For privacy or performance, you can configure a self-hosted Kroki instance:
+
+```bash
+# Set custom Kroki server URL
+uv run gws config set-kroki http://localhost:8000
+
+# View current Kroki URL
+uv run gws config
+```
+
+To run a local Kroki server with Docker:
+```bash
+docker run -d -p 8000:8000 yuzutech/kroki
 ```
 
 ## Output Format

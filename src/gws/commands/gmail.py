@@ -78,6 +78,14 @@ def send_message(
         bool,
         typer.Option("--html", help="Send as HTML email."),
     ] = False,
+    from_name: Annotated[
+        Optional[str],
+        typer.Option("--from-name", "-n", help="Sender display name."),
+    ] = None,
+    signature: Annotated[
+        Optional[str],
+        typer.Option("--signature", "-s", help="Email signature to append."),
+    ] = None,
 ) -> None:
     """Send an email message."""
     if stdin:
@@ -94,6 +102,8 @@ def send_message(
         cc=cc,
         bcc=bcc,
         html=html,
+        from_name=from_name,
+        signature=signature,
     )
 
 
@@ -112,6 +122,14 @@ def reply_to_message(
         bool,
         typer.Option("--html", help="Send as HTML reply."),
     ] = False,
+    from_name: Annotated[
+        Optional[str],
+        typer.Option("--from-name", "-n", help="Sender display name."),
+    ] = None,
+    signature: Annotated[
+        Optional[str],
+        typer.Option("--signature", "-s", help="Email signature to append."),
+    ] = None,
 ) -> None:
     """Reply to an existing message."""
     if stdin:
@@ -125,6 +143,8 @@ def reply_to_message(
         message_id=message_id,
         body=body,
         html=html,
+        from_name=from_name,
+        signature=signature,
     )
 
 

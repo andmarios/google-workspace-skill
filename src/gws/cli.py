@@ -150,6 +150,7 @@ def config_default(ctx: typer.Context) -> None:
             "operation": "config",
             "enabled_services": config.enabled_services,
             "all_services": Config.ALL_SERVICES,
+            "kroki_url": config.kroki_url,
         })
 
 
@@ -237,12 +238,34 @@ def config_reset() -> None:
     """Reset configuration to defaults (all services enabled)."""
     config = Config.load()
     config.enabled_services = list(Config.ALL_SERVICES)
+    config.kroki_url = Config.DEFAULT_KROKI_URL
     config.save()
 
     output_success(
         operation="config.reset",
-        message="Configuration reset to defaults. All services enabled.",
+        message="Configuration reset to defaults.",
         enabled_services=config.enabled_services,
+        kroki_url=config.kroki_url,
+    )
+
+
+@config_app.command("set-kroki")
+def config_set_kroki(
+    url: Annotated[str, typer.Argument(help="Kroki server URL (e.g., http://localhost:8000).")],
+) -> None:
+    """Set the Kroki server URL for diagram rendering.
+
+    Default is https://kroki.io (public server).
+    Set a custom URL if you run a local Kroki instance.
+    """
+    config = Config.load()
+    config.kroki_url = url.rstrip("/")
+    config.save()
+
+    output_success(
+        operation="config.set-kroki",
+        message=f"Kroki URL set to: {config.kroki_url}",
+        kroki_url=config.kroki_url,
     )
 
 

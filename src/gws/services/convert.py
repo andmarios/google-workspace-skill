@@ -2,6 +2,8 @@
 
 import io
 import re
+import tempfile
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +13,7 @@ from googleapiclient.errors import HttpError
 from gws.services.base import BaseService
 from gws.output import output_success, output_error
 from gws.exceptions import ExitCode
+from gws.utils.diagrams import render_diagrams_in_markdown, find_diagram_blocks
 
 
 class ConvertService(BaseService):
@@ -19,16 +22,212 @@ class ConvertService(BaseService):
     SERVICE_NAME = "drive"
     VERSION = "v3"
 
+    def _process_diagrams(
+        self,
+        markdown: str,
+        temp_dir: Path,
+    ) -> tuple[str, list[str]]:
+        """Render diagrams and upload to Drive, returning modified markdown.
+
+        Args:
+            markdown: Original markdown content
+            temp_dir: Temporary directory for rendered images
+
+        Returns:
+            Tuple of (modified markdown, list of uploaded file IDs for cleanup)
+        """
+        blocks = find_diagram_blocks(markdown)
+        if not blocks:
+            return markdown, []
+
+        # Render diagrams locally
+        modified_md, rendered_paths = render_diagrams_in_markdown(
+            markdown, temp_dir, output_format="png"
+        )
+
+        # Upload each rendered diagram to Drive and get public URLs
+        uploaded_ids = []
+        for path in rendered_paths:
+            # Upload to Drive
+            file_metadata = {"name": path.name}
+            media = MediaFileUpload(str(path), mimetype="image/png")
+            uploaded = (
+                self.drive_service.files()
+                .create(body=file_metadata, media_body=media, fields="id")
+                .execute()
+            )
+            file_id = uploaded["id"]
+            uploaded_ids.append(file_id)
+
+            # Make publicly accessible
+            self.drive_service.permissions().create(
+                fileId=file_id,
+                body={"type": "anyone", "role": "reader"},
+            ).execute()
+
+            # Get the web content link for embedding
+            # Use the direct image URL format
+            image_url = f"https://drive.google.com/uc?export=view&id={file_id}"
+
+            # Replace local path with Drive URL in markdown
+            modified_md = modified_md.replace(str(path.absolute()), image_url)
+
+        return modified_md, uploaded_ids
+
+    def _resize_document_images(
+        self,
+        document_id: str,
+        max_width_pt: float = 450.0,
+        max_height_pt: float = 600.0,
+    ) -> int:
+        """Resize oversized images in a Google Doc by replacing them.
+
+        The Docs API doesn't support direct resizing of inline images,
+        so we find oversized images, delete them, and re-insert with correct size.
+
+        Args:
+            document_id: The Google Doc ID
+            max_width_pt: Maximum width in points (450pt ≈ 6 inches)
+            max_height_pt: Maximum height in points (600pt ≈ 8.3 inches)
+
+        Returns:
+            Number of images resized
+        """
+        from googleapiclient.discovery import build
+        from gws.auth.oauth import AuthManager
+
+        auth_manager = AuthManager()
+        credentials = auth_manager.get_credentials()
+        docs_service = build("docs", "v1", credentials=credentials)
+
+        # Get document structure
+        doc = docs_service.documents().get(documentId=document_id).execute()
+
+        # Find inline objects (images) that need resizing
+        inline_objects = doc.get("inlineObjects", {})
+        if not inline_objects:
+            return 0
+
+        # Collect images that need resizing with their info
+        images_to_resize = []
+        for obj_id, obj_data in inline_objects.items():
+            props = obj_data.get("inlineObjectProperties", {})
+            embedded = props.get("embeddedObject", {})
+            size = embedded.get("size", {})
+
+            width = size.get("width", {}).get("magnitude", 0)
+            height = size.get("height", {}).get("magnitude", 0)
+
+            # Check if image exceeds either dimension
+            needs_resize = (width > max_width_pt or height > max_height_pt) and width > 0 and height > 0
+
+            if needs_resize:
+                # Get the image URI
+                image_props = embedded.get("imageProperties", {})
+                content_uri = image_props.get("contentUri", "")
+                source_uri = image_props.get("sourceUri", "")
+                uri = source_uri or content_uri
+
+                if uri:
+                    # Calculate scale factors for both dimensions
+                    width_scale = max_width_pt / width if width > max_width_pt else 1.0
+                    height_scale = max_height_pt / height if height > max_height_pt else 1.0
+
+                    # Use the smaller scale to ensure both dimensions fit
+                    scale = min(width_scale, height_scale)
+                    new_width = width * scale
+                    new_height = height * scale
+
+                    images_to_resize.append({
+                        "object_id": obj_id,
+                        "uri": uri,
+                        "new_width": new_width,
+                        "new_height": new_height,
+                    })
+
+        if not images_to_resize:
+            return 0
+
+        # Find positions of these images in the document body
+        body = doc.get("body", {}).get("content", [])
+        image_positions = {}
+
+        for element in body:
+            if "paragraph" in element:
+                para = element["paragraph"]
+                for pe in para.get("elements", []):
+                    if "inlineObjectElement" in pe:
+                        ioe = pe["inlineObjectElement"]
+                        obj_id = ioe.get("inlineObjectId")
+                        if obj_id:
+                            # Get the start index of this element
+                            start_index = pe.get("startIndex", 0)
+                            image_positions[obj_id] = start_index
+
+        # Process each image - delete and re-insert with new size
+        # Process in reverse order to preserve indices
+        requests = []
+        for img_info in sorted(
+            images_to_resize,
+            key=lambda x: image_positions.get(x["object_id"], 0),
+            reverse=True,
+        ):
+            obj_id = img_info["object_id"]
+            if obj_id not in image_positions:
+                continue
+
+            position = image_positions[obj_id]
+
+            # Delete the old image
+            requests.append({
+                "deleteContentRange": {
+                    "range": {
+                        "startIndex": position,
+                        "endIndex": position + 1,
+                    }
+                }
+            })
+
+            # Insert new image with correct size
+            requests.append({
+                "insertInlineImage": {
+                    "uri": img_info["uri"],
+                    "location": {"index": position},
+                    "objectSize": {
+                        "width": {"magnitude": img_info["new_width"], "unit": "PT"},
+                        "height": {"magnitude": img_info["new_height"], "unit": "PT"},
+                    },
+                }
+            })
+
+        if requests:
+            docs_service.documents().batchUpdate(
+                documentId=document_id,
+                body={"requests": requests},
+            ).execute()
+
+        return len(images_to_resize)
+
     def md_to_doc(
         self,
         input_path: str,
         title: str | None = None,
         folder_id: str | None = None,
+        render_diagrams: bool = False,
     ) -> dict[str, Any]:
         """Convert Markdown file to Google Doc.
 
         Uses Google's native Markdown import (added July 2024).
+
+        Args:
+            input_path: Path to markdown file
+            title: Document title (defaults to filename)
+            folder_id: Optional folder to create document in
+            render_diagrams: If True, render Mermaid/PlantUML diagrams via Kroki
         """
+        temp_dir = None
+        uploaded_diagram_ids = []
+
         try:
             path = Path(input_path)
             if not path.exists():
@@ -41,6 +240,26 @@ class ConvertService(BaseService):
 
             doc_title = title or path.stem
 
+            # Read markdown content
+            markdown_content = path.read_text(encoding="utf-8")
+            upload_path = path
+
+            # Process diagrams if requested
+            diagrams_rendered = 0
+            if render_diagrams:
+                temp_dir = Path(tempfile.mkdtemp(prefix="gws_diagrams_"))
+                blocks = find_diagram_blocks(markdown_content)
+                diagrams_rendered = len(blocks)
+
+                if blocks:
+                    markdown_content, uploaded_diagram_ids = self._process_diagrams(
+                        markdown_content, temp_dir
+                    )
+                    # Write modified markdown to temp file
+                    temp_md = temp_dir / "converted.md"
+                    temp_md.write_text(markdown_content, encoding="utf-8")
+                    upload_path = temp_md
+
             # Upload markdown file and convert to Google Doc
             file_metadata = {
                 "name": doc_title,
@@ -51,7 +270,7 @@ class ConvertService(BaseService):
                 file_metadata["parents"] = [folder_id]
 
             media = MediaFileUpload(
-                str(path),
+                str(upload_path),
                 mimetype="text/markdown",
                 resumable=True,
             )
@@ -62,14 +281,24 @@ class ConvertService(BaseService):
                 .execute()
             )
 
-            output_success(
-                operation="convert.md_to_doc",
-                document_id=file["id"],
-                title=file["name"],
-                web_view_link=file["webViewLink"],
-                source_file=str(path),
-            )
+            # Resize any oversized images to fit the page
+            images_resized = self._resize_document_images(file["id"])
+
+            result = {
+                "document_id": file["id"],
+                "title": file["name"],
+                "web_view_link": file["webViewLink"],
+                "source_file": str(path),
+            }
+
+            if render_diagrams and diagrams_rendered > 0:
+                result["diagrams_rendered"] = diagrams_rendered
+            if images_resized > 0:
+                result["images_resized"] = images_resized
+
+            output_success(operation="convert.md_to_doc", **result)
             return file
+
         except HttpError as e:
             output_error(
                 error_code="API_ERROR",
@@ -77,21 +306,28 @@ class ConvertService(BaseService):
                 message=f"Drive API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+        finally:
+            # Cleanup temp directory
+            if temp_dir and temp_dir.exists():
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
     def md_to_pdf(
         self,
         input_path: str,
         output_path: str,
         title: str | None = None,
+        render_diagrams: bool = False,
     ) -> dict[str, Any]:
         """Convert Markdown to PDF via Google Docs.
 
-        1. Upload Markdown as Google Doc
+        1. Upload Markdown as Google Doc (optionally rendering diagrams)
         2. Export as PDF
-        3. Delete the temporary Doc
+        3. Delete the temporary Doc and diagram images
         """
+        temp_dir = None
+        uploaded_diagram_ids = []
+
         try:
-            # First create the doc
             path = Path(input_path)
             if not path.exists():
                 output_error(
@@ -103,6 +339,26 @@ class ConvertService(BaseService):
 
             doc_title = title or f"_temp_{path.stem}"
 
+            # Read markdown content
+            markdown_content = path.read_text(encoding="utf-8")
+            upload_path = path
+
+            # Process diagrams if requested
+            diagrams_rendered = 0
+            if render_diagrams:
+                temp_dir = Path(tempfile.mkdtemp(prefix="gws_diagrams_"))
+                blocks = find_diagram_blocks(markdown_content)
+                diagrams_rendered = len(blocks)
+
+                if blocks:
+                    markdown_content, uploaded_diagram_ids = self._process_diagrams(
+                        markdown_content, temp_dir
+                    )
+                    # Write modified markdown to temp file
+                    temp_md = temp_dir / "converted.md"
+                    temp_md.write_text(markdown_content, encoding="utf-8")
+                    upload_path = temp_md
+
             # Upload as Doc
             file_metadata = {
                 "name": doc_title,
@@ -110,7 +366,7 @@ class ConvertService(BaseService):
             }
 
             media = MediaFileUpload(
-                str(path),
+                str(upload_path),
                 mimetype="text/markdown",
                 resumable=True,
             )
@@ -124,6 +380,9 @@ class ConvertService(BaseService):
             doc_id = file["id"]
 
             try:
+                # Resize any oversized images to fit the page
+                self._resize_document_images(doc_id)
+
                 # Export as PDF
                 request = self.drive_service.files().export_media(
                     fileId=doc_id,
@@ -140,15 +399,24 @@ class ConvertService(BaseService):
 
                 fh.close()
 
-                output_success(
-                    operation="convert.md_to_pdf",
-                    output_path=str(output_file),
-                    source_file=str(path),
-                    file_size=output_file.stat().st_size,
-                )
+                result = {
+                    "output_path": str(output_file),
+                    "source_file": str(path),
+                    "file_size": output_file.stat().st_size,
+                }
+                if render_diagrams and diagrams_rendered > 0:
+                    result["diagrams_rendered"] = diagrams_rendered
+
+                output_success(operation="convert.md_to_pdf", **result)
             finally:
                 # Delete the temporary doc
                 self.drive_service.files().delete(fileId=doc_id).execute()
+                # Delete uploaded diagram images
+                for diagram_id in uploaded_diagram_ids:
+                    try:
+                        self.drive_service.files().delete(fileId=diagram_id).execute()
+                    except Exception:
+                        pass  # Ignore cleanup errors
 
             return {"output_path": str(output_file)}
         except HttpError as e:
@@ -158,6 +426,10 @@ class ConvertService(BaseService):
                 message=f"Drive API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+        finally:
+            # Cleanup temp directory
+            if temp_dir and temp_dir.exists():
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
     def md_to_slides(
         self,

@@ -165,6 +165,14 @@ class GmailService(BaseService):
 
         return attachments
 
+    def get_profile(self) -> dict[str, Any]:
+        """Get the current user's Gmail profile."""
+        try:
+            profile = self.service.users().getProfile(userId="me").execute()
+            return profile
+        except HttpError:
+            return {}
+
     def send_message(
         self,
         to: str,
@@ -173,16 +181,30 @@ class GmailService(BaseService):
         cc: str | None = None,
         bcc: str | None = None,
         html: bool = False,
+        from_name: str | None = None,
+        signature: str | None = None,
     ) -> dict[str, Any]:
         """Send a new email message."""
         try:
-            message = MIMEMultipart() if html else MIMEText(body)
+            # Append signature if provided
+            full_body = body
+            if signature:
+                full_body = f"{body}\n\n--\n{signature}"
+
+            message = MIMEMultipart() if html else MIMEText(full_body)
 
             if html:
-                message.attach(MIMEText(body, "html"))
+                message.attach(MIMEText(full_body, "html"))
 
             message["to"] = to
             message["subject"] = subject
+
+            # Set From with display name if provided
+            if from_name:
+                profile = self.get_profile()
+                email_address = profile.get("emailAddress", "")
+                if email_address:
+                    message["from"] = f'"{from_name}" <{email_address}>'
 
             if cc:
                 message["cc"] = cc
@@ -219,6 +241,8 @@ class GmailService(BaseService):
         message_id: str,
         body: str,
         html: bool = False,
+        from_name: str | None = None,
+        signature: str | None = None,
     ) -> dict[str, Any]:
         """Reply to an existing message."""
         try:
@@ -236,11 +260,23 @@ class GmailService(BaseService):
                 for h in original.get("payload", {}).get("headers", [])
             }
 
+            # Append signature if provided
+            full_body = body
+            if signature:
+                full_body = f"{body}\n\n--\n{signature}"
+
             # Build reply
-            message = MIMEMultipart() if html else MIMEText(body)
+            message = MIMEMultipart() if html else MIMEText(full_body)
 
             if html:
-                message.attach(MIMEText(body, "html"))
+                message.attach(MIMEText(full_body, "html"))
+
+            # Set From with display name if provided
+            if from_name:
+                profile = self.get_profile()
+                email_address = profile.get("emailAddress", "")
+                if email_address:
+                    message["from"] = f'"{from_name}" <{email_address}>'
 
             # Reply to the sender
             reply_to = headers.get("Reply-To", headers.get("From", ""))

@@ -23,7 +23,10 @@ class Config:
         "convert",
     ]
 
+    DEFAULT_KROKI_URL: ClassVar[str] = "https://kroki.io"
+
     enabled_services: list[str] = field(default_factory=lambda: Config.ALL_SERVICES.copy())
+    kroki_url: str = field(default_factory=lambda: Config.DEFAULT_KROKI_URL)
 
     @classmethod
     def load(cls) -> "Config":
