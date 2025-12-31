@@ -5,6 +5,10 @@ category: productivity
 version: 1.0.0
 key_capabilities: Docs (read/edit/format), Sheets (read/write/format), Slides (create/edit), Drive (upload/download/share), Gmail (send/search), Calendar (events), Contacts (manage), Convert (markdown)
 when_to_use: Document operations, spreadsheet data, presentations, Drive file management, email, calendar events, contacts
+allowed_tools:
+  - Bash(uv run gws:*)
+  - Bash(cd * && uv run gws:*)
+  - Read(/home/piper/.claude/.google/**)
 ---
 
 # Google Workspace Skill
@@ -13,7 +17,7 @@ Manage Google Workspace documents, spreadsheets, presentations, drive files, ema
 
 ## Purpose
 
-**Google Docs:** Read, create, insert/append text, find-replace, format, page breaks, images
+**Google Docs:** Read, create, insert/append text, find-replace, format (text, paragraph, extended), tables (insert, style, merge, row/column ops), headers/footers, lists/bullets, page breaks, section breaks, document styling, images
 
 **Google Sheets:** Read, create, write/append data, format cells, manage sheets
 
@@ -56,6 +60,22 @@ Manage Google Workspace documents, spreadsheets, presentations, drive files, ema
 - Delete moves to trash by default (recoverable from Drive)
 - For emails, confirm recipient and content before sending
 
+## Critical Rules
+
+**IMPORTANT - You MUST follow these rules:**
+
+1. **Bullet lists in Markdown**: ALWAYS use asterisks (`*`) NOT dashes (`-`) for bullet points. Google Docs API requires asterisks for proper list rendering. This applies to ALL markdown content being converted to Google Docs.
+   - CORRECT: `* Item one`
+   - WRONG: `- Item one`
+
+2. **Never modify original files**: When converting Markdown to Google Docs, NEVER edit the user's original markdown file. Instead:
+   - Create a temporary copy in `/tmp/` with the required formatting changes (e.g., converting `-` to `*` for bullets)
+   - Upload the temporary copy to Google Docs
+   - Delete the temporary file after successful upload
+   - This preserves the user's original file formatting
+
+3. **Read before modify**: ALWAYS read the document first before making changes to understand structure and indices.
+
 ## Quick Reference
 
 All commands use `uv run gws <service> <command>`. Authentication is automatic on first use.
@@ -86,10 +106,10 @@ uv run gws auth logout
 | Service | Operations | Description |
 |---------|------------|-------------|
 | `drive` | 11 | File upload, download, share, organize |
-| `docs` | 10 | Read, create, edit, format documents |
+| `docs` | 37 | Full document editing, tables, formatting, headers/footers, lists |
 | `sheets` | 11 | Read, write, format spreadsheets |
 | `slides` | 12 | Create and edit presentations |
-| `gmail` | 6 | List, read, send, search emails |
+| `gmail` | 8 | List, read, send, search, mark read/unread |
 | `calendar` | 6 | Manage calendar events |
 | `contacts` | 5 | Manage contacts (People API) |
 | `convert` | 3 | Markdown to Docs/Slides/PDF |
@@ -137,6 +157,8 @@ uv run gws drive export <file_id> /path/to/output.pdf --format pdf
 
 ## Docs Operations
 
+### Basic Operations
+
 ```bash
 # Read document content (plain text)
 uv run gws docs read <document_id>
@@ -153,11 +175,8 @@ uv run gws docs insert <document_id> "Text to insert" --index 10
 # Append text to end
 uv run gws docs append <document_id> "Text to append"
 
-# Replace text
+# Replace all occurrences
 uv run gws docs replace <document_id> "old text" "new text"
-
-# Format text (bold, italic, underline)
-uv run gws docs format <document_id> 1 50 --bold --italic
 
 # Delete content range
 uv run gws docs delete <document_id> 10 50
@@ -168,6 +187,133 @@ uv run gws docs page-break <document_id> 100
 # Insert image from URL
 uv run gws docs insert-image <document_id> "https://example.com/image.png" --width 300
 ```
+
+### Text Formatting
+
+```bash
+# Basic formatting (bold, italic, underline)
+uv run gws docs format <document_id> 1 50 --bold --italic --underline
+
+# Extended formatting (fonts, colors, effects)
+uv run gws docs format-text-extended <document_id> 1 50 \
+    --font "Arial" --size 14 --color "#FF0000" \
+    --bg-color "#FFFF00" --strikethrough --small-caps
+
+# Superscript/subscript
+uv run gws docs format-text-extended <document_id> 10 12 --superscript
+uv run gws docs format-text-extended <document_id> 20 22 --subscript
+
+# Add hyperlink to text
+uv run gws docs insert-link <document_id> 5 15 "https://example.com"
+```
+
+### Paragraph Formatting
+
+```bash
+# Alignment and named styles
+uv run gws docs format-paragraph <document_id> 1 100 --align CENTER
+uv run gws docs format-paragraph <document_id> 1 50 --style HEADING_1
+
+# Spacing and indentation
+uv run gws docs format-paragraph <document_id> 1 100 \
+    --space-above 12 --space-below 6 --line-spacing 150 \
+    --indent-first 36 --indent-left 18
+
+# Paragraph borders
+uv run gws docs paragraph-border <document_id> 1 100 \
+    --all --color "#0000FF" --width 2
+
+# Keep lines together
+uv run gws docs format-paragraph <document_id> 1 100 --keep-together --keep-with-next
+```
+
+**Named styles**: TITLE, SUBTITLE, HEADING_1 through HEADING_6, NORMAL_TEXT
+
+### Tables
+
+```bash
+# List tables in document
+uv run gws docs list-tables <document_id>
+
+# Insert table (rows, columns)
+uv run gws docs insert-table <document_id> 3 4 --index 50
+
+# Row and column operations
+uv run gws docs insert-table-row <document_id> 0 1 --above
+uv run gws docs insert-table-column <document_id> 0 2 --left
+uv run gws docs delete-table-row <document_id> 0 2
+uv run gws docs delete-table-column <document_id> 0 1
+
+# Merge/unmerge cells
+uv run gws docs merge-cells <document_id> 0 0 0 1 2    # start_row, start_col, end_row, end_col
+uv run gws docs unmerge-cells <document_id> 0 0 0 1 2
+
+# Style table cells
+uv run gws docs style-table-cell <document_id> 0 0 0 \
+    --bg-color "#FFFF00" --border-color "#000000" --border-width 1 --padding 5
+
+# Set column width (points)
+uv run gws docs set-column-width <document_id> 0 1 150
+
+# Pin header rows
+uv run gws docs pin-table-header <document_id> 0 --rows 2
+```
+
+### Lists and Bullets
+
+```bash
+# Create bulleted list
+uv run gws docs create-bullets <document_id> 1 100 --preset BULLET_DISC_CIRCLE_SQUARE
+
+# Create numbered list
+uv run gws docs create-numbered <document_id> 1 100 --preset NUMBERED_DECIMAL_NESTED
+
+# Remove bullets/numbering
+uv run gws docs remove-bullets <document_id> 1 100
+```
+
+**Bullet presets**: BULLET_DISC_CIRCLE_SQUARE, BULLET_CHECKBOX, BULLET_DIAMONDX_ARROW3D_SQUARE
+
+**Number presets**: NUMBERED_DECIMAL_NESTED, NUMBERED_DECIMAL_ALPHA_ROMAN
+
+### Headers and Footers
+
+```bash
+# List headers/footers
+uv run gws docs list-headers-footers <document_id>
+
+# Create header/footer
+uv run gws docs create-header <document_id> --type DEFAULT
+uv run gws docs create-footer <document_id> --type FIRST_PAGE_FOOTER
+
+# Insert text into header/footer
+uv run gws docs insert-segment-text <document_id> <header_id> "Company Name" --index 0
+
+# Delete header/footer
+uv run gws docs delete-header <document_id> <header_id>
+uv run gws docs delete-footer <document_id> <footer_id>
+```
+
+**Header/footer types**: DEFAULT, FIRST_PAGE_HEADER, FIRST_PAGE_FOOTER
+
+### Sections and Document Style
+
+```bash
+# Insert section break
+uv run gws docs insert-section-break <document_id> 100 --type NEXT_PAGE
+
+# Update document margins and page size (points, 72pt = 1 inch)
+uv run gws docs document-style <document_id> \
+    --margin-top 72 --margin-bottom 72 --margin-left 72 --margin-right 72
+
+# Change page size (612x792 = Letter, 595x842 = A4)
+uv run gws docs document-style <document_id> --page-width 595 --page-height 842
+
+# Different first page header/footer
+uv run gws docs document-style <document_id> --first-page-diff
+```
+
+**Section break types**: NEXT_PAGE, CONTINUOUS
 
 ## Sheets Operations
 
@@ -454,7 +600,7 @@ uv run gws sheets write "$ID" "A1:C1" --values '[["Name","Value","Date"]]'
 ## Known Limitations
 
 1. **Port conflicts**: OAuth uses ports 8080-8099; kill stale processes if auth fails
-2. **Sheet names with `!`**: Use simple range notation (e.g., `A1:C3`) when possible
+2. **Sheet names with exclamation marks**: Use simple range notation (e.g., `A1:C3`) when possible
 3. **Slides images**: Both `--width` and `--height` must be specified together
 4. **Gmail API**: Must be enabled in GCP console before first use
 
