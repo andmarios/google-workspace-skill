@@ -1,202 +1,114 @@
-# Google Workspace CLI (gws)
+# Google Workspace Skill for Claude Code
 
-A unified command-line interface for managing Google Workspace services including Docs, Sheets, Slides, Drive, Gmail, Calendar, and Contacts.
+A Claude Code skill that enables Claude to manage your Google Workspace: Docs, Sheets, Slides, Drive, Gmail, Calendar, and Contacts.
 
-## Features
+## What Claude Can Do
 
-- **Unified CLI**: Single `gws` command with intuitive subcommands
-- **8 Services**: Drive, Docs, Sheets, Slides, Gmail, Calendar, Contacts + Document Converter
-- **64 Operations**: Comprehensive coverage of Google Workspace APIs
-- **JSON Output**: Machine-readable output for scripting and automation
-- **OAuth Loopback**: Automatic browser-based authentication (no manual code copying)
-- **Cross-Platform**: Works on Linux, macOS, and Windows
-- **Zero Setup**: Just `uv run` - no Python installation required
+With this skill installed, Claude can:
+
+- **Documents**: Read, create, edit, and format Google Docs
+- **Spreadsheets**: Read/write data, format cells, manage sheets
+- **Presentations**: Create slides, add text and images, format content
+- **Drive**: Upload, download, search, share, and organize files
+- **Email**: Read, send, reply to, and search Gmail messages
+- **Calendar**: View and create events, manage schedules
+- **Contacts**: List and manage your contacts
+- **Convert**: Transform Markdown files to Docs, Slides, or PDF (with diagram support)
 
 ## Installation
 
-### Using uv (Recommended)
+### 1. Clone to your skills directory
 
 ```bash
-# Run directly without installation
-uv run gws --help
-
-# Or install as a tool for global access
-uv tool install .
-gws --help
+git clone https://github.com/your-username/google-workspace ~/.claude/skills/google-workspace
 ```
 
-### Prerequisites
+### 2. Set up Google Cloud OAuth credentials
 
-1. **uv** package manager: https://docs.astral.sh/uv/
-2. **Google Cloud Project** with OAuth credentials:
-   - Create project at https://console.cloud.google.com
-   - Enable APIs: Drive, Docs, Sheets, Slides, Gmail, Calendar, People
-   - Create OAuth 2.0 credentials (Desktop application)
-   - Download `client_secret.json` to `~/.claude/.google/`
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project (or select existing)
+3. Enable these APIs:
+   - Google Drive API
+   - Google Docs API
+   - Google Sheets API
+   - Google Slides API
+   - Gmail API
+   - Google Calendar API
+   - People API
+4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
+5. Select **Desktop application**
+6. Download the JSON file
+7. Save it as `~/.claude/.google/client_secret.json`
 
-## Quick Start
+### 3. Authenticate
 
-```bash
-# 1. Authenticate with Google (opens browser)
-uv run gws auth
+Run any command or ask Claude to use the skill. A browser window will open for Google sign-in. Grant access to the requested services and authentication completes automatically.
 
-# 2. List your Drive files
-uv run gws drive list
+## Usage
 
-# 3. Read a Google Doc
-uv run gws docs read <document_id>
+Once installed, simply ask Claude to work with your Google Workspace:
 
-# 4. Create a spreadsheet
-uv run gws sheets create "My Spreadsheet"
-```
+> "Read my latest Google Doc and summarize it"
 
-## Services
+> "Create a spreadsheet with this data..."
 
-### Drive (11 operations)
-File management: upload, download, list, search, get metadata, copy, move, share, create folder, update, delete
+> "Send an email to john@example.com about the meeting"
 
-```bash
-uv run gws drive list --max 20
-uv run gws drive upload ./report.pdf --folder <folder_id>
-uv run gws drive share <file_id> --role reader
-```
+> "Convert this markdown report to a PDF"
 
-### Docs (10 operations)
-Document editing: read, structure, create, insert, append, replace, format, delete range, page break, insert image
+> "What's on my calendar tomorrow?"
 
-```bash
-uv run gws docs read <document_id>
-uv run gws docs create "New Document" --content "Hello World"
-uv run gws docs format <document_id> 1 50 --bold
-```
-
-### Sheets (11 operations)
-Spreadsheet management: metadata, read, create, write, append, clear, add/delete/rename sheets, format, batch get
-
-```bash
-uv run gws sheets read <spreadsheet_id> "A1:D10"
-uv run gws sheets write <spreadsheet_id> "A1:B2" --values '[["A","B"],["1","2"]]'
-uv run gws sheets format <spreadsheet_id> <sheet_id> 0 1 0 3 --bold --bg-color "#FFE0B2"
-```
-
-### Slides (12 operations)
-Presentation editing: metadata, read, create, add/delete/duplicate slides, textbox, insert text, replace text, format, insert image, delete element
-
-```bash
-uv run gws slides create "New Presentation"
-uv run gws slides create-textbox <pres_id> <slide_id> "Hello" --x 100 --y 100 --width 400 --height 50
-uv run gws slides insert-image <pres_id> <slide_id> "https://..." --x 50 --y 200 --width 300 --height 200
-```
-
-### Gmail (6 operations)
-Email management: list, read, send, reply, search, delete
-
-```bash
-uv run gws gmail list --max 10
-uv run gws gmail send "recipient@example.com" "Subject" "Body text"
-uv run gws gmail search "is:unread from:boss@company.com"
-```
-
-### Calendar (6 operations)
-Event management: list calendars, list events, get, create, update, delete
-
-```bash
-uv run gws calendar calendars
-uv run gws calendar create "Meeting" "2025-01-15T10:00:00" "2025-01-15T11:00:00"
-uv run gws calendar list --max 5
-```
-
-### Contacts (5 operations)
-Contact management via People API: list, get, create, update, delete
-
-```bash
-uv run gws contacts list --max 20
-uv run gws contacts create "John Doe" --email "john@example.com"
-```
-
-### Convert (3 operations)
-Document conversion: Markdown to Google Docs, Slides, or PDF
-
-```bash
-uv run gws convert md-to-doc ./report.md --title "Q4 Report"
-uv run gws convert md-to-slides ./deck.md --title "Presentation"
-uv run gws convert md-to-pdf ./report.md ./report.pdf
-```
+Claude will use the skill automatically when your request involves Google Workspace services.
 
 ## Configuration
 
-Enable/disable services based on your security needs:
+### Enable/Disable Services
+
+For security, you can disable services you don't need:
 
 ```bash
-# View current configuration
-uv run gws config
-
-# List all services with status
-uv run gws config list
-
 # Disable Gmail access
 uv run gws config disable gmail
 
-# Re-enable Gmail
+# Re-enable later
 uv run gws config enable gmail
 
-# Reset to defaults (all enabled)
-uv run gws config reset
+# See what's enabled
+uv run gws config list
 ```
 
-## Output Format
+### Custom Kroki Server
 
-All commands output JSON for easy parsing:
-
-```json
-{
-  "status": "success",
-  "operation": "docs.read",
-  "document_id": "1abc...",
-  "content": "Document content here..."
-}
-```
-
-## Project Structure
-
-```
-src/gws/
-├── cli.py              # Main Typer CLI app
-├── config.py           # Service configuration
-├── output.py           # JSON output formatting
-├── exceptions.py       # Exit codes
-├── auth/
-│   ├── oauth.py        # OAuth loopback flow
-│   └── scopes.py       # API scope definitions
-├── services/
-│   ├── base.py         # Base service class
-│   ├── drive.py        # Drive operations
-│   ├── docs.py         # Docs operations
-│   ├── sheets.py       # Sheets operations
-│   ├── slides.py       # Slides operations
-│   ├── gmail.py        # Gmail operations
-│   ├── calendar.py     # Calendar operations
-│   ├── contacts.py     # Contacts operations
-│   └── convert.py      # Document converter
-└── commands/           # CLI command definitions
-```
-
-## Development
+For diagram rendering, the skill uses [Kroki](https://kroki.io) (public server by default). To use a self-hosted instance:
 
 ```bash
-# Install development dependencies
-uv sync --dev
+# Set custom Kroki URL
+uv run gws config set-kroki http://localhost:8000
 
-# Run tests
-uv run pytest
-
-# Run linter
-uv run ruff check .
-
-# Type checking
-uv run mypy src/
+# Or use environment variable
+export GWS_KROKI_URL=http://localhost:8000
 ```
+
+## Requirements
+
+- [uv](https://docs.astral.sh/uv/) package manager
+- Google Cloud OAuth credentials (see Installation)
+- Claude Code CLI
+
+## Credential Storage
+
+All credentials are stored in `~/.claude/.google/`:
+
+| File | Purpose |
+|------|---------|
+| `client_secret.json` | OAuth client credentials (you provide) |
+| `token.json` | Access token (auto-generated on first auth) |
+| `gws_config.json` | Service enable/disable settings |
+
+## Skill Documentation
+
+For detailed command reference and examples, see [SKILL.md](SKILL.md).
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) file for details.
+MIT License - See [LICENSE](LICENSE) for details.
