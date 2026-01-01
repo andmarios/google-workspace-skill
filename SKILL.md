@@ -106,11 +106,11 @@ uv run gws auth logout
 | Service | Operations | Description |
 |---------|------------|-------------|
 | `drive` | 11 | File upload, download, share, organize |
-| `docs` | 37 | Full document editing, tables, formatting, headers/footers, lists |
-| `sheets` | 23 | Read, write, format, borders, merge, conditional formatting |
-| `slides` | 24 | Create, edit, shapes, tables, professional formatting |
-| `gmail` | 8 | List, read, send, search, mark read/unread |
-| `calendar` | 6 | Manage calendar events |
+| `docs` | 42 | Full document editing, tables, formatting, headers/footers, lists, named ranges, footnotes |
+| `sheets` | 35 | Read, write, format, borders, merge, conditional formatting, charts, data validation, sorting |
+| `slides` | 32 | Create, edit, shapes, tables, backgrounds, bullets, lines, cell merging |
+| `gmail` | 22 | List, read, send, search, labels, drafts, attachments |
+| `calendar` | 13 | Manage calendar events, recurring events, attendees, RSVP |
 | `contacts` | 5 | Manage contacts (People API) |
 | `convert` | 3 | Markdown to Docs/Slides/PDF |
 
@@ -315,6 +315,35 @@ uv run gws docs document-style <document_id> --first-page-diff
 
 **Section break types**: NEXT_PAGE, CONTINUOUS
 
+### Named Ranges (Bookmarks)
+
+```bash
+# Create a named range
+uv run gws docs create-named-range <document_id> "Section1" 1 100
+
+# List all named ranges
+uv run gws docs list-named-ranges <document_id>
+
+# Delete named range by name
+uv run gws docs delete-named-range <document_id> --name "Section1"
+
+# Delete named range by ID
+uv run gws docs delete-named-range <document_id> --id "kix.abc123"
+```
+
+### Footnotes
+
+```bash
+# Insert a footnote reference at a position
+uv run gws docs insert-footnote <document_id> 50
+
+# List all footnotes in document
+uv run gws docs list-footnotes <document_id>
+
+# Add content to a footnote (use insert-segment-text with footnote ID)
+uv run gws docs insert-segment-text <document_id> <footnote_id> "Footnote text here" --index 0
+```
+
 ## Sheets Operations
 
 ### Basic Operations
@@ -472,6 +501,94 @@ uv run gws sheets clear-conditional-formats <spreadsheet_id> <sheet_id>
 ```
 
 **Condition types**: NUMBER_GREATER, NUMBER_LESS, NUMBER_EQ, NUMBER_BETWEEN, TEXT_CONTAINS, TEXT_NOT_CONTAINS, TEXT_STARTS_WITH, TEXT_ENDS_WITH, BLANK, NOT_BLANK, DATE_BEFORE, DATE_AFTER
+
+### Row and Column Manipulation
+
+```bash
+# Insert rows at index (0-indexed)
+uv run gws sheets insert-rows <spreadsheet_id> <sheet_id> 5 3  # Insert 3 rows at index 5
+uv run gws sheets insert-rows <spreadsheet_id> <sheet_id> 0 2 --inherit-after  # Inherit formatting from row below
+
+# Insert columns
+uv run gws sheets insert-columns <spreadsheet_id> <sheet_id> 2 1  # Insert 1 column at index 2
+
+# Delete rows
+uv run gws sheets delete-rows <spreadsheet_id> <sheet_id> 5 8  # Delete rows 5-7 (end exclusive)
+
+# Delete columns
+uv run gws sheets delete-columns <spreadsheet_id> <sheet_id> 0 2  # Delete columns 0-1
+```
+
+### Sorting and Data Operations
+
+```bash
+# Sort range by column (ascending by default)
+uv run gws sheets sort <spreadsheet_id> <sheet_id> 1 100 0 5 2  # Sort rows 1-99 by column 2
+
+# Sort descending
+uv run gws sheets sort <spreadsheet_id> <sheet_id> 1 100 0 5 2 --descending
+
+# Find and replace text
+uv run gws sheets find-replace <spreadsheet_id> "old text" "new text"
+
+# Find-replace options
+uv run gws sheets find-replace <spreadsheet_id> "pattern" "replacement" \
+    --sheet-id 0 --match-case --match-entire-cell --use-regex
+
+# Duplicate a sheet
+uv run gws sheets duplicate-sheet <spreadsheet_id> <sheet_id> --name "Copy of Sheet1"
+```
+
+### Data Validation
+
+```bash
+# Dropdown list from values
+uv run gws sheets set-validation <spreadsheet_id> <sheet_id> 1 10 2 3 \
+    --type ONE_OF_LIST --values "Option1,Option2,Option3"
+
+# Number validation (greater than)
+uv run gws sheets set-validation <spreadsheet_id> <sheet_id> 1 10 0 1 \
+    --type NUMBER_GREATER --values "0"
+
+# Custom formula validation
+uv run gws sheets set-validation <spreadsheet_id> <sheet_id> 1 10 0 5 \
+    --type CUSTOM_FORMULA --formula "=A1>0"
+
+# Clear validation
+uv run gws sheets clear-validation <spreadsheet_id> <sheet_id> 1 10 2 3
+```
+
+**Validation types**: ONE_OF_LIST, ONE_OF_RANGE, NUMBER_GREATER, NUMBER_LESS, NUMBER_BETWEEN, NUMBER_EQ, NUMBER_NOT_EQ, DATE_BEFORE, DATE_AFTER, DATE_BETWEEN, TEXT_CONTAINS, TEXT_NOT_CONTAINS, CUSTOM_FORMULA, BOOLEAN
+
+### Charts
+
+```bash
+# Create a basic column chart
+uv run gws sheets add-chart <spreadsheet_id> <sheet_id> COLUMN "A1:C10" 0 5 \
+    --title "Sales Report"
+
+# Create line chart
+uv run gws sheets add-chart <spreadsheet_id> <sheet_id> LINE "Sheet1!A1:B20" 0 5
+
+# Create pie chart
+uv run gws sheets add-chart <spreadsheet_id> <sheet_id> PIE "A1:B5" 5 0
+
+# Delete chart
+uv run gws sheets delete-chart <spreadsheet_id> <chart_id>
+```
+
+**Chart types**: COLUMN, BAR, LINE, AREA, PIE, SCATTER
+
+### Banding (Alternating Row Colors)
+
+```bash
+# Add alternating colors to a range
+uv run gws sheets add-banding <spreadsheet_id> <sheet_id> 0 20 0 5 \
+    --header-color "#1565C0" --first-color "#E3F2FD" --second-color "#FFFFFF"
+
+# Delete banding
+uv run gws sheets delete-banding <spreadsheet_id> <banding_id>
+```
 
 ## Slides Operations
 
@@ -639,9 +756,79 @@ uv run gws slides delete-table-row <presentation_id> <table_id> 3
 
 # Delete column
 uv run gws slides delete-table-column <presentation_id> <table_id> 2
+
+# Merge table cells
+uv run gws slides merge-table-cells <presentation_id> <table_id> 0 0 2 2
+
+# Unmerge table cells
+uv run gws slides unmerge-table-cells <presentation_id> <table_id> 0 0 2 2
+
+# Style table borders
+uv run gws slides style-table-borders <presentation_id> <table_id> 0 0 \
+    --rows 3 --cols 3 --color "#000000" --weight 2 --style SOLID --position ALL
+```
+
+**Border positions**: ALL, INNER, OUTER, INNER_HORIZONTAL, INNER_VERTICAL, LEFT, RIGHT, TOP, BOTTOM
+
+### Slide Backgrounds
+
+```bash
+# Set solid color background
+uv run gws slides set-background <presentation_id> <slide_id> --color "#1565C0"
+
+# Set image background
+uv run gws slides set-background <presentation_id> <slide_id> \
+    --image "https://example.com/background.jpg"
+```
+
+### Bullet Lists
+
+```bash
+# Add bullet formatting to text
+uv run gws slides create-bullets <presentation_id> <element_id> \
+    --preset BULLET_DISC_CIRCLE_SQUARE
+
+# Apply bullets to specific text range
+uv run gws slides create-bullets <presentation_id> <element_id> \
+    --start 0 --end 100 --preset NUMBERED_DIGIT_ALPHA_ROMAN
+
+# Remove bullets
+uv run gws slides remove-bullets <presentation_id> <element_id>
+```
+
+**Bullet presets**: BULLET_DISC_CIRCLE_SQUARE, BULLET_DIAMONDX_ARROW3D_SQUARE, BULLET_CHECKBOX, BULLET_ARROW_DIAMOND_DISC, NUMBERED_DIGIT_ALPHA_ROMAN, NUMBERED_DIGIT_NESTED
+
+### Lines and Arrows
+
+```bash
+# Create a line
+uv run gws slides create-line <presentation_id> <slide_id> \
+    --start-x 100 --start-y 100 --end-x 400 --end-y 100
+
+# Create an arrow
+uv run gws slides create-line <presentation_id> <slide_id> \
+    --start-x 100 --start-y 200 --end-x 400 --end-y 200 \
+    --end-arrow FILL_ARROW --color "#FF0000" --weight 2
+
+# Create a dashed line
+uv run gws slides create-line <presentation_id> <slide_id> \
+    --start-x 100 --start-y 300 --end-x 400 --end-y 400 \
+    --style DASH --category STRAIGHT
+```
+
+**Line categories**: STRAIGHT, BENT, CURVED
+**Arrow types**: NONE, FILL_ARROW, STEALTH_ARROW, FILL_CIRCLE, FILL_SQUARE, FILL_DIAMOND, OPEN_ARROW, OPEN_CIRCLE, OPEN_SQUARE, OPEN_DIAMOND
+
+### Slide Reordering
+
+```bash
+# Move slides to a new position
+uv run gws slides reorder-slides <presentation_id> "slide_id1,slide_id2" 0
 ```
 
 ## Gmail Operations
+
+### Basic Operations
 
 ```bash
 # List recent messages
@@ -653,11 +840,22 @@ uv run gws gmail read <message_id>
 # Search messages
 uv run gws gmail search "is:unread from:user@example.com" --max 5
 
-# Send email
+# Send email (HTML by default)
 uv run gws gmail send "recipient@example.com" "Subject" "Email body"
+
+# Send plain text email
+uv run gws gmail send "recipient@example.com" "Subject" "Plain text" --plain
+
+# Send with display name and signature
+uv run gws gmail send "recipient@example.com" "Subject" "Body" \
+    --from-name "John Doe" --signature "Best regards,\nJohn"
 
 # Reply to message
 uv run gws gmail reply <message_id> "Reply body"
+
+# Mark as read/unread
+uv run gws gmail mark-read <message_id>
+uv run gws gmail mark-unread <message_id>
 
 # Delete message (moves to trash)
 uv run gws gmail delete <message_id>
@@ -665,7 +863,67 @@ uv run gws gmail delete <message_id>
 
 **Gmail search operators**: `is:unread`, `from:`, `to:`, `subject:`, `has:attachment`, `after:`, `before:`
 
+### Labels
+
+```bash
+# List all labels
+uv run gws gmail labels
+
+# Create a new label
+uv run gws gmail create-label "Project X" --visibility labelShow
+
+# Delete a label
+uv run gws gmail delete-label <label_id>
+
+# Add labels to a message
+uv run gws gmail add-labels <message_id> "Label1_ID,Label2_ID"
+
+# Remove labels from a message
+uv run gws gmail remove-labels <message_id> "UNREAD,Label_ID"
+```
+
+### Drafts
+
+```bash
+# List drafts
+uv run gws gmail drafts --max 10
+
+# Read a draft
+uv run gws gmail get-draft <draft_id>
+
+# Create a draft (HTML by default)
+uv run gws gmail create-draft "recipient@example.com" "Subject" "Draft body"
+
+# Create plain text draft
+uv run gws gmail create-draft "recipient@example.com" "Subject" "Body" --plain
+
+# Update a draft
+uv run gws gmail update-draft <draft_id> --subject "New Subject" --body "Updated body"
+
+# Send a draft
+uv run gws gmail send-draft <draft_id>
+
+# Delete a draft
+uv run gws gmail delete-draft <draft_id>
+```
+
+### Attachments
+
+```bash
+# Send email with attachments
+uv run gws gmail send-with-attachment "recipient@example.com" "Subject" "Body" \
+    "/path/to/file1.pdf,/path/to/file2.xlsx"
+
+# List attachments in a message
+uv run gws gmail list-attachments <message_id>
+
+# Download an attachment
+uv run gws gmail download-attachment <message_id> <attachment_id> /path/to/output.pdf
+```
+
 ## Calendar Operations
+
+### Basic Operations
 
 ```bash
 # List calendars
@@ -681,11 +939,61 @@ uv run gws calendar get <event_id>
 uv run gws calendar create "Meeting" "2025-01-15T10:00:00" "2025-01-15T11:00:00" \
     --description "Discuss project" --location "Conference Room A"
 
+# Create all-day event
+uv run gws calendar create "Company Holiday" "2025-12-25" "2025-12-26" --all-day
+
+# Quick add (natural language)
+uv run gws calendar quick-add "Meeting tomorrow at 3pm"
+uv run gws calendar quick-add "Lunch with Bob on Friday at noon"
+
 # Update event
 uv run gws calendar update <event_id> --summary "Updated Meeting" --location "Room B"
 
 # Delete event
 uv run gws calendar delete <event_id>
+```
+
+### Recurring Events
+
+```bash
+# Create recurring event with RRULE
+uv run gws calendar create-recurring "Team Standup" "2025-01-15T09:30:00" "2025-01-15T09:45:00" \
+    "FREQ=WEEKLY;BYDAY=MO,WE,FR" --timezone "America/New_York"
+
+# Common RRULE patterns
+# FREQ=DAILY - Every day
+# FREQ=WEEKLY;BYDAY=MO,WE,FR - Monday, Wednesday, Friday
+# FREQ=MONTHLY;BYMONTHDAY=15 - 15th of each month
+# FREQ=YEARLY - Yearly
+# FREQ=WEEKLY;COUNT=10 - Weekly for 10 occurrences
+# FREQ=DAILY;UNTIL=20251231 - Daily until December 31, 2025
+
+# List instances of a recurring event
+uv run gws calendar instances <recurring_event_id> --max 10
+
+# List instances in a date range
+uv run gws calendar instances <event_id> --from "2025-01-01T00:00:00Z" --to "2025-03-01T00:00:00Z"
+```
+
+### Attendees
+
+```bash
+# Add attendees to an event
+uv run gws calendar add-attendees <event_id> "alice@example.com,bob@example.com"
+
+# Add attendees without sending notifications
+uv run gws calendar add-attendees <event_id> "alice@example.com" --no-notify
+
+# Remove attendees
+uv run gws calendar remove-attendees <event_id> "bob@example.com"
+
+# List attendees and RSVP status
+uv run gws calendar attendees <event_id>
+
+# RSVP to an event
+uv run gws calendar rsvp <event_id> accepted
+uv run gws calendar rsvp <event_id> declined
+uv run gws calendar rsvp <event_id> tentative
 ```
 
 ## Contacts Operations

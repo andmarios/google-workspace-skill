@@ -1461,3 +1461,850 @@ class SheetsService(BaseService):
                 message=f"Google Sheets API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    def insert_rows(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_index: int,
+        count: int,
+        inherit_from_before: bool = True,
+    ) -> dict[str, Any]:
+        """Insert rows at a specific index.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            start_index: Row index to insert at (0-based).
+            count: Number of rows to insert.
+            inherit_from_before: If True, new rows inherit formatting from row above.
+        """
+        try:
+            requests = [
+                {
+                    "insertDimension": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "dimension": "ROWS",
+                            "startIndex": start_index,
+                            "endIndex": start_index + count,
+                        },
+                        "inheritFromBefore": inherit_from_before,
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.insert_rows",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                start_index=start_index,
+                count=count,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.insert_rows",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def insert_columns(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_index: int,
+        count: int,
+        inherit_from_before: bool = True,
+    ) -> dict[str, Any]:
+        """Insert columns at a specific index.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            start_index: Column index to insert at (0-based).
+            count: Number of columns to insert.
+            inherit_from_before: If True, new columns inherit formatting from column to the left.
+        """
+        try:
+            requests = [
+                {
+                    "insertDimension": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "dimension": "COLUMNS",
+                            "startIndex": start_index,
+                            "endIndex": start_index + count,
+                        },
+                        "inheritFromBefore": inherit_from_before,
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.insert_columns",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                start_index=start_index,
+                count=count,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.insert_columns",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_rows(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_index: int,
+        end_index: int,
+    ) -> dict[str, Any]:
+        """Delete rows in a range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            start_index: Start row index (0-based).
+            end_index: End row index (exclusive).
+        """
+        try:
+            requests = [
+                {
+                    "deleteDimension": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "dimension": "ROWS",
+                            "startIndex": start_index,
+                            "endIndex": end_index,
+                        },
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.delete_rows",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                start_index=start_index,
+                end_index=end_index,
+                deleted_count=end_index - start_index,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.delete_rows",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_columns(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_index: int,
+        end_index: int,
+    ) -> dict[str, Any]:
+        """Delete columns in a range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            start_index: Start column index (0-based).
+            end_index: End column index (exclusive).
+        """
+        try:
+            requests = [
+                {
+                    "deleteDimension": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "dimension": "COLUMNS",
+                            "startIndex": start_index,
+                            "endIndex": end_index,
+                        },
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.delete_columns",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                start_index=start_index,
+                end_index=end_index,
+                deleted_count=end_index - start_index,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.delete_columns",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def sort_range(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+        sort_column: int,
+        ascending: bool = True,
+    ) -> dict[str, Any]:
+        """Sort a range by a column.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            start_row: Start row index (0-based).
+            end_row: End row index (exclusive).
+            start_col: Start column index (0-based).
+            end_col: End column index (exclusive).
+            sort_column: Column index to sort by (0-based).
+            ascending: Sort ascending if True, descending if False.
+        """
+        try:
+            requests = [
+                {
+                    "sortRange": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": start_row,
+                            "endRowIndex": end_row,
+                            "startColumnIndex": start_col,
+                            "endColumnIndex": end_col,
+                        },
+                        "sortSpecs": [
+                            {
+                                "dimensionIndex": sort_column,
+                                "sortOrder": "ASCENDING" if ascending else "DESCENDING",
+                            }
+                        ],
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.sort_range",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                range=f"R{start_row}C{start_col}:R{end_row}C{end_col}",
+                sort_column=sort_column,
+                ascending=ascending,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.sort_range",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def find_replace(
+        self,
+        spreadsheet_id: str,
+        find: str,
+        replace: str,
+        sheet_id: int | None = None,
+        all_sheets: bool = False,
+        match_case: bool = False,
+        match_entire_cell: bool = False,
+        use_regex: bool = False,
+    ) -> dict[str, Any]:
+        """Find and replace text in a spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            find: Text to find.
+            replace: Replacement text.
+            sheet_id: Sheet ID to search in (optional, omit for all_sheets).
+            all_sheets: If True, search all sheets.
+            match_case: Case-sensitive search.
+            match_entire_cell: Match entire cell content only.
+            use_regex: Treat find as a regular expression.
+        """
+        try:
+            find_replace_request: dict[str, Any] = {
+                "find": find,
+                "replacement": replace,
+                "matchCase": match_case,
+                "matchEntireCell": match_entire_cell,
+                "searchByRegex": use_regex,
+            }
+
+            if all_sheets:
+                find_replace_request["allSheets"] = True
+            elif sheet_id is not None:
+                find_replace_request["sheetId"] = sheet_id
+            else:
+                find_replace_request["allSheets"] = True
+
+            requests = [{"findReplace": find_replace_request}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            # Extract replacement count from response
+            replies = result.get("replies", [{}])
+            find_replace_response = replies[0].get("findReplace", {})
+            occurrences_changed = find_replace_response.get("occurrencesChanged", 0)
+            values_changed = find_replace_response.get("valuesChanged", 0)
+            sheets_changed = find_replace_response.get("sheetsChanged", 0)
+
+            output_success(
+                operation="sheets.find_replace",
+                spreadsheet_id=spreadsheet_id,
+                find=find,
+                replace=replace,
+                occurrences_changed=occurrences_changed,
+                values_changed=values_changed,
+                sheets_changed=sheets_changed,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.find_replace",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def duplicate_sheet(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        new_name: str | None = None,
+        insert_index: int | None = None,
+    ) -> dict[str, Any]:
+        """Duplicate a sheet within the spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID to duplicate.
+            new_name: Name for the new sheet (optional).
+            insert_index: Position to insert the new sheet (optional).
+        """
+        try:
+            duplicate_request: dict[str, Any] = {
+                "sourceSheetId": sheet_id,
+            }
+
+            if new_name is not None:
+                duplicate_request["newSheetName"] = new_name
+            if insert_index is not None:
+                duplicate_request["insertSheetIndex"] = insert_index
+
+            requests = [{"duplicateSheet": duplicate_request}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            # Extract new sheet info from response
+            replies = result.get("replies", [{}])
+            duplicate_response = replies[0].get("duplicateSheet", {}).get("properties", {})
+            new_sheet_id = duplicate_response.get("sheetId")
+            new_sheet_title = duplicate_response.get("title")
+
+            output_success(
+                operation="sheets.duplicate_sheet",
+                spreadsheet_id=spreadsheet_id,
+                source_sheet_id=sheet_id,
+                new_sheet_id=new_sheet_id,
+                new_sheet_title=new_sheet_title,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.duplicate_sheet",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def set_data_validation(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+        validation_type: str,
+        values: list[str] | None = None,
+        formula: str | None = None,
+        strict: bool = True,
+        show_dropdown: bool = True,
+    ) -> dict[str, Any]:
+        """Set data validation on a range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            start_row: Start row index (0-based).
+            end_row: End row index (exclusive).
+            start_col: Start column index (0-based).
+            end_col: End column index (exclusive).
+            validation_type: Type of validation (ONE_OF_LIST, NUMBER_GREATER,
+                NUMBER_LESS, NUMBER_BETWEEN, TEXT_CONTAINS, CUSTOM_FORMULA, etc.).
+            values: List of values for ONE_OF_LIST or condition values.
+            formula: Custom formula for CUSTOM_FORMULA type.
+            strict: If True, reject invalid input; if False, show warning.
+            show_dropdown: Show dropdown for list validation.
+        """
+        try:
+            valid_types = {
+                "ONE_OF_LIST",
+                "NUMBER_GREATER",
+                "NUMBER_LESS",
+                "NUMBER_EQUAL",
+                "NUMBER_NOT_EQUAL",
+                "NUMBER_GREATER_THAN_EQ",
+                "NUMBER_LESS_THAN_EQ",
+                "NUMBER_BETWEEN",
+                "NUMBER_NOT_BETWEEN",
+                "TEXT_CONTAINS",
+                "TEXT_NOT_CONTAINS",
+                "TEXT_STARTS_WITH",
+                "TEXT_ENDS_WITH",
+                "TEXT_EQ",
+                "TEXT_IS_EMAIL",
+                "TEXT_IS_URL",
+                "DATE_EQ",
+                "DATE_BEFORE",
+                "DATE_AFTER",
+                "DATE_ON_OR_BEFORE",
+                "DATE_ON_OR_AFTER",
+                "DATE_BETWEEN",
+                "DATE_NOT_BETWEEN",
+                "DATE_IS_VALID",
+                "CUSTOM_FORMULA",
+                "BOOLEAN",
+            }
+            if validation_type.upper() not in valid_types:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="sheets.set_data_validation",
+                    message=f"validation_type must be one of: {sorted(valid_types)}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            # Build condition based on type
+            condition: dict[str, Any] = {"type": validation_type.upper()}
+
+            if validation_type.upper() == "ONE_OF_LIST" and values:
+                condition["values"] = [{"userEnteredValue": v} for v in values]
+            elif validation_type.upper() == "CUSTOM_FORMULA" and formula:
+                condition["values"] = [{"userEnteredValue": formula}]
+            elif values:
+                condition["values"] = [{"userEnteredValue": v} for v in values]
+
+            validation_rule: dict[str, Any] = {
+                "condition": condition,
+                "strict": strict,
+            }
+
+            if validation_type.upper() == "ONE_OF_LIST":
+                validation_rule["showCustomUi"] = show_dropdown
+
+            requests = [
+                {
+                    "setDataValidation": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": start_row,
+                            "endRowIndex": end_row,
+                            "startColumnIndex": start_col,
+                            "endColumnIndex": end_col,
+                        },
+                        "rule": validation_rule,
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.set_data_validation",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                range=f"R{start_row}C{start_col}:R{end_row}C{end_col}",
+                validation_type=validation_type.upper(),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.set_data_validation",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def clear_data_validation(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+    ) -> dict[str, Any]:
+        """Clear data validation from a range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            start_row: Start row index (0-based).
+            end_row: End row index (exclusive).
+            start_col: Start column index (0-based).
+            end_col: End column index (exclusive).
+        """
+        try:
+            requests = [
+                {
+                    "setDataValidation": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": start_row,
+                            "endRowIndex": end_row,
+                            "startColumnIndex": start_col,
+                            "endColumnIndex": end_col,
+                        },
+                        # Omitting 'rule' clears validation
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.clear_data_validation",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                range=f"R{start_row}C{start_col}:R{end_row}C{end_col}",
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.clear_data_validation",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def add_chart(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        chart_type: str,
+        data_range_start_row: int,
+        data_range_end_row: int,
+        data_range_start_col: int,
+        data_range_end_col: int,
+        anchor_row: int,
+        anchor_col: int,
+        title: str | None = None,
+        legend_position: str = "BOTTOM_LEGEND",
+    ) -> dict[str, Any]:
+        """Add a chart to a sheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            chart_type: Type of chart (LINE, COLUMN, BAR, PIE, SCATTER, AREA).
+            data_range_start_row: Start row of data range (0-based).
+            data_range_end_row: End row of data range (exclusive).
+            data_range_start_col: Start column of data range (0-based).
+            data_range_end_col: End column of data range (exclusive).
+            anchor_row: Row to anchor chart (0-based).
+            anchor_col: Column to anchor chart (0-based).
+            title: Chart title (optional).
+            legend_position: Legend position (BOTTOM_LEGEND, LEFT_LEGEND,
+                RIGHT_LEGEND, TOP_LEGEND, NO_LEGEND).
+        """
+        try:
+            valid_types = {"LINE", "COLUMN", "BAR", "PIE", "SCATTER", "AREA"}
+            if chart_type.upper() not in valid_types:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="sheets.add_chart",
+                    message=f"chart_type must be one of: {valid_types}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            # Build data range
+            data_range = {
+                "sheetId": sheet_id,
+                "startRowIndex": data_range_start_row,
+                "endRowIndex": data_range_end_row,
+                "startColumnIndex": data_range_start_col,
+                "endColumnIndex": data_range_end_col,
+            }
+
+            # Build chart spec based on type
+            chart_spec: dict[str, Any] = {
+                "title": title or "",
+                "basicChart": {
+                    "chartType": chart_type.upper(),
+                    "legendPosition": legend_position.upper(),
+                    "domains": [{"domain": {"sourceRange": {"sources": [data_range]}}}],
+                    "series": [{"series": {"sourceRange": {"sources": [data_range]}}}],
+                },
+            }
+
+            requests = [
+                {
+                    "addChart": {
+                        "chart": {
+                            "spec": chart_spec,
+                            "position": {
+                                "overlayPosition": {
+                                    "anchorCell": {
+                                        "sheetId": sheet_id,
+                                        "rowIndex": anchor_row,
+                                        "columnIndex": anchor_col,
+                                    },
+                                    "widthPixels": 600,
+                                    "heightPixels": 400,
+                                }
+                            },
+                        }
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            # Extract chart ID from response
+            replies = result.get("replies", [{}])
+            chart_id = replies[0].get("addChart", {}).get("chart", {}).get("chartId")
+
+            output_success(
+                operation="sheets.add_chart",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                chart_id=chart_id,
+                chart_type=chart_type.upper(),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.add_chart",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_chart(
+        self,
+        spreadsheet_id: str,
+        chart_id: int,
+    ) -> dict[str, Any]:
+        """Delete a chart from a spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            chart_id: The chart ID to delete.
+        """
+        try:
+            requests = [{"deleteEmbeddedObject": {"objectId": chart_id}}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.delete_chart",
+                spreadsheet_id=spreadsheet_id,
+                chart_id=chart_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.delete_chart",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def add_banding(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+        header_color: str | None = None,
+        first_color: str | None = None,
+        second_color: str | None = None,
+    ) -> dict[str, Any]:
+        """Add alternating row colors (banding) to a range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID (numeric).
+            start_row: Start row index (0-based).
+            end_row: End row index (exclusive).
+            start_col: Start column index (0-based).
+            end_col: End column index (exclusive).
+            header_color: Header row color (hex, e.g., '#4285F4').
+            first_color: First alternating color (hex, e.g., '#FFFFFF').
+            second_color: Second alternating color (hex, e.g., '#F3F3F3').
+        """
+        try:
+            row_properties: dict[str, Any] = {}
+
+            if header_color:
+                row_properties["headerColor"] = hex_to_rgb(header_color)
+            if first_color:
+                row_properties["firstBandColor"] = hex_to_rgb(first_color)
+            if second_color:
+                row_properties["secondBandColor"] = hex_to_rgb(second_color)
+
+            # Use defaults if no colors provided
+            if not row_properties:
+                row_properties = {
+                    "headerColor": {"red": 0.26, "green": 0.52, "blue": 0.96},
+                    "firstBandColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
+                    "secondBandColor": {"red": 0.95, "green": 0.95, "blue": 0.95},
+                }
+
+            requests = [
+                {
+                    "addBanding": {
+                        "bandedRange": {
+                            "range": {
+                                "sheetId": sheet_id,
+                                "startRowIndex": start_row,
+                                "endRowIndex": end_row,
+                                "startColumnIndex": start_col,
+                                "endColumnIndex": end_col,
+                            },
+                            "rowProperties": row_properties,
+                        }
+                    }
+                }
+            ]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            # Extract banded range ID from response
+            replies = result.get("replies", [{}])
+            banded_range_id = (
+                replies[0].get("addBanding", {}).get("bandedRange", {}).get("bandedRangeId")
+            )
+
+            output_success(
+                operation="sheets.add_banding",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                range=f"R{start_row}C{start_col}:R{end_row}C{end_col}",
+                banded_range_id=banded_range_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.add_banding",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_banding(
+        self,
+        spreadsheet_id: str,
+        banded_range_id: int,
+    ) -> dict[str, Any]:
+        """Delete a banded range (alternating colors) from a spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            banded_range_id: The banded range ID to delete.
+        """
+        try:
+            requests = [{"deleteBanding": {"bandedRangeId": banded_range_id}}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.delete_banding",
+                spreadsheet_id=spreadsheet_id,
+                banded_range_id=banded_range_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.delete_banding",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

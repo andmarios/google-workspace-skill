@@ -286,3 +286,396 @@ class CalendarService(BaseService):
                 message=f"Calendar API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # ===== Recurring Events =====
+
+    def create_recurring_event(
+        self,
+        summary: str,
+        start: str,
+        end: str,
+        rrule: str,
+        calendar_id: str = "primary",
+        timezone_str: str = "UTC",
+        description: str | None = None,
+        location: str | None = None,
+        attendees: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Create a recurring event.
+
+        Args:
+            summary: Event title.
+            start: Start time (ISO format or HH:MM for time only).
+            end: End time (ISO format or HH:MM for time only).
+            rrule: RRULE recurrence rule (e.g., "FREQ=WEEKLY;BYDAY=MO,WE,FR").
+            calendar_id: Calendar ID.
+            timezone_str: Timezone for the event.
+            description: Event description.
+            location: Event location.
+            attendees: List of attendee email addresses.
+        """
+        try:
+            event_body: dict[str, Any] = {
+                "summary": summary,
+                "start": {"dateTime": start, "timeZone": timezone_str},
+                "end": {"dateTime": end, "timeZone": timezone_str},
+                "recurrence": [f"RRULE:{rrule}"],
+            }
+
+            if description:
+                event_body["description"] = description
+            if location:
+                event_body["location"] = location
+            if attendees:
+                event_body["attendees"] = [{"email": email} for email in attendees]
+
+            event = (
+                self.service.events()
+                .insert(calendarId=calendar_id, body=event_body)
+                .execute()
+            )
+
+            output_success(
+                operation="calendar.create_recurring",
+                event_id=event["id"],
+                summary=summary,
+                start=start,
+                end=end,
+                rrule=rrule,
+                html_link=event.get("htmlLink", ""),
+            )
+            return event
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.create_recurring",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_instances(
+        self,
+        event_id: str,
+        calendar_id: str = "primary",
+        time_min: str | None = None,
+        time_max: str | None = None,
+        max_results: int = 25,
+    ) -> dict[str, Any]:
+        """Get instances of a recurring event.
+
+        Args:
+            event_id: The recurring event ID.
+            calendar_id: Calendar ID.
+            time_min: Lower bound for instances (ISO format).
+            time_max: Upper bound for instances (ISO format).
+            max_results: Maximum number of instances to return.
+        """
+        try:
+            params: dict[str, Any] = {
+                "calendarId": calendar_id,
+                "eventId": event_id,
+                "maxResults": max_results,
+            }
+
+            if time_min:
+                params["timeMin"] = time_min
+            else:
+                params["timeMin"] = datetime.now(timezone.utc).isoformat()
+
+            if time_max:
+                params["timeMax"] = time_max
+
+            result = self.service.events().instances(**params).execute()
+
+            instances = []
+            for event in result.get("items", []):
+                start = event.get("start", {})
+                end = event.get("end", {})
+
+                instances.append({
+                    "id": event["id"],
+                    "summary": event.get("summary", "(no title)"),
+                    "start": start.get("dateTime", start.get("date", "")),
+                    "end": end.get("dateTime", end.get("date", "")),
+                    "status": event.get("status", ""),
+                })
+
+            output_success(
+                operation="calendar.get_instances",
+                event_id=event_id,
+                instance_count=len(instances),
+                instances=instances,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.get_instances",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # ===== Attendee Management =====
+
+    def add_attendees(
+        self,
+        event_id: str,
+        emails: list[str],
+        calendar_id: str = "primary",
+        send_notifications: bool = True,
+    ) -> dict[str, Any]:
+        """Add attendees to an event.
+
+        Args:
+            event_id: The event ID.
+            emails: List of email addresses to add.
+            calendar_id: Calendar ID.
+            send_notifications: Whether to send email notifications.
+        """
+        try:
+            # Get existing event
+            event = (
+                self.service.events()
+                .get(calendarId=calendar_id, eventId=event_id)
+                .execute()
+            )
+
+            # Add new attendees
+            existing_attendees = event.get("attendees", [])
+            existing_emails = {a["email"] for a in existing_attendees}
+
+            for email in emails:
+                if email not in existing_emails:
+                    existing_attendees.append({"email": email})
+
+            event["attendees"] = existing_attendees
+
+            # Update event
+            send_updates = "all" if send_notifications else "none"
+            updated_event = (
+                self.service.events()
+                .update(
+                    calendarId=calendar_id,
+                    eventId=event_id,
+                    body=event,
+                    sendUpdates=send_updates,
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="calendar.add_attendees",
+                event_id=event_id,
+                added_emails=emails,
+                attendee_count=len(updated_event.get("attendees", [])),
+            )
+            return updated_event
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.add_attendees",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def remove_attendees(
+        self,
+        event_id: str,
+        emails: list[str],
+        calendar_id: str = "primary",
+        send_notifications: bool = True,
+    ) -> dict[str, Any]:
+        """Remove attendees from an event.
+
+        Args:
+            event_id: The event ID.
+            emails: List of email addresses to remove.
+            calendar_id: Calendar ID.
+            send_notifications: Whether to send email notifications.
+        """
+        try:
+            # Get existing event
+            event = (
+                self.service.events()
+                .get(calendarId=calendar_id, eventId=event_id)
+                .execute()
+            )
+
+            # Filter out specified attendees
+            emails_to_remove = set(emails)
+            event["attendees"] = [
+                a for a in event.get("attendees", [])
+                if a["email"] not in emails_to_remove
+            ]
+
+            # Update event
+            send_updates = "all" if send_notifications else "none"
+            updated_event = (
+                self.service.events()
+                .update(
+                    calendarId=calendar_id,
+                    eventId=event_id,
+                    body=event,
+                    sendUpdates=send_updates,
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="calendar.remove_attendees",
+                event_id=event_id,
+                removed_emails=emails,
+                attendee_count=len(updated_event.get("attendees", [])),
+            )
+            return updated_event
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.remove_attendees",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_attendees(
+        self,
+        event_id: str,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Get attendees and their RSVP status for an event.
+
+        Args:
+            event_id: The event ID.
+            calendar_id: Calendar ID.
+        """
+        try:
+            event = (
+                self.service.events()
+                .get(calendarId=calendar_id, eventId=event_id)
+                .execute()
+            )
+
+            attendees = [
+                {
+                    "email": a["email"],
+                    "display_name": a.get("displayName", ""),
+                    "response_status": a.get("responseStatus", "needsAction"),
+                    "organizer": a.get("organizer", False),
+                    "optional": a.get("optional", False),
+                }
+                for a in event.get("attendees", [])
+            ]
+
+            output_success(
+                operation="calendar.get_attendees",
+                event_id=event_id,
+                summary=event.get("summary", ""),
+                attendee_count=len(attendees),
+                attendees=attendees,
+            )
+            return {"event_id": event_id, "attendees": attendees}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.get_attendees",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def respond_to_event(
+        self,
+        event_id: str,
+        response: str,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Respond to an event invitation (RSVP).
+
+        Args:
+            event_id: The event ID.
+            response: Response status (accepted, declined, tentative).
+            calendar_id: Calendar ID.
+        """
+        try:
+            valid_responses = {"accepted", "declined", "tentative"}
+            if response.lower() not in valid_responses:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="calendar.respond",
+                    message=f"Response must be one of: {valid_responses}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            # Get event and find self in attendees
+            event = (
+                self.service.events()
+                .get(calendarId=calendar_id, eventId=event_id)
+                .execute()
+            )
+
+            # Update self's response status
+            for attendee in event.get("attendees", []):
+                if attendee.get("self", False):
+                    attendee["responseStatus"] = response.lower()
+                    break
+
+            updated_event = (
+                self.service.events()
+                .update(
+                    calendarId=calendar_id,
+                    eventId=event_id,
+                    body=event,
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="calendar.respond",
+                event_id=event_id,
+                response=response.lower(),
+                summary=updated_event.get("summary", ""),
+            )
+            return updated_event
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.respond",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def quick_add(
+        self,
+        text: str,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Create an event from natural language text.
+
+        Args:
+            text: Natural language description (e.g., "Meeting tomorrow at 3pm").
+            calendar_id: Calendar ID.
+        """
+        try:
+            event = (
+                self.service.events()
+                .quickAdd(calendarId=calendar_id, text=text)
+                .execute()
+            )
+
+            start = event.get("start", {})
+            end = event.get("end", {})
+
+            output_success(
+                operation="calendar.quick_add",
+                event_id=event["id"],
+                summary=event.get("summary", ""),
+                start=start.get("dateTime", start.get("date", "")),
+                end=end.get("dateTime", end.get("date", "")),
+                html_link=event.get("htmlLink", ""),
+            )
+            return event
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.quick_add",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

@@ -1485,3 +1485,583 @@ class SlidesService(BaseService):
                 message=f"Google Slides API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # ===== Phase 6: Slides Enhancements =====
+
+    def set_slide_background(
+        self,
+        presentation_id: str,
+        slide_id: str,
+        color: str | None = None,
+        image_url: str | None = None,
+    ) -> dict[str, Any]:
+        """Set slide background to a solid color or image.
+
+        Args:
+            presentation_id: The presentation ID.
+            slide_id: The slide object ID.
+            color: Background color (hex, e.g., "#FFFFFF").
+            image_url: Background image URL (publicly accessible).
+        """
+        try:
+            if not color and not image_url:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="slides.set_slide_background",
+                    message="Either color or image_url must be provided",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            page_properties: dict[str, Any] = {}
+            fields = []
+
+            if color:
+                from gws.utils.colors import parse_hex_color
+                rgb = parse_hex_color(color)
+                page_properties["pageBackgroundFill"] = {
+                    "solidFill": {"color": {"rgbColor": rgb}}
+                }
+                fields.append("pageBackgroundFill")
+            elif image_url:
+                page_properties["pageBackgroundFill"] = {
+                    "stretchedPictureFill": {"contentUrl": image_url}
+                }
+                fields.append("pageBackgroundFill")
+
+            request = {
+                "updatePageProperties": {
+                    "objectId": slide_id,
+                    "pageProperties": page_properties,
+                    "fields": ",".join(fields),
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.set_slide_background",
+                presentation_id=presentation_id,
+                slide_id=slide_id,
+                background_type="color" if color else "image",
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.set_slide_background",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def create_bullets(
+        self,
+        presentation_id: str,
+        object_id: str,
+        bullet_preset: str = "BULLET_DISC_CIRCLE_SQUARE",
+        start_index: int | None = None,
+        end_index: int | None = None,
+    ) -> dict[str, Any]:
+        """Create bullet list formatting for text.
+
+        Args:
+            presentation_id: The presentation ID.
+            object_id: The shape/text box object ID.
+            bullet_preset: Bullet style preset. Options:
+                BULLET_DISC_CIRCLE_SQUARE, BULLET_DIAMONDX_ARROW3D_SQUARE,
+                BULLET_CHECKBOX, BULLET_ARROW_DIAMOND_DISC,
+                BULLET_STAR_CIRCLE_SQUARE, BULLET_ARROW3D_CIRCLE_SQUARE,
+                BULLET_LEFTTRIANGLE_DIAMOND_DISC, NUMBERED_DIGIT_ALPHA_ROMAN,
+                NUMBERED_DIGIT_ALPHA_ROMAN_PARENS, NUMBERED_DIGIT_NESTED,
+                NUMBERED_UPPERALPHA_ALPHA_ROMAN, NUMBERED_UPPERROMAN_UPPERALPHA_DIGIT,
+                NUMBERED_ZERODIGIT_ALPHA_ROMAN
+            start_index: Start character index (0-based). If None, applies to all.
+            end_index: End character index (exclusive). If None, applies to all.
+        """
+        try:
+            if start_index is not None and end_index is not None:
+                text_range = {
+                    "type": "FIXED_RANGE",
+                    "startIndex": start_index,
+                    "endIndex": end_index,
+                }
+            else:
+                text_range = {"type": "ALL"}
+
+            request = {
+                "createParagraphBullets": {
+                    "objectId": object_id,
+                    "textRange": text_range,
+                    "bulletPreset": bullet_preset,
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.create_bullets",
+                presentation_id=presentation_id,
+                object_id=object_id,
+                bullet_preset=bullet_preset,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.create_bullets",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def remove_bullets(
+        self,
+        presentation_id: str,
+        object_id: str,
+        start_index: int | None = None,
+        end_index: int | None = None,
+    ) -> dict[str, Any]:
+        """Remove bullet list formatting from text.
+
+        Args:
+            presentation_id: The presentation ID.
+            object_id: The shape/text box object ID.
+            start_index: Start character index (0-based). If None, applies to all.
+            end_index: End character index (exclusive). If None, applies to all.
+        """
+        try:
+            if start_index is not None and end_index is not None:
+                text_range = {
+                    "type": "FIXED_RANGE",
+                    "startIndex": start_index,
+                    "endIndex": end_index,
+                }
+            else:
+                text_range = {"type": "ALL"}
+
+            request = {
+                "deleteParagraphBullets": {
+                    "objectId": object_id,
+                    "textRange": text_range,
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.remove_bullets",
+                presentation_id=presentation_id,
+                object_id=object_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.remove_bullets",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def style_table_borders(
+        self,
+        presentation_id: str,
+        table_id: str,
+        row_index: int,
+        column_index: int,
+        row_span: int = 1,
+        column_span: int = 1,
+        color: str = "#000000",
+        weight: float = 1.0,
+        dash_style: str = "SOLID",
+        border_position: str = "ALL",
+    ) -> dict[str, Any]:
+        """Style table cell borders.
+
+        Args:
+            presentation_id: The presentation ID.
+            table_id: The table object ID.
+            row_index: Starting row index.
+            column_index: Starting column index.
+            row_span: Number of rows to style.
+            column_span: Number of columns to style.
+            color: Border color (hex, e.g., "#000000").
+            weight: Border weight in points.
+            dash_style: Dash style (SOLID, DOT, DASH, DASH_DOT, LONG_DASH).
+            border_position: Which borders to style (ALL, INNER, OUTER,
+                INNER_HORIZONTAL, INNER_VERTICAL, LEFT, RIGHT, TOP, BOTTOM).
+        """
+        try:
+            from gws.utils.colors import parse_hex_color
+
+            valid_positions = {
+                "ALL", "INNER", "OUTER", "INNER_HORIZONTAL", "INNER_VERTICAL",
+                "LEFT", "RIGHT", "TOP", "BOTTOM"
+            }
+            if border_position.upper() not in valid_positions:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="slides.style_table_borders",
+                    message=f"border_position must be one of: {valid_positions}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            valid_styles = {"SOLID", "DOT", "DASH", "DASH_DOT", "LONG_DASH"}
+            if dash_style.upper() not in valid_styles:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="slides.style_table_borders",
+                    message=f"dash_style must be one of: {valid_styles}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            rgb = parse_hex_color(color)
+
+            request = {
+                "updateTableBorderProperties": {
+                    "objectId": table_id,
+                    "tableRange": {
+                        "location": {
+                            "rowIndex": row_index,
+                            "columnIndex": column_index,
+                        },
+                        "rowSpan": row_span,
+                        "columnSpan": column_span,
+                    },
+                    "borderPosition": border_position.upper(),
+                    "tableBorderProperties": {
+                        "tableBorderFill": {
+                            "solidFill": {"color": {"rgbColor": rgb}}
+                        },
+                        "weight": {"magnitude": weight, "unit": "PT"},
+                        "dashStyle": dash_style.upper(),
+                    },
+                    "fields": "tableBorderFill,weight,dashStyle",
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.style_table_borders",
+                presentation_id=presentation_id,
+                table_id=table_id,
+                border_position=border_position.upper(),
+                row_index=row_index,
+                column_index=column_index,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.style_table_borders",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def merge_table_cells(
+        self,
+        presentation_id: str,
+        table_id: str,
+        row_index: int,
+        column_index: int,
+        row_span: int,
+        column_span: int,
+    ) -> dict[str, Any]:
+        """Merge table cells.
+
+        Args:
+            presentation_id: The presentation ID.
+            table_id: The table object ID.
+            row_index: Starting row index.
+            column_index: Starting column index.
+            row_span: Number of rows to merge.
+            column_span: Number of columns to merge.
+        """
+        try:
+            request = {
+                "mergeTableCells": {
+                    "objectId": table_id,
+                    "tableRange": {
+                        "location": {
+                            "rowIndex": row_index,
+                            "columnIndex": column_index,
+                        },
+                        "rowSpan": row_span,
+                        "columnSpan": column_span,
+                    },
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.merge_table_cells",
+                presentation_id=presentation_id,
+                table_id=table_id,
+                row_index=row_index,
+                column_index=column_index,
+                row_span=row_span,
+                column_span=column_span,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.merge_table_cells",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def unmerge_table_cells(
+        self,
+        presentation_id: str,
+        table_id: str,
+        row_index: int,
+        column_index: int,
+        row_span: int,
+        column_span: int,
+    ) -> dict[str, Any]:
+        """Unmerge table cells.
+
+        Args:
+            presentation_id: The presentation ID.
+            table_id: The table object ID.
+            row_index: Starting row index.
+            column_index: Starting column index.
+            row_span: Number of rows in merged region.
+            column_span: Number of columns in merged region.
+        """
+        try:
+            request = {
+                "unmergeTableCells": {
+                    "objectId": table_id,
+                    "tableRange": {
+                        "location": {
+                            "rowIndex": row_index,
+                            "columnIndex": column_index,
+                        },
+                        "rowSpan": row_span,
+                        "columnSpan": column_span,
+                    },
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.unmerge_table_cells",
+                presentation_id=presentation_id,
+                table_id=table_id,
+                row_index=row_index,
+                column_index=column_index,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.unmerge_table_cells",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def create_line(
+        self,
+        presentation_id: str,
+        page_object_id: str,
+        start_x: float,
+        start_y: float,
+        end_x: float,
+        end_y: float,
+        line_category: str = "STRAIGHT",
+        color: str = "#000000",
+        weight: float = 1.0,
+        dash_style: str = "SOLID",
+        start_arrow: str | None = None,
+        end_arrow: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a line or arrow on a slide.
+
+        Args:
+            presentation_id: The presentation ID.
+            page_object_id: The slide/page object ID.
+            start_x: Starting X position in points.
+            start_y: Starting Y position in points.
+            end_x: Ending X position in points.
+            end_y: Ending Y position in points.
+            line_category: Line category (STRAIGHT, BENT, CURVED).
+            color: Line color (hex, e.g., "#000000").
+            weight: Line weight in points.
+            dash_style: Dash style (SOLID, DOT, DASH, DASH_DOT, LONG_DASH).
+            start_arrow: Start arrow type (NONE, STEALTH_ARROW, FILL_ARROW,
+                FILL_CIRCLE, FILL_SQUARE, FILL_DIAMOND, OPEN_ARROW,
+                OPEN_CIRCLE, OPEN_SQUARE, OPEN_DIAMOND).
+            end_arrow: End arrow type (same options as start_arrow).
+        """
+        try:
+            from gws.utils.colors import parse_hex_color
+
+            line_id = self._generate_object_id()
+
+            # Calculate width and height from start/end points
+            width = abs(end_x - start_x) or 1  # Minimum 1pt
+            height = abs(end_y - start_y) or 1
+
+            valid_categories = {"STRAIGHT", "BENT", "CURVED"}
+            if line_category.upper() not in valid_categories:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="slides.create_line",
+                    message=f"line_category must be one of: {valid_categories}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            request = {
+                "createLine": {
+                    "objectId": line_id,
+                    "lineCategory": line_category.upper(),
+                    "elementProperties": {
+                        "pageObjectId": page_object_id,
+                        "size": {
+                            "width": {"magnitude": width, "unit": "PT"},
+                            "height": {"magnitude": height, "unit": "PT"},
+                        },
+                        "transform": {
+                            "scaleX": 1 if end_x >= start_x else -1,
+                            "scaleY": 1 if end_y >= start_y else -1,
+                            "translateX": min(start_x, end_x),
+                            "translateY": min(start_y, end_y),
+                            "unit": "PT",
+                        },
+                    },
+                }
+            }
+
+            # Create the line first
+            requests = [request]
+
+            # Then update line properties
+            rgb = parse_hex_color(color)
+            line_properties: dict[str, Any] = {
+                "lineFill": {"solidFill": {"color": {"rgbColor": rgb}}},
+                "weight": {"magnitude": weight, "unit": "PT"},
+                "dashStyle": dash_style.upper(),
+            }
+            fields = ["lineFill", "weight", "dashStyle"]
+
+            if start_arrow:
+                line_properties["startArrow"] = start_arrow.upper()
+                fields.append("startArrow")
+            if end_arrow:
+                line_properties["endArrow"] = end_arrow.upper()
+                fields.append("endArrow")
+
+            update_request = {
+                "updateLineProperties": {
+                    "objectId": line_id,
+                    "lineProperties": line_properties,
+                    "fields": ",".join(fields),
+                }
+            }
+            requests.append(update_request)
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": requests}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.create_line",
+                presentation_id=presentation_id,
+                page_object_id=page_object_id,
+                line_id=line_id,
+                line_category=line_category.upper(),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.create_line",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def reorder_slides(
+        self,
+        presentation_id: str,
+        slide_ids: list[str],
+        insertion_index: int,
+    ) -> dict[str, Any]:
+        """Move slides to a new position.
+
+        Args:
+            presentation_id: The presentation ID.
+            slide_ids: List of slide object IDs to move.
+            insertion_index: Target index where slides will be moved (0-based).
+        """
+        try:
+            request = {
+                "updateSlidesPosition": {
+                    "slideObjectIds": slide_ids,
+                    "insertionIndex": insertion_index,
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.reorder_slides",
+                presentation_id=presentation_id,
+                slide_ids=slide_ids,
+                insertion_index=insertion_index,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.reorder_slides",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

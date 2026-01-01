@@ -1921,3 +1921,258 @@ class DocsService(BaseService):
                 message=f"Google Docs API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # NAMED RANGE OPERATIONS (Phase 7)
+    # =========================================================================
+
+    def create_named_range(
+        self,
+        document_id: str,
+        name: str,
+        start_index: int,
+        end_index: int,
+    ) -> dict[str, Any]:
+        """Create a named range (bookmark) in the document.
+
+        Args:
+            document_id: The document ID.
+            name: Name for the range (must be unique).
+            start_index: Start character index.
+            end_index: End character index.
+        """
+        try:
+            requests = [{
+                "createNamedRange": {
+                    "name": name,
+                    "range": {
+                        "startIndex": start_index,
+                        "endIndex": end_index,
+                    },
+                }
+            }]
+
+            result = self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            named_range_id = (
+                result.get("replies", [{}])[0]
+                .get("createNamedRange", {})
+                .get("namedRangeId")
+            )
+
+            output_success(
+                operation="docs.create_named_range",
+                document_id=document_id,
+                name=name,
+                named_range_id=named_range_id,
+                start_index=start_index,
+                end_index=end_index,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.create_named_range",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_named_range(
+        self,
+        document_id: str,
+        name: str | None = None,
+        named_range_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Delete a named range by name or ID.
+
+        Args:
+            document_id: The document ID.
+            name: Name of the range to delete.
+            named_range_id: ID of the range to delete.
+        """
+        try:
+            if not name and not named_range_id:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="docs.delete_named_range",
+                    message="Either name or named_range_id must be provided",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            request: dict[str, Any] = {"deleteNamedRange": {}}
+            if name:
+                request["deleteNamedRange"]["name"] = name
+            else:
+                request["deleteNamedRange"]["namedRangeId"] = named_range_id
+
+            result = self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": [request]}
+            ).execute()
+
+            output_success(
+                operation="docs.delete_named_range",
+                document_id=document_id,
+                name=name,
+                named_range_id=named_range_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.delete_named_range",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def list_named_ranges(self, document_id: str) -> dict[str, Any]:
+        """List all named ranges in the document."""
+        try:
+            doc = self.service.documents().get(documentId=document_id).execute()
+            named_ranges = doc.get("namedRanges", {})
+
+            range_info = []
+            for name, data in named_ranges.items():
+                for nr in data.get("namedRanges", []):
+                    ranges = nr.get("ranges", [])
+                    for r in ranges:
+                        range_info.append({
+                            "name": name,
+                            "id": nr.get("namedRangeId"),
+                            "start_index": r.get("startIndex"),
+                            "end_index": r.get("endIndex"),
+                        })
+
+            output_success(
+                operation="docs.list_named_ranges",
+                document_id=document_id,
+                count=len(range_info),
+                named_ranges=range_info,
+            )
+            return {"named_ranges": range_info}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.list_named_ranges",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # FOOTNOTE OPERATIONS (Phase 7)
+    # =========================================================================
+
+    def insert_footnote(
+        self,
+        document_id: str,
+        index: int,
+    ) -> dict[str, Any]:
+        """Insert a footnote reference at the specified index.
+
+        Args:
+            document_id: The document ID.
+            index: Character index where to insert the footnote reference.
+        """
+        try:
+            requests = [{
+                "createFootnote": {
+                    "location": {"index": index},
+                }
+            }]
+
+            result = self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            footnote_id = (
+                result.get("replies", [{}])[0]
+                .get("createFootnote", {})
+                .get("footnoteId")
+            )
+
+            output_success(
+                operation="docs.insert_footnote",
+                document_id=document_id,
+                index=index,
+                footnote_id=footnote_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.insert_footnote",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def list_footnotes(self, document_id: str) -> dict[str, Any]:
+        """List all footnotes in the document."""
+        try:
+            doc = self.service.documents().get(documentId=document_id).execute()
+            footnotes = doc.get("footnotes", {})
+
+            footnote_info = []
+            for fid, footnote in footnotes.items():
+                content = self._extract_text(footnote.get("content", []))
+                footnote_info.append({
+                    "id": fid,
+                    "content": content[:500] if content else "",
+                })
+
+            output_success(
+                operation="docs.list_footnotes",
+                document_id=document_id,
+                count=len(footnote_info),
+                footnotes=footnote_info,
+            )
+            return {"footnotes": footnote_info}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.list_footnotes",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_footnote_content(
+        self,
+        document_id: str,
+        footnote_id: str,
+        start_index: int,
+        end_index: int,
+    ) -> dict[str, Any]:
+        """Delete content from a footnote.
+
+        Note: Footnotes cannot be entirely deleted, only their content can be modified.
+        """
+        try:
+            requests = [{
+                "deleteContentRange": {
+                    "range": {
+                        "segmentId": footnote_id,
+                        "startIndex": start_index,
+                        "endIndex": end_index,
+                    }
+                }
+            }]
+
+            result = self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            output_success(
+                operation="docs.delete_footnote_content",
+                document_id=document_id,
+                footnote_id=footnote_id,
+                start_index=start_index,
+                end_index=end_index,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.delete_footnote_content",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

@@ -160,3 +160,191 @@ def delete_event(
     """Delete an event."""
     service = CalendarService()
     service.delete_event(event_id=event_id, calendar_id=calendar_id)
+
+
+# ===== Recurring Events =====
+
+
+@app.command("create-recurring")
+def create_recurring_event(
+    summary: Annotated[str, typer.Argument(help="Event title.")],
+    start: Annotated[str, typer.Argument(help="Start time (ISO 8601 format).")],
+    end: Annotated[str, typer.Argument(help="End time (ISO 8601 format).")],
+    rrule: Annotated[str, typer.Argument(help="RRULE recurrence rule (e.g., 'FREQ=WEEKLY;BYDAY=MO,WE,FR').")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+    timezone_str: Annotated[
+        str,
+        typer.Option("--timezone", "-tz", help="Timezone for the event (default: UTC)."),
+    ] = "UTC",
+    description: Annotated[
+        Optional[str],
+        typer.Option("--description", "-d", help="Event description."),
+    ] = None,
+    location: Annotated[
+        Optional[str],
+        typer.Option("--location", "-l", help="Event location."),
+    ] = None,
+    attendees: Annotated[
+        Optional[str],
+        typer.Option("--attendees", "-a", help="Comma-separated attendee emails."),
+    ] = None,
+) -> None:
+    """Create a recurring event.
+
+    Common RRULE examples:
+        FREQ=DAILY (every day)
+        FREQ=WEEKLY;BYDAY=MO,WE,FR (Mon, Wed, Fri)
+        FREQ=MONTHLY;BYMONTHDAY=15 (15th of each month)
+        FREQ=YEARLY (yearly)
+    """
+    attendee_list = [a.strip() for a in attendees.split(",")] if attendees else None
+
+    service = CalendarService()
+    service.create_recurring_event(
+        summary=summary,
+        start=start,
+        end=end,
+        rrule=rrule,
+        calendar_id=calendar_id,
+        timezone_str=timezone_str,
+        description=description,
+        location=location,
+        attendees=attendee_list,
+    )
+
+
+@app.command("instances")
+def get_instances(
+    event_id: Annotated[str, typer.Argument(help="Recurring event ID.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+    time_min: Annotated[
+        Optional[str],
+        typer.Option("--from", help="Start time (ISO 8601 format)."),
+    ] = None,
+    time_max: Annotated[
+        Optional[str],
+        typer.Option("--to", help="End time (ISO 8601 format)."),
+    ] = None,
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-n", help="Maximum instances to return."),
+    ] = 25,
+) -> None:
+    """List instances of a recurring event."""
+    service = CalendarService()
+    service.get_instances(
+        event_id=event_id,
+        calendar_id=calendar_id,
+        time_min=time_min,
+        time_max=time_max,
+        max_results=max_results,
+    )
+
+
+# ===== Attendee Management =====
+
+
+@app.command("add-attendees")
+def add_attendees(
+    event_id: Annotated[str, typer.Argument(help="Event ID.")],
+    emails: Annotated[str, typer.Argument(help="Comma-separated email addresses to add.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+    no_notify: Annotated[
+        bool,
+        typer.Option("--no-notify", help="Don't send email notifications."),
+    ] = False,
+) -> None:
+    """Add attendees to an event."""
+    email_list = [e.strip() for e in emails.split(",")]
+
+    service = CalendarService()
+    service.add_attendees(
+        event_id=event_id,
+        emails=email_list,
+        calendar_id=calendar_id,
+        send_notifications=not no_notify,
+    )
+
+
+@app.command("remove-attendees")
+def remove_attendees(
+    event_id: Annotated[str, typer.Argument(help="Event ID.")],
+    emails: Annotated[str, typer.Argument(help="Comma-separated email addresses to remove.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+    no_notify: Annotated[
+        bool,
+        typer.Option("--no-notify", help="Don't send email notifications."),
+    ] = False,
+) -> None:
+    """Remove attendees from an event."""
+    email_list = [e.strip() for e in emails.split(",")]
+
+    service = CalendarService()
+    service.remove_attendees(
+        event_id=event_id,
+        emails=email_list,
+        calendar_id=calendar_id,
+        send_notifications=not no_notify,
+    )
+
+
+@app.command("attendees")
+def get_attendees(
+    event_id: Annotated[str, typer.Argument(help="Event ID.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """List attendees and their RSVP status for an event."""
+    service = CalendarService()
+    service.get_attendees(event_id=event_id, calendar_id=calendar_id)
+
+
+@app.command("rsvp")
+def respond_to_event(
+    event_id: Annotated[str, typer.Argument(help="Event ID.")],
+    response: Annotated[str, typer.Argument(help="Response: accepted, declined, or tentative.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Respond to an event invitation (RSVP)."""
+    service = CalendarService()
+    service.respond_to_event(
+        event_id=event_id,
+        response=response,
+        calendar_id=calendar_id,
+    )
+
+
+@app.command("quick-add")
+def quick_add(
+    text: Annotated[str, typer.Argument(help="Natural language event description.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Create an event from natural language.
+
+    Examples:
+        "Meeting tomorrow at 3pm"
+        "Lunch with Bob on Friday at noon"
+        "Team standup every weekday at 9:30am"
+    """
+    service = CalendarService()
+    service.quick_add(text=text, calendar_id=calendar_id)

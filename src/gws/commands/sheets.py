@@ -600,3 +600,349 @@ def clear_conditional_formats(
         spreadsheet_id=spreadsheet_id,
         sheet_id=sheet_id,
     )
+
+
+@app.command("insert-rows")
+def insert_rows(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_index: Annotated[int, typer.Argument(help="Row index to insert at (0-indexed).")],
+    count: Annotated[int, typer.Argument(help="Number of rows to insert.")],
+    inherit_from_before: Annotated[
+        bool,
+        typer.Option("--inherit-before/--inherit-after", help="Inherit formatting from row before (default) or after."),
+    ] = True,
+) -> None:
+    """Insert rows at a specific index."""
+    service = SheetsService()
+    service.insert_rows(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_index=start_index,
+        count=count,
+        inherit_from_before=inherit_from_before,
+    )
+
+
+@app.command("insert-columns")
+def insert_columns(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_index: Annotated[int, typer.Argument(help="Column index to insert at (0-indexed).")],
+    count: Annotated[int, typer.Argument(help="Number of columns to insert.")],
+    inherit_from_before: Annotated[
+        bool,
+        typer.Option("--inherit-before/--inherit-after", help="Inherit formatting from column before (default) or after."),
+    ] = True,
+) -> None:
+    """Insert columns at a specific index."""
+    service = SheetsService()
+    service.insert_columns(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_index=start_index,
+        count=count,
+        inherit_from_before=inherit_from_before,
+    )
+
+
+@app.command("delete-rows")
+def delete_rows(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_index: Annotated[int, typer.Argument(help="Start row index (0-indexed, inclusive).")],
+    end_index: Annotated[int, typer.Argument(help="End row index (0-indexed, exclusive).")],
+) -> None:
+    """Delete rows in a range."""
+    service = SheetsService()
+    service.delete_rows(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_index=start_index,
+        end_index=end_index,
+    )
+
+
+@app.command("delete-columns")
+def delete_columns(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_index: Annotated[int, typer.Argument(help="Start column index (0-indexed, inclusive).")],
+    end_index: Annotated[int, typer.Argument(help="End column index (0-indexed, exclusive).")],
+) -> None:
+    """Delete columns in a range."""
+    service = SheetsService()
+    service.delete_columns(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_index=start_index,
+        end_index=end_index,
+    )
+
+
+@app.command("sort")
+def sort_range(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    start_col: Annotated[int, typer.Argument(help="Start column (0-indexed).")],
+    end_col: Annotated[int, typer.Argument(help="End column (exclusive).")],
+    sort_column: Annotated[int, typer.Argument(help="Column index to sort by (0-indexed).")],
+    descending: Annotated[
+        bool,
+        typer.Option("--desc", "-d", help="Sort in descending order."),
+    ] = False,
+) -> None:
+    """Sort a range by a column."""
+    service = SheetsService()
+    service.sort_range(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+        sort_column=sort_column,
+        ascending=not descending,
+    )
+
+
+@app.command("find-replace")
+def find_replace(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    find: Annotated[str, typer.Argument(help="Text to find.")],
+    replace: Annotated[str, typer.Argument(help="Replacement text.")],
+    sheet_id: Annotated[
+        Optional[int],
+        typer.Option("--sheet-id", "-s", help="Limit to specific sheet ID."),
+    ] = None,
+    all_sheets: Annotated[
+        bool,
+        typer.Option("--all-sheets", "-a", help="Search all sheets."),
+    ] = False,
+    match_case: Annotated[
+        bool,
+        typer.Option("--match-case", "-c", help="Case-sensitive matching."),
+    ] = False,
+    match_entire_cell: Annotated[
+        bool,
+        typer.Option("--entire-cell", "-e", help="Match entire cell contents."),
+    ] = False,
+    use_regex: Annotated[
+        bool,
+        typer.Option("--regex", "-r", help="Use regular expression."),
+    ] = False,
+) -> None:
+    """Find and replace text in a spreadsheet."""
+    service = SheetsService()
+    service.find_replace(
+        spreadsheet_id=spreadsheet_id,
+        find=find,
+        replace=replace,
+        sheet_id=sheet_id,
+        all_sheets=all_sheets,
+        match_case=match_case,
+        match_entire_cell=match_entire_cell,
+        use_regex=use_regex,
+    )
+
+
+@app.command("duplicate-sheet")
+def duplicate_sheet(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID to duplicate.")],
+    new_name: Annotated[
+        Optional[str],
+        typer.Option("--name", "-n", help="Name for the new sheet."),
+    ] = None,
+    insert_index: Annotated[
+        Optional[int],
+        typer.Option("--index", "-i", help="Position to insert the new sheet."),
+    ] = None,
+) -> None:
+    """Duplicate a sheet within the spreadsheet."""
+    service = SheetsService()
+    service.duplicate_sheet(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        new_name=new_name,
+        insert_index=insert_index,
+    )
+
+
+@app.command("set-validation")
+def set_validation(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    start_col: Annotated[int, typer.Argument(help="Start column (0-indexed).")],
+    end_col: Annotated[int, typer.Argument(help="End column (exclusive).")],
+    validation_type: Annotated[
+        str,
+        typer.Option(
+            "--type", "-t",
+            help="Validation type (ONE_OF_LIST, NUMBER_GREATER, TEXT_CONTAINS, etc.).",
+        ),
+    ],
+    values: Annotated[
+        Optional[str],
+        typer.Option("--values", "-v", help="Comma-separated values for list or conditions."),
+    ] = None,
+    formula: Annotated[
+        Optional[str],
+        typer.Option("--formula", "-f", help="Custom formula for CUSTOM_FORMULA type."),
+    ] = None,
+    allow_invalid: Annotated[
+        bool,
+        typer.Option("--allow-invalid", help="Allow invalid input with warning."),
+    ] = False,
+    no_dropdown: Annotated[
+        bool,
+        typer.Option("--no-dropdown", help="Hide dropdown for list validation."),
+    ] = False,
+) -> None:
+    """Set data validation on a cell range.
+
+    Validation types: ONE_OF_LIST, NUMBER_GREATER, NUMBER_LESS, NUMBER_BETWEEN,
+    TEXT_CONTAINS, TEXT_IS_EMAIL, DATE_BEFORE, CUSTOM_FORMULA, etc.
+    """
+    values_list = [v.strip() for v in values.split(",")] if values else None
+
+    service = SheetsService()
+    service.set_data_validation(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+        validation_type=validation_type,
+        values=values_list,
+        formula=formula,
+        strict=not allow_invalid,
+        show_dropdown=not no_dropdown,
+    )
+
+
+@app.command("clear-validation")
+def clear_validation(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    start_col: Annotated[int, typer.Argument(help="Start column (0-indexed).")],
+    end_col: Annotated[int, typer.Argument(help="End column (exclusive).")],
+) -> None:
+    """Clear data validation from a cell range."""
+    service = SheetsService()
+    service.clear_data_validation(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+    )
+
+
+@app.command("add-chart")
+def add_chart(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    chart_type: Annotated[
+        str, typer.Argument(help="Chart type (LINE, COLUMN, BAR, PIE, SCATTER, AREA).")
+    ],
+    data_start_row: Annotated[int, typer.Argument(help="Data range start row (0-indexed).")],
+    data_end_row: Annotated[int, typer.Argument(help="Data range end row (exclusive).")],
+    data_start_col: Annotated[int, typer.Argument(help="Data range start column (0-indexed).")],
+    data_end_col: Annotated[int, typer.Argument(help="Data range end column (exclusive).")],
+    anchor_row: Annotated[int, typer.Option("--anchor-row", "-r", help="Anchor row (0-indexed).")] = 0,
+    anchor_col: Annotated[int, typer.Option("--anchor-col", "-c", help="Anchor column (0-indexed).")] = 5,
+    title: Annotated[
+        Optional[str],
+        typer.Option("--title", "-t", help="Chart title."),
+    ] = None,
+    legend: Annotated[
+        str,
+        typer.Option("--legend", "-l", help="Legend position (BOTTOM_LEGEND, NO_LEGEND, etc.)."),
+    ] = "BOTTOM_LEGEND",
+) -> None:
+    """Add a chart to a sheet."""
+    service = SheetsService()
+    service.add_chart(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        chart_type=chart_type,
+        data_range_start_row=data_start_row,
+        data_range_end_row=data_end_row,
+        data_range_start_col=data_start_col,
+        data_range_end_col=data_end_col,
+        anchor_row=anchor_row,
+        anchor_col=anchor_col,
+        title=title,
+        legend_position=legend,
+    )
+
+
+@app.command("delete-chart")
+def delete_chart(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    chart_id: Annotated[int, typer.Argument(help="Chart ID to delete.")],
+) -> None:
+    """Delete a chart from a spreadsheet."""
+    service = SheetsService()
+    service.delete_chart(
+        spreadsheet_id=spreadsheet_id,
+        chart_id=chart_id,
+    )
+
+
+@app.command("add-banding")
+def add_banding(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    start_col: Annotated[int, typer.Argument(help="Start column (0-indexed).")],
+    end_col: Annotated[int, typer.Argument(help="End column (exclusive).")],
+    header_color: Annotated[
+        Optional[str],
+        typer.Option("--header-color", help="Header row color (hex, e.g., #4285F4)."),
+    ] = None,
+    first_color: Annotated[
+        Optional[str],
+        typer.Option("--first-color", help="First alternating color (hex)."),
+    ] = None,
+    second_color: Annotated[
+        Optional[str],
+        typer.Option("--second-color", help="Second alternating color (hex)."),
+    ] = None,
+) -> None:
+    """Add alternating row colors (banding) to a range."""
+    service = SheetsService()
+    service.add_banding(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+        header_color=header_color,
+        first_color=first_color,
+        second_color=second_color,
+    )
+
+
+@app.command("delete-banding")
+def delete_banding(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    banded_range_id: Annotated[int, typer.Argument(help="Banded range ID to delete.")],
+) -> None:
+    """Delete a banded range (alternating colors) from a spreadsheet."""
+    service = SheetsService()
+    service.delete_banding(
+        spreadsheet_id=spreadsheet_id,
+        banded_range_id=banded_range_id,
+    )

@@ -875,3 +875,82 @@ def document_style(
         page_height=page_height,
         use_first_page_header_footer=use_first_page_header_footer,
     )
+
+
+# =============================================================================
+# NAMED RANGE COMMANDS (Phase 7)
+# =============================================================================
+
+
+@app.command("create-named-range")
+def create_named_range(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    name: Annotated[str, typer.Argument(help="Name for the range (must be unique).")],
+    start_index: Annotated[int, typer.Argument(help="Start character index.")],
+    end_index: Annotated[int, typer.Argument(help="End character index.")],
+) -> None:
+    """Create a named range (bookmark) in the document."""
+    service = DocsService()
+    service.create_named_range(
+        document_id=document_id,
+        name=name,
+        start_index=start_index,
+        end_index=end_index,
+    )
+
+
+@app.command("delete-named-range")
+def delete_named_range(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    name: Annotated[
+        Optional[str],
+        typer.Option("--name", "-n", help="Name of the range to delete."),
+    ] = None,
+    range_id: Annotated[
+        Optional[str],
+        typer.Option("--id", "-i", help="ID of the range to delete."),
+    ] = None,
+) -> None:
+    """Delete a named range by name or ID."""
+    service = DocsService()
+    service.delete_named_range(
+        document_id=document_id,
+        name=name,
+        named_range_id=range_id,
+    )
+
+
+@app.command("list-named-ranges")
+def list_named_ranges(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+) -> None:
+    """List all named ranges (bookmarks) in the document."""
+    service = DocsService()
+    service.list_named_ranges(document_id=document_id)
+
+
+# =============================================================================
+# FOOTNOTE COMMANDS (Phase 7)
+# =============================================================================
+
+
+@app.command("insert-footnote")
+def insert_footnote(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    index: Annotated[int, typer.Argument(help="Character index to insert footnote reference.")],
+) -> None:
+    """Insert a footnote reference at the specified index.
+
+    After creation, use insert-segment-text with the footnote ID to add footnote content.
+    """
+    service = DocsService()
+    service.insert_footnote(document_id=document_id, index=index)
+
+
+@app.command("list-footnotes")
+def list_footnotes(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+) -> None:
+    """List all footnotes in the document."""
+    service = DocsService()
+    service.list_footnotes(document_id=document_id)

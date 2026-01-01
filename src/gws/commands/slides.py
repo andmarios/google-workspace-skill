@@ -575,3 +575,240 @@ def insert_table_text(
         column_index=column_index,
         text=text,
     )
+
+
+# ===== Phase 6: Slides Enhancements =====
+
+
+@app.command("set-background")
+def set_background(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    slide_id: Annotated[str, typer.Argument(help="Slide object ID.")],
+    color: Annotated[
+        Optional[str],
+        typer.Option("--color", "-c", help="Background color (hex, e.g., #FFFFFF)."),
+    ] = None,
+    image_url: Annotated[
+        Optional[str],
+        typer.Option("--image", "-i", help="Background image URL."),
+    ] = None,
+) -> None:
+    """Set slide background to a color or image."""
+    service = SlidesService()
+    service.set_slide_background(
+        presentation_id=presentation_id,
+        slide_id=slide_id,
+        color=color,
+        image_url=image_url,
+    )
+
+
+@app.command("create-bullets")
+def create_bullets(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_id: Annotated[str, typer.Argument(help="Shape/text box object ID.")],
+    bullet_preset: Annotated[
+        str,
+        typer.Option(
+            "--preset", "-p",
+            help="Bullet preset (BULLET_DISC_CIRCLE_SQUARE, NUMBERED_DIGIT_ALPHA_ROMAN, etc.).",
+        ),
+    ] = "BULLET_DISC_CIRCLE_SQUARE",
+    start_index: Annotated[
+        Optional[int],
+        typer.Option("--start", help="Start character index (0-based)."),
+    ] = None,
+    end_index: Annotated[
+        Optional[int],
+        typer.Option("--end", help="End character index (exclusive)."),
+    ] = None,
+) -> None:
+    """Add bullet list formatting to text."""
+    service = SlidesService()
+    service.create_bullets(
+        presentation_id=presentation_id,
+        object_id=object_id,
+        bullet_preset=bullet_preset,
+        start_index=start_index,
+        end_index=end_index,
+    )
+
+
+@app.command("remove-bullets")
+def remove_bullets(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_id: Annotated[str, typer.Argument(help="Shape/text box object ID.")],
+    start_index: Annotated[
+        Optional[int],
+        typer.Option("--start", help="Start character index (0-based)."),
+    ] = None,
+    end_index: Annotated[
+        Optional[int],
+        typer.Option("--end", help="End character index (exclusive)."),
+    ] = None,
+) -> None:
+    """Remove bullet list formatting from text."""
+    service = SlidesService()
+    service.remove_bullets(
+        presentation_id=presentation_id,
+        object_id=object_id,
+        start_index=start_index,
+        end_index=end_index,
+    )
+
+
+@app.command("style-table-borders")
+def style_table_borders(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    row_index: Annotated[int, typer.Argument(help="Starting row index.")],
+    column_index: Annotated[int, typer.Argument(help="Starting column index.")],
+    row_span: Annotated[
+        int,
+        typer.Option("--rows", "-r", help="Number of rows to style."),
+    ] = 1,
+    column_span: Annotated[
+        int,
+        typer.Option("--cols", "-c", help="Number of columns to style."),
+    ] = 1,
+    color: Annotated[
+        str,
+        typer.Option("--color", help="Border color (hex)."),
+    ] = "#000000",
+    weight: Annotated[
+        float,
+        typer.Option("--weight", "-w", help="Border weight in points."),
+    ] = 1.0,
+    dash_style: Annotated[
+        str,
+        typer.Option("--style", "-s", help="Dash style (SOLID, DOT, DASH, etc.)."),
+    ] = "SOLID",
+    border_position: Annotated[
+        str,
+        typer.Option("--position", "-p", help="Border position (ALL, INNER, OUTER, etc.)."),
+    ] = "ALL",
+) -> None:
+    """Style table cell borders."""
+    service = SlidesService()
+    service.style_table_borders(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        row_index=row_index,
+        column_index=column_index,
+        row_span=row_span,
+        column_span=column_span,
+        color=color,
+        weight=weight,
+        dash_style=dash_style,
+        border_position=border_position,
+    )
+
+
+@app.command("merge-table-cells")
+def merge_table_cells(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    row_index: Annotated[int, typer.Argument(help="Starting row index.")],
+    column_index: Annotated[int, typer.Argument(help="Starting column index.")],
+    row_span: Annotated[int, typer.Argument(help="Number of rows to merge.")],
+    column_span: Annotated[int, typer.Argument(help="Number of columns to merge.")],
+) -> None:
+    """Merge table cells into one."""
+    service = SlidesService()
+    service.merge_table_cells(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        row_index=row_index,
+        column_index=column_index,
+        row_span=row_span,
+        column_span=column_span,
+    )
+
+
+@app.command("unmerge-table-cells")
+def unmerge_table_cells(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    row_index: Annotated[int, typer.Argument(help="Starting row index.")],
+    column_index: Annotated[int, typer.Argument(help="Starting column index.")],
+    row_span: Annotated[int, typer.Argument(help="Number of rows in merged region.")],
+    column_span: Annotated[int, typer.Argument(help="Number of columns in merged region.")],
+) -> None:
+    """Unmerge previously merged table cells."""
+    service = SlidesService()
+    service.unmerge_table_cells(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        row_index=row_index,
+        column_index=column_index,
+        row_span=row_span,
+        column_span=column_span,
+    )
+
+
+@app.command("create-line")
+def create_line(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    page_id: Annotated[str, typer.Argument(help="Page/slide object ID.")],
+    start_x: Annotated[float, typer.Option("--start-x", help="Start X position in points.")],
+    start_y: Annotated[float, typer.Option("--start-y", help="Start Y position in points.")],
+    end_x: Annotated[float, typer.Option("--end-x", help="End X position in points.")],
+    end_y: Annotated[float, typer.Option("--end-y", help="End Y position in points.")],
+    line_category: Annotated[
+        str,
+        typer.Option("--category", "-c", help="Line category (STRAIGHT, BENT, CURVED)."),
+    ] = "STRAIGHT",
+    color: Annotated[
+        str,
+        typer.Option("--color", help="Line color (hex)."),
+    ] = "#000000",
+    weight: Annotated[
+        float,
+        typer.Option("--weight", "-w", help="Line weight in points."),
+    ] = 1.0,
+    dash_style: Annotated[
+        str,
+        typer.Option("--style", "-s", help="Dash style (SOLID, DOT, DASH, etc.)."),
+    ] = "SOLID",
+    start_arrow: Annotated[
+        Optional[str],
+        typer.Option("--start-arrow", help="Start arrow type (FILL_ARROW, OPEN_ARROW, etc.)."),
+    ] = None,
+    end_arrow: Annotated[
+        Optional[str],
+        typer.Option("--end-arrow", help="End arrow type (FILL_ARROW, OPEN_ARROW, etc.)."),
+    ] = None,
+) -> None:
+    """Create a line or arrow on a slide."""
+    service = SlidesService()
+    service.create_line(
+        presentation_id=presentation_id,
+        page_object_id=page_id,
+        start_x=start_x,
+        start_y=start_y,
+        end_x=end_x,
+        end_y=end_y,
+        line_category=line_category,
+        color=color,
+        weight=weight,
+        dash_style=dash_style,
+        start_arrow=start_arrow,
+        end_arrow=end_arrow,
+    )
+
+
+@app.command("reorder-slides")
+def reorder_slides(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    slide_ids: Annotated[str, typer.Argument(help="Comma-separated slide object IDs to move.")],
+    insertion_index: Annotated[int, typer.Argument(help="Target index (0-based).")],
+) -> None:
+    """Move slides to a new position."""
+    slide_id_list = [s.strip() for s in slide_ids.split(",")]
+
+    service = SlidesService()
+    service.reorder_slides(
+        presentation_id=presentation_id,
+        slide_ids=slide_id_list,
+        insertion_index=insertion_index,
+    )
