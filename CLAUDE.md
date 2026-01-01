@@ -7,7 +7,9 @@ This file provides context for Claude when working on this codebase.
 This is a **Claude Code skill** that provides Google Workspace integration. The skill exposes a CLI (`gws`) that Claude invokes to interact with Google APIs.
 
 **Key distinction:**
-- `SKILL.md` - Instructions for Claude when **using** the skill (command reference)
+- `SKILL.md` - Instructions for Claude when **using** the skill (overview, navigation)
+- `reference/*.md` - Service-specific API documentation (docs, sheets, slides, etc.)
+- `SKILL-advanced.md` - Design best practices, content creation, API efficiency
 - `CLAUDE.md` - Instructions for Claude when **developing** the skill (this file)
 
 ## Architecture
@@ -112,7 +114,7 @@ Stored in `~/.claude/.google/`:
 
 1. Add method to service class in `src/gws/services/<service>.py`
 2. Add CLI command in `src/gws/commands/<service>.py`
-3. Document in `SKILL.md`
+3. Document in the appropriate reference file (`reference/<service>.md`)
 
 ### Adding a New Service
 
@@ -121,7 +123,8 @@ Stored in `~/.claude/.google/`:
 3. Register in `src/gws/cli.py`: `app.add_typer(newservice.app, name="newservice")`
 4. Add scopes to `src/gws/auth/scopes.py`
 5. Add to `Config.ALL_SERVICES` in `src/gws/config.py`
-6. Document in `SKILL.md`
+6. Create `reference/newservice.md` with API documentation
+7. Add navigation entry in `SKILL.md` Services Reference table
 
 ## Important Notes
 

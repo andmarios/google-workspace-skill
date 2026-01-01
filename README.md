@@ -107,7 +107,8 @@ All credentials are stored in `~/.claude/.google/`:
 
 ## Skill Documentation
 
-For detailed command reference and examples, see [SKILL.md](SKILL.md).
+- [SKILL.md](SKILL.md) - Command reference and API overview
+- [SKILL-advanced.md](SKILL-advanced.md) - Design best practices, content creation tips, API efficiency
 
 ## License
 
