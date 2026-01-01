@@ -199,3 +199,133 @@ def delete_file(
     """Delete a file (moves to trash by default)."""
     service = DriveService()
     service.delete(file_id=file_id, permanent=permanent)
+
+
+# ===== Comments =====
+
+
+@app.command("list-comments")
+def list_comments(
+    file_id: Annotated[str, typer.Argument(help="File ID to list comments for.")],
+    include_deleted: Annotated[
+        bool,
+        typer.Option("--include-deleted", help="Include deleted comments."),
+    ] = False,
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum number of comments to return."),
+    ] = 20,
+) -> None:
+    """List comments on a file."""
+    service = DriveService()
+    service.list_comments(
+        file_id=file_id, include_deleted=include_deleted, max_results=max_results
+    )
+
+
+@app.command("add-comment")
+def add_comment(
+    file_id: Annotated[str, typer.Argument(help="File ID to comment on.")],
+    content: Annotated[str, typer.Argument(help="Comment text.")],
+) -> None:
+    """Add a comment to a file."""
+    service = DriveService()
+    service.add_comment(file_id=file_id, content=content)
+
+
+@app.command("resolve-comment")
+def resolve_comment(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    comment_id: Annotated[str, typer.Argument(help="Comment ID to resolve.")],
+) -> None:
+    """Mark a comment as resolved."""
+    service = DriveService()
+    service.resolve_comment(file_id=file_id, comment_id=comment_id)
+
+
+@app.command("delete-comment")
+def delete_comment(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    comment_id: Annotated[str, typer.Argument(help="Comment ID to delete.")],
+) -> None:
+    """Delete a comment."""
+    service = DriveService()
+    service.delete_comment(file_id=file_id, comment_id=comment_id)
+
+
+@app.command("reply-to-comment")
+def reply_to_comment(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    comment_id: Annotated[str, typer.Argument(help="Comment ID to reply to.")],
+    content: Annotated[str, typer.Argument(help="Reply text.")],
+) -> None:
+    """Reply to a comment."""
+    service = DriveService()
+    service.reply_to_comment(file_id=file_id, comment_id=comment_id, content=content)
+
+
+# ===== Revisions =====
+
+
+@app.command("list-revisions")
+def list_revisions(
+    file_id: Annotated[str, typer.Argument(help="File ID to list revisions for.")],
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum number of revisions to return."),
+    ] = 20,
+) -> None:
+    """List revisions of a file."""
+    service = DriveService()
+    service.list_revisions(file_id=file_id, max_results=max_results)
+
+
+@app.command("get-revision")
+def get_revision(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    revision_id: Annotated[str, typer.Argument(help="Revision ID.")],
+) -> None:
+    """Get metadata for a specific revision."""
+    service = DriveService()
+    service.get_revision(file_id=file_id, revision_id=revision_id)
+
+
+@app.command("delete-revision")
+def delete_revision(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    revision_id: Annotated[str, typer.Argument(help="Revision ID to delete.")],
+) -> None:
+    """Delete a revision (cannot delete the last remaining revision)."""
+    service = DriveService()
+    service.delete_revision(file_id=file_id, revision_id=revision_id)
+
+
+# ===== Trash =====
+
+
+@app.command("list-trash")
+def list_trash(
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum number of files to return."),
+    ] = 20,
+) -> None:
+    """List files in trash."""
+    service = DriveService()
+    service.list_trash(max_results=max_results)
+
+
+@app.command("restore")
+def restore_from_trash(
+    file_id: Annotated[str, typer.Argument(help="File ID to restore from trash.")],
+) -> None:
+    """Restore a file from trash."""
+    service = DriveService()
+    service.restore_from_trash(file_id=file_id)
+
+
+@app.command("empty-trash")
+def empty_trash() -> None:
+    """Permanently delete all files in trash."""
+    service = DriveService()
+    service.empty_trash()

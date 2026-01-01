@@ -105,13 +105,13 @@ uv run gws auth logout
 
 | Service | Operations | Description |
 |---------|------------|-------------|
-| `drive` | 11 | File upload, download, share, organize |
-| `docs` | 42 | Full document editing, tables, formatting, headers/footers, lists, named ranges, footnotes |
-| `sheets` | 35 | Read, write, format, borders, merge, conditional formatting, charts, data validation, sorting |
-| `slides` | 32 | Create, edit, shapes, tables, backgrounds, bullets, lines, cell merging |
-| `gmail` | 22 | List, read, send, search, labels, drafts, attachments |
-| `calendar` | 13 | Manage calendar events, recurring events, attendees, RSVP |
-| `contacts` | 5 | Manage contacts (People API) |
+| `drive` | 22 | File upload, download, share, organize, comments, revisions, trash |
+| `docs` | 44 | Full document editing, tables, formatting, headers/footers, lists, named ranges, footnotes, suggestions |
+| `sheets` | 49 | Read, write, format, borders, merge, conditional formatting, charts, data validation, sorting, filters, pivot tables, protected ranges, named ranges |
+| `slides` | 36 | Create, edit, shapes, tables, backgrounds, bullets, lines, cell merging, speaker notes, videos |
+| `gmail` | 31 | List, read, send, search, labels, drafts, attachments, threads, vacation, signatures |
+| `calendar` | 18 | Manage calendar events, recurring events, attendees, RSVP, free/busy, calendar sharing |
+| `contacts` | 15 | Manage contacts, groups, photos (People API) |
 | `convert` | 3 | Markdown to Docs/Slides/PDF |
 
 ## Drive Operations
@@ -153,6 +153,54 @@ uv run gws drive delete <file_id>
 
 # Export Google file format
 uv run gws drive export <file_id> /path/to/output.pdf --format pdf
+```
+
+### Comments
+
+```bash
+# List comments on a file
+uv run gws drive list-comments <file_id> --max 20
+
+# Include deleted comments
+uv run gws drive list-comments <file_id> --include-deleted
+
+# Add a comment
+uv run gws drive add-comment <file_id> "This needs review"
+
+# Reply to a comment
+uv run gws drive reply-to-comment <file_id> <comment_id> "Good point, fixed."
+
+# Resolve a comment
+uv run gws drive resolve-comment <file_id> <comment_id>
+
+# Delete a comment
+uv run gws drive delete-comment <file_id> <comment_id>
+```
+
+### Revisions
+
+```bash
+# List file revisions
+uv run gws drive list-revisions <file_id> --max 20
+
+# Get revision metadata
+uv run gws drive get-revision <file_id> <revision_id>
+
+# Delete a revision (cannot delete the last remaining revision)
+uv run gws drive delete-revision <file_id> <revision_id>
+```
+
+### Trash Management
+
+```bash
+# List files in trash
+uv run gws drive list-trash --max 20
+
+# Restore a file from trash
+uv run gws drive restore <file_id>
+
+# Permanently delete all files in trash
+uv run gws drive empty-trash
 ```
 
 ## Docs Operations
@@ -343,6 +391,18 @@ uv run gws docs list-footnotes <document_id>
 # Add content to a footnote (use insert-segment-text with footnote ID)
 uv run gws docs insert-segment-text <document_id> <footnote_id> "Footnote text here" --index 0
 ```
+
+### Suggestions (Tracked Changes)
+
+```bash
+# Get all pending suggestions in a document
+uv run gws docs suggestions <document_id>
+
+# Check if document has pending suggestions
+uv run gws docs document-mode <document_id>
+```
+
+**Note**: The Docs API can read suggestions (insertions, deletions, style changes) but cannot accept or reject them programmatically. Use the Google Docs UI to accept or reject suggestions.
 
 ## Sheets Operations
 
@@ -590,6 +650,69 @@ uv run gws sheets add-banding <spreadsheet_id> <sheet_id> 0 20 0 5 \
 uv run gws sheets delete-banding <spreadsheet_id> <banding_id>
 ```
 
+### Filters
+
+```bash
+# Set a basic filter on a range (enables filter dropdowns)
+uv run gws sheets set-filter <spreadsheet_id> <sheet_id> 0 100 0 5
+
+# Clear basic filter
+uv run gws sheets clear-filter <spreadsheet_id> <sheet_id>
+
+# Create a filter view (saved view with specific filters)
+uv run gws sheets create-filter-view <spreadsheet_id> <sheet_id> 0 100 0 5 "My Filter"
+
+# List filter views
+uv run gws sheets list-filter-views <spreadsheet_id> <sheet_id>
+
+# Delete filter view
+uv run gws sheets delete-filter-view <spreadsheet_id> <filter_view_id>
+```
+
+### Pivot Tables
+
+```bash
+# Create a pivot table from source data
+uv run gws sheets create-pivot-table <spreadsheet_id> <source_sheet_id> 0 100 0 5 \
+    <target_sheet_id> 0 0 --row-source 0 --column-source 1 --value-source 2 \
+    --summarize SUM
+
+# List pivot tables in a sheet
+uv run gws sheets list-pivot-tables <spreadsheet_id> <sheet_id>
+```
+
+**Summarize functions**: SUM, COUNTA, COUNT, COUNTUNIQUE, AVERAGE, MAX, MIN, MEDIAN, PRODUCT, STDEV, STDEVP, VAR, VARP
+
+### Protected Ranges
+
+```bash
+# Protect a range (only you can edit)
+uv run gws sheets protect-range <spreadsheet_id> <sheet_id> 0 10 0 5 \
+    --description "Header row - do not edit"
+
+# Protect entire sheet
+uv run gws sheets protect-sheet <spreadsheet_id> <sheet_id> --description "Locked sheet"
+
+# List protected ranges
+uv run gws sheets list-protected-ranges <spreadsheet_id>
+
+# Unprotect a range
+uv run gws sheets unprotect-range <spreadsheet_id> <protected_range_id>
+```
+
+### Named Ranges
+
+```bash
+# Create a named range
+uv run gws sheets create-named-range <spreadsheet_id> <sheet_id> 0 10 0 3 "SalesData"
+
+# List named ranges
+uv run gws sheets list-named-ranges <spreadsheet_id>
+
+# Delete named range
+uv run gws sheets delete-named-range <spreadsheet_id> <named_range_id>
+```
+
 ## Slides Operations
 
 ### Basic Operations
@@ -826,6 +949,28 @@ uv run gws slides create-line <presentation_id> <slide_id> \
 uv run gws slides reorder-slides <presentation_id> "slide_id1,slide_id2" 0
 ```
 
+### Speaker Notes
+
+```bash
+# Get speaker notes for a slide
+uv run gws slides get-speaker-notes <presentation_id> <slide_id>
+
+# Set speaker notes for a slide
+uv run gws slides set-speaker-notes <presentation_id> <slide_id> "Notes for this slide"
+```
+
+### Videos
+
+```bash
+# Insert a YouTube video
+uv run gws slides insert-video <presentation_id> <slide_id> "dQw4w9WgXcQ" \
+    --x 100 --y 100 --width 400 --height 225
+
+# Update video properties (autoplay, mute, start/end times)
+uv run gws slides update-video-properties <presentation_id> <video_id> \
+    --autoplay --mute --start 10 --end 60
+```
+
 ## Gmail Operations
 
 ### Basic Operations
@@ -921,6 +1066,55 @@ uv run gws gmail list-attachments <message_id>
 uv run gws gmail download-attachment <message_id> <attachment_id> /path/to/output.pdf
 ```
 
+### Threads
+
+```bash
+# List threads
+uv run gws gmail threads --max 10
+
+# Read a thread (all messages in conversation)
+uv run gws gmail get-thread <thread_id>
+
+# Move thread to trash
+uv run gws gmail trash-thread <thread_id>
+
+# Restore thread from trash
+uv run gws gmail untrash-thread <thread_id>
+
+# Add/remove labels from entire thread
+uv run gws gmail modify-thread-labels <thread_id> --add "IMPORTANT" --remove "UNREAD"
+```
+
+### Settings
+
+```bash
+# Get vacation responder settings
+uv run gws gmail get-vacation
+
+# Enable vacation responder
+uv run gws gmail set-vacation \
+    --subject "Out of Office" \
+    --body "I'm currently out of the office and will return on Monday." \
+    --enable
+
+# Disable vacation responder
+uv run gws gmail set-vacation --disable
+
+# Vacation with date range
+uv run gws gmail set-vacation \
+    --subject "On Vacation" \
+    --body "I'll be back soon!" \
+    --start-time "2025-12-20T00:00:00Z" \
+    --end-time "2025-12-31T00:00:00Z" \
+    --contacts-only
+
+# Get email signature
+uv run gws gmail get-signature
+
+# Set email signature (HTML)
+uv run gws gmail set-signature "<p><b>John Doe</b><br>Software Engineer</p>"
+```
+
 ## Calendar Operations
 
 ### Basic Operations
@@ -996,7 +1190,49 @@ uv run gws calendar rsvp <event_id> declined
 uv run gws calendar rsvp <event_id> tentative
 ```
 
+### Free/Busy
+
+```bash
+# Query free/busy information
+uv run gws calendar freebusy "2025-01-15T00:00:00Z" "2025-01-16T00:00:00Z"
+
+# Query multiple calendars
+uv run gws calendar freebusy "2025-01-15T00:00:00Z" "2025-01-16T00:00:00Z" \
+    --calendars "primary,calendar_id_2"
+
+# Query with timezone
+uv run gws calendar freebusy "2025-01-15T09:00:00" "2025-01-15T18:00:00" \
+    --timezone "America/New_York"
+```
+
+### Calendar Sharing (ACL)
+
+```bash
+# List who has access to a calendar
+uv run gws calendar list-acl --calendar <calendar_id>
+
+# Share calendar with a user (read-only)
+uv run gws calendar add-acl user "alice@example.com" reader
+
+# Share calendar with a user (can edit)
+uv run gws calendar add-acl user "bob@example.com" writer
+
+# Share with everyone in a domain (free/busy only)
+uv run gws calendar add-acl domain "example.com" freeBusyReader
+
+# Update access level
+uv run gws calendar update-acl <rule_id> writer
+
+# Remove access
+uv run gws calendar remove-acl <rule_id>
+```
+
+**Scope types**: user, group, domain, default
+**Roles**: reader, writer, owner, freeBusyReader
+
 ## Contacts Operations
+
+### Basic Operations
 
 ```bash
 # List contacts
@@ -1013,6 +1249,50 @@ uv run gws contacts update <resource_name> --email "newemail@example.com"
 
 # Delete contact
 uv run gws contacts delete <resource_name>
+```
+
+### Contact Groups
+
+```bash
+# List all contact groups
+uv run gws contacts groups
+
+# Get a group with its members
+uv run gws contacts get-group <group_resource_name>
+
+# Get group without member list
+uv run gws contacts get-group <group_resource_name> --no-members
+
+# Create a new group
+uv run gws contacts create-group "Work Colleagues"
+
+# Rename a group
+uv run gws contacts update-group <group_resource_name> "New Group Name"
+
+# Delete a group (keeps contacts)
+uv run gws contacts delete-group <group_resource_name>
+
+# Delete group AND its contacts
+uv run gws contacts delete-group <group_resource_name> --delete-contacts
+
+# Add contacts to a group
+uv run gws contacts add-to-group <group_resource_name> "people/c123,people/c456"
+
+# Remove contacts from a group
+uv run gws contacts remove-from-group <group_resource_name> "people/c123"
+```
+
+### Contact Photos
+
+```bash
+# Get a contact's photo URL
+uv run gws contacts get-photo <resource_name>
+
+# Set a contact's photo from a local file (JPEG or PNG, max 2MB)
+uv run gws contacts set-photo <resource_name> /path/to/photo.jpg
+
+# Delete a contact's photo
+uv run gws contacts delete-photo <resource_name>
 ```
 
 ## Document Conversion

@@ -954,3 +954,37 @@ def list_footnotes(
     """List all footnotes in the document."""
     service = DocsService()
     service.list_footnotes(document_id=document_id)
+
+
+# =============================================================================
+# SUGGESTION COMMANDS (Phase 8)
+# =============================================================================
+
+
+@app.command("suggestions")
+def get_suggestions(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+) -> None:
+    """Get all pending suggestions (tracked changes) in the document.
+
+    Returns suggestions including insertions, deletions, and style changes
+    made while in "Suggesting" mode in Google Docs.
+
+    Note: The Docs API can read suggestions but cannot accept/reject them
+    programmatically. Use the Google Docs UI to accept or reject.
+    """
+    service = DocsService()
+    service.get_suggestions(document_id=document_id)
+
+
+@app.command("document-mode")
+def get_document_mode(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+) -> None:
+    """Check if document has pending suggestions.
+
+    Returns information about whether the document has pending tracked changes
+    and a count of unique suggestions.
+    """
+    service = DocsService()
+    service.get_document_mode(document_id=document_id)

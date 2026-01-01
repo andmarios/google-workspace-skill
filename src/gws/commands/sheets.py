@@ -946,3 +946,288 @@ def delete_banding(
         spreadsheet_id=spreadsheet_id,
         banded_range_id=banded_range_id,
     )
+
+
+# ===== Filters =====
+
+
+@app.command("set-basic-filter")
+def set_basic_filter(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    start_col: Annotated[int, typer.Argument(help="Start column (0-indexed).")],
+    end_col: Annotated[int, typer.Argument(help="End column (exclusive).")],
+) -> None:
+    """Set a basic filter on a range (enables filter dropdowns in column headers)."""
+    service = SheetsService()
+    service.set_basic_filter(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+    )
+
+
+@app.command("clear-basic-filter")
+def clear_basic_filter(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+) -> None:
+    """Clear the basic filter from a sheet."""
+    service = SheetsService()
+    service.clear_basic_filter(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+    )
+
+
+@app.command("create-filter-view")
+def create_filter_view(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    title: Annotated[str, typer.Argument(help="Filter view name.")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    start_col: Annotated[int, typer.Argument(help="Start column (0-indexed).")],
+    end_col: Annotated[int, typer.Argument(help="End column (exclusive).")],
+) -> None:
+    """Create a named filter view (saveable filter configuration)."""
+    service = SheetsService()
+    service.create_filter_view(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        title=title,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+    )
+
+
+@app.command("list-filter-views")
+def list_filter_views(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+) -> None:
+    """List all filter views in a spreadsheet."""
+    service = SheetsService()
+    service.list_filter_views(spreadsheet_id=spreadsheet_id)
+
+
+@app.command("delete-filter-view")
+def delete_filter_view(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    filter_view_id: Annotated[int, typer.Argument(help="Filter view ID to delete.")],
+) -> None:
+    """Delete a filter view."""
+    service = SheetsService()
+    service.delete_filter_view(
+        spreadsheet_id=spreadsheet_id,
+        filter_view_id=filter_view_id,
+    )
+
+
+# ===== Pivot Tables =====
+
+
+@app.command("create-pivot-table")
+def create_pivot_table(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    source_sheet_id: Annotated[int, typer.Argument(help="Source data sheet ID.")],
+    source_start_row: Annotated[int, typer.Argument(help="Source start row (0-indexed).")],
+    source_end_row: Annotated[int, typer.Argument(help="Source end row (exclusive).")],
+    source_start_col: Annotated[int, typer.Argument(help="Source start column (0-indexed).")],
+    source_end_col: Annotated[int, typer.Argument(help="Source end column (exclusive).")],
+    target_sheet_id: Annotated[int, typer.Argument(help="Target sheet ID for pivot table.")],
+    target_row: Annotated[int, typer.Argument(help="Target start row (0-indexed).")],
+    target_col: Annotated[int, typer.Argument(help="Target start column (0-indexed).")],
+    row_columns: Annotated[str, typer.Argument(help="Comma-separated column indices for row grouping.")],
+    value_columns: Annotated[str, typer.Argument(help="Comma-separated column indices for values.")],
+    value_functions: Annotated[
+        Optional[str],
+        typer.Option("--functions", "-f", help="Comma-separated aggregation functions (SUM, AVERAGE, COUNT, MAX, MIN). Defaults to SUM."),
+    ] = None,
+    column_columns: Annotated[
+        Optional[str],
+        typer.Option("--column-groups", "-c", help="Comma-separated column indices for column grouping."),
+    ] = None,
+) -> None:
+    """Create a pivot table from source data.
+
+    Example:
+        gws sheets create-pivot-table SPREADSHEET_ID 0 0 100 0 5 0 0 0 "0" "2,3" -f "SUM,AVERAGE"
+    """
+    row_cols = [int(c.strip()) for c in row_columns.split(",")]
+    val_cols = [int(c.strip()) for c in value_columns.split(",")]
+    val_funcs = [f.strip().upper() for f in value_functions.split(",")] if value_functions else None
+    col_cols = [int(c.strip()) for c in column_columns.split(",")] if column_columns else None
+
+    service = SheetsService()
+    service.create_pivot_table(
+        spreadsheet_id=spreadsheet_id,
+        source_sheet_id=source_sheet_id,
+        source_start_row=source_start_row,
+        source_end_row=source_end_row,
+        source_start_col=source_start_col,
+        source_end_col=source_end_col,
+        target_sheet_id=target_sheet_id,
+        target_row=target_row,
+        target_col=target_col,
+        row_source_columns=row_cols,
+        value_source_columns=val_cols,
+        value_functions=val_funcs,
+        column_source_columns=col_cols,
+    )
+
+
+@app.command("list-pivot-tables")
+def list_pivot_tables(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+) -> None:
+    """List all pivot tables in a spreadsheet."""
+    service = SheetsService()
+    service.list_pivot_tables(spreadsheet_id=spreadsheet_id)
+
+
+# ===== Protected Ranges =====
+
+
+@app.command("protect-range")
+def protect_range(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    start_col: Annotated[int, typer.Argument(help="Start column (0-indexed).")],
+    end_col: Annotated[int, typer.Argument(help="End column (exclusive).")],
+    description: Annotated[
+        Optional[str],
+        typer.Option("--description", "-d", help="Description of the protected range."),
+    ] = None,
+    warning_only: Annotated[
+        bool,
+        typer.Option("--warning-only", "-w", help="Show warning but allow editing."),
+    ] = False,
+    editors: Annotated[
+        Optional[str],
+        typer.Option("--editors", "-e", help="Comma-separated email addresses that can edit."),
+    ] = None,
+) -> None:
+    """Protect a range from editing."""
+    editor_list = [e.strip() for e in editors.split(",")] if editors else None
+
+    service = SheetsService()
+    service.protect_range(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+        description=description,
+        warning_only=warning_only,
+        editors=editor_list,
+    )
+
+
+@app.command("protect-sheet")
+def protect_sheet(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    description: Annotated[
+        Optional[str],
+        typer.Option("--description", "-d", help="Description of the protection."),
+    ] = None,
+    warning_only: Annotated[
+        bool,
+        typer.Option("--warning-only", "-w", help="Show warning but allow editing."),
+    ] = False,
+    editors: Annotated[
+        Optional[str],
+        typer.Option("--editors", "-e", help="Comma-separated email addresses that can edit."),
+    ] = None,
+) -> None:
+    """Protect an entire sheet from editing."""
+    editor_list = [e.strip() for e in editors.split(",")] if editors else None
+
+    service = SheetsService()
+    service.protect_sheet(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        description=description,
+        warning_only=warning_only,
+        editors=editor_list,
+    )
+
+
+@app.command("list-protected-ranges")
+def list_protected_ranges(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+) -> None:
+    """List all protected ranges in a spreadsheet."""
+    service = SheetsService()
+    service.list_protected_ranges(spreadsheet_id=spreadsheet_id)
+
+
+@app.command("unprotect-range")
+def unprotect_range(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    protected_range_id: Annotated[int, typer.Argument(help="Protected range ID to remove.")],
+) -> None:
+    """Remove protection from a range."""
+    service = SheetsService()
+    service.unprotect_range(
+        spreadsheet_id=spreadsheet_id,
+        protected_range_id=protected_range_id,
+    )
+
+
+# ===== Named Ranges =====
+
+
+@app.command("create-named-range")
+def create_named_range(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    name: Annotated[str, typer.Argument(help="Name for the range (must be valid identifier).")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    start_col: Annotated[int, typer.Argument(help="Start column (0-indexed).")],
+    end_col: Annotated[int, typer.Argument(help="End column (exclusive).")],
+) -> None:
+    """Create a named range for use in formulas."""
+    service = SheetsService()
+    service.create_named_range(
+        spreadsheet_id=spreadsheet_id,
+        name=name,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+    )
+
+
+@app.command("list-named-ranges")
+def list_named_ranges(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+) -> None:
+    """List all named ranges in a spreadsheet."""
+    service = SheetsService()
+    service.list_named_ranges(spreadsheet_id=spreadsheet_id)
+
+
+@app.command("delete-named-range")
+def delete_named_range(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    named_range_id: Annotated[str, typer.Argument(help="Named range ID to delete.")],
+) -> None:
+    """Delete a named range."""
+    service = SheetsService()
+    service.delete_named_range(
+        spreadsheet_id=spreadsheet_id,
+        named_range_id=named_range_id,
+    )

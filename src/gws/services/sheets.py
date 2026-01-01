@@ -2308,3 +2308,788 @@ class SheetsService(BaseService):
                 message=f"Google Sheets API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # FILTER OPERATIONS
+    # =========================================================================
+
+    def set_basic_filter(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+    ) -> dict[str, Any]:
+        """Set a basic filter on a range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID.
+            start_row: Starting row index (0-indexed).
+            end_row: Ending row index (exclusive).
+            start_col: Starting column index (0-indexed).
+            end_col: Ending column index (exclusive).
+        """
+        try:
+            requests = [{
+                "setBasicFilter": {
+                    "filter": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": start_row,
+                            "endRowIndex": end_row,
+                            "startColumnIndex": start_col,
+                            "endColumnIndex": end_col,
+                        }
+                    }
+                }
+            }]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.set_basic_filter",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                range=f"R{start_row}C{start_col}:R{end_row}C{end_col}",
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.set_basic_filter",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def clear_basic_filter(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+    ) -> dict[str, Any]:
+        """Clear the basic filter from a sheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID.
+        """
+        try:
+            requests = [{"clearBasicFilter": {"sheetId": sheet_id}}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.clear_basic_filter",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.clear_basic_filter",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def create_filter_view(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        title: str,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+    ) -> dict[str, Any]:
+        """Create a named filter view.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID.
+            title: Name for the filter view.
+            start_row: Starting row index (0-indexed).
+            end_row: Ending row index (exclusive).
+            start_col: Starting column index (0-indexed).
+            end_col: Ending column index (exclusive).
+        """
+        try:
+            requests = [{
+                "addFilterView": {
+                    "filter": {
+                        "title": title,
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": start_row,
+                            "endRowIndex": end_row,
+                            "startColumnIndex": start_col,
+                            "endColumnIndex": end_col,
+                        }
+                    }
+                }
+            }]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            filter_view_id = (
+                result.get("replies", [{}])[0]
+                .get("addFilterView", {})
+                .get("filter", {})
+                .get("filterViewId")
+            )
+
+            output_success(
+                operation="sheets.create_filter_view",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                title=title,
+                filter_view_id=filter_view_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.create_filter_view",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def list_filter_views(
+        self,
+        spreadsheet_id: str,
+    ) -> dict[str, Any]:
+        """List all filter views in a spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+        """
+        try:
+            spreadsheet = (
+                self.service.spreadsheets()
+                .get(spreadsheetId=spreadsheet_id)
+                .execute()
+            )
+
+            filter_views = []
+            for sheet in spreadsheet.get("sheets", []):
+                sheet_title = sheet["properties"]["title"]
+                sheet_id = sheet["properties"]["sheetId"]
+                for fv in sheet.get("filterViews", []):
+                    filter_views.append({
+                        "filter_view_id": fv.get("filterViewId"),
+                        "title": fv.get("title"),
+                        "sheet_id": sheet_id,
+                        "sheet_title": sheet_title,
+                        "range": fv.get("range"),
+                    })
+
+            output_success(
+                operation="sheets.list_filter_views",
+                spreadsheet_id=spreadsheet_id,
+                count=len(filter_views),
+                filter_views=filter_views,
+            )
+            return {"filter_views": filter_views}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.list_filter_views",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_filter_view(
+        self,
+        spreadsheet_id: str,
+        filter_view_id: int,
+    ) -> dict[str, Any]:
+        """Delete a filter view.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            filter_view_id: The filter view ID to delete.
+        """
+        try:
+            requests = [{"deleteFilterView": {"filterId": filter_view_id}}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.delete_filter_view",
+                spreadsheet_id=spreadsheet_id,
+                filter_view_id=filter_view_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.delete_filter_view",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # PIVOT TABLE OPERATIONS
+    # =========================================================================
+
+    def create_pivot_table(
+        self,
+        spreadsheet_id: str,
+        source_sheet_id: int,
+        source_start_row: int,
+        source_end_row: int,
+        source_start_col: int,
+        source_end_col: int,
+        target_sheet_id: int,
+        target_row: int,
+        target_col: int,
+        row_source_columns: list[int],
+        value_source_columns: list[int],
+        value_functions: list[str] | None = None,
+        column_source_columns: list[int] | None = None,
+    ) -> dict[str, Any]:
+        """Create a pivot table.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            source_sheet_id: Sheet ID containing source data.
+            source_start_row: Source data start row (0-indexed).
+            source_end_row: Source data end row (exclusive).
+            source_start_col: Source data start column (0-indexed).
+            source_end_col: Source data end column (exclusive).
+            target_sheet_id: Sheet ID for pivot table output.
+            target_row: Target row for pivot table (0-indexed).
+            target_col: Target column for pivot table (0-indexed).
+            row_source_columns: List of column indices to use as row groups.
+            value_source_columns: List of column indices to aggregate.
+            value_functions: Aggregation functions (SUM, AVERAGE, COUNT, MAX, MIN, etc.).
+            column_source_columns: Optional column indices for column groups.
+        """
+        try:
+            if value_functions is None:
+                value_functions = ["SUM"] * len(value_source_columns)
+
+            # Build row groups
+            rows = []
+            for col_idx in row_source_columns:
+                rows.append({
+                    "sourceColumnOffset": col_idx,
+                    "showTotals": True,
+                    "sortOrder": "ASCENDING",
+                })
+
+            # Build values
+            values = []
+            for i, col_idx in enumerate(value_source_columns):
+                func = value_functions[i] if i < len(value_functions) else "SUM"
+                values.append({
+                    "sourceColumnOffset": col_idx,
+                    "summarizeFunction": func.upper(),
+                })
+
+            # Build columns (optional)
+            columns = []
+            if column_source_columns:
+                for col_idx in column_source_columns:
+                    columns.append({
+                        "sourceColumnOffset": col_idx,
+                        "showTotals": True,
+                        "sortOrder": "ASCENDING",
+                    })
+
+            pivot_table: dict[str, Any] = {
+                "source": {
+                    "sheetId": source_sheet_id,
+                    "startRowIndex": source_start_row,
+                    "endRowIndex": source_end_row,
+                    "startColumnIndex": source_start_col,
+                    "endColumnIndex": source_end_col,
+                },
+                "rows": rows,
+                "values": values,
+            }
+            if columns:
+                pivot_table["columns"] = columns
+
+            requests = [{
+                "updateCells": {
+                    "rows": [{
+                        "values": [{
+                            "pivotTable": pivot_table
+                        }]
+                    }],
+                    "start": {
+                        "sheetId": target_sheet_id,
+                        "rowIndex": target_row,
+                        "columnIndex": target_col,
+                    },
+                    "fields": "pivotTable",
+                }
+            }]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.create_pivot_table",
+                spreadsheet_id=spreadsheet_id,
+                source_sheet_id=source_sheet_id,
+                target_sheet_id=target_sheet_id,
+                target_location=f"R{target_row}C{target_col}",
+                row_groups=len(row_source_columns),
+                values=len(value_source_columns),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.create_pivot_table",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def list_pivot_tables(
+        self,
+        spreadsheet_id: str,
+    ) -> dict[str, Any]:
+        """List all pivot tables in a spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+        """
+        try:
+            spreadsheet = (
+                self.service.spreadsheets()
+                .get(spreadsheetId=spreadsheet_id, includeGridData=False)
+                .execute()
+            )
+
+            pivot_tables = []
+            for sheet in spreadsheet.get("sheets", []):
+                sheet_title = sheet["properties"]["title"]
+                sheet_id = sheet["properties"]["sheetId"]
+                for pt in sheet.get("data", [{}])[0].get("rowData", []) if sheet.get("data") else []:
+                    for cell in pt.get("values", []):
+                        if "pivotTable" in cell:
+                            pivot_tables.append({
+                                "sheet_id": sheet_id,
+                                "sheet_title": sheet_title,
+                                "source": cell["pivotTable"].get("source"),
+                            })
+
+            # Alternative: check the sheets structure for pivot tables
+            for sheet in spreadsheet.get("sheets", []):
+                sheet_title = sheet["properties"]["title"]
+                sheet_id = sheet["properties"]["sheetId"]
+                for pivot in sheet.get("pivotTables", []):
+                    pivot_tables.append({
+                        "sheet_id": sheet_id,
+                        "sheet_title": sheet_title,
+                        "source": pivot.get("source"),
+                        "rows": len(pivot.get("rows", [])),
+                        "columns": len(pivot.get("columns", [])),
+                        "values": len(pivot.get("values", [])),
+                    })
+
+            output_success(
+                operation="sheets.list_pivot_tables",
+                spreadsheet_id=spreadsheet_id,
+                count=len(pivot_tables),
+                pivot_tables=pivot_tables,
+            )
+            return {"pivot_tables": pivot_tables}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.list_pivot_tables",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # PROTECTED RANGES
+    # =========================================================================
+
+    def protect_range(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+        description: str | None = None,
+        warning_only: bool = False,
+        editors: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Protect a range from editing.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID.
+            start_row: Start row index (0-indexed).
+            end_row: End row index (exclusive).
+            start_col: Start column index (0-indexed).
+            end_col: End column index (exclusive).
+            description: Description of the protected range.
+            warning_only: If True, shows warning but allows editing.
+            editors: List of email addresses that can edit.
+        """
+        try:
+            protected_range: dict[str, Any] = {
+                "range": {
+                    "sheetId": sheet_id,
+                    "startRowIndex": start_row,
+                    "endRowIndex": end_row,
+                    "startColumnIndex": start_col,
+                    "endColumnIndex": end_col,
+                },
+                "warningOnly": warning_only,
+            }
+
+            if description:
+                protected_range["description"] = description
+
+            if editors:
+                protected_range["editors"] = {"users": editors}
+
+            requests = [{"addProtectedRange": {"protectedRange": protected_range}}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            protected_range_id = (
+                result.get("replies", [{}])[0]
+                .get("addProtectedRange", {})
+                .get("protectedRange", {})
+                .get("protectedRangeId")
+            )
+
+            output_success(
+                operation="sheets.protect_range",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                protected_range_id=protected_range_id,
+                range=f"R{start_row}C{start_col}:R{end_row}C{end_col}",
+                warning_only=warning_only,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.protect_range",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def protect_sheet(
+        self,
+        spreadsheet_id: str,
+        sheet_id: int,
+        description: str | None = None,
+        warning_only: bool = False,
+        editors: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Protect an entire sheet from editing.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            sheet_id: The sheet ID.
+            description: Description of the protection.
+            warning_only: If True, shows warning but allows editing.
+            editors: List of email addresses that can edit.
+        """
+        try:
+            protected_range: dict[str, Any] = {
+                "range": {"sheetId": sheet_id},
+                "warningOnly": warning_only,
+            }
+
+            if description:
+                protected_range["description"] = description
+
+            if editors:
+                protected_range["editors"] = {"users": editors}
+
+            requests = [{"addProtectedRange": {"protectedRange": protected_range}}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            protected_range_id = (
+                result.get("replies", [{}])[0]
+                .get("addProtectedRange", {})
+                .get("protectedRange", {})
+                .get("protectedRangeId")
+            )
+
+            output_success(
+                operation="sheets.protect_sheet",
+                spreadsheet_id=spreadsheet_id,
+                sheet_id=sheet_id,
+                protected_range_id=protected_range_id,
+                warning_only=warning_only,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.protect_sheet",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def list_protected_ranges(
+        self,
+        spreadsheet_id: str,
+    ) -> dict[str, Any]:
+        """List all protected ranges in a spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+        """
+        try:
+            spreadsheet = (
+                self.service.spreadsheets()
+                .get(spreadsheetId=spreadsheet_id)
+                .execute()
+            )
+
+            protected_ranges = []
+            for sheet in spreadsheet.get("sheets", []):
+                sheet_title = sheet["properties"]["title"]
+                sheet_id = sheet["properties"]["sheetId"]
+                for pr in sheet.get("protectedRanges", []):
+                    protected_ranges.append({
+                        "protected_range_id": pr.get("protectedRangeId"),
+                        "description": pr.get("description"),
+                        "sheet_id": sheet_id,
+                        "sheet_title": sheet_title,
+                        "range": pr.get("range"),
+                        "warning_only": pr.get("warningOnly", False),
+                        "editors": pr.get("editors", {}).get("users", []),
+                    })
+
+            output_success(
+                operation="sheets.list_protected_ranges",
+                spreadsheet_id=spreadsheet_id,
+                count=len(protected_ranges),
+                protected_ranges=protected_ranges,
+            )
+            return {"protected_ranges": protected_ranges}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.list_protected_ranges",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def unprotect_range(
+        self,
+        spreadsheet_id: str,
+        protected_range_id: int,
+    ) -> dict[str, Any]:
+        """Remove protection from a range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            protected_range_id: The protected range ID to remove.
+        """
+        try:
+            requests = [{"deleteProtectedRange": {"protectedRangeId": protected_range_id}}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.unprotect_range",
+                spreadsheet_id=spreadsheet_id,
+                protected_range_id=protected_range_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.unprotect_range",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # NAMED RANGES
+    # =========================================================================
+
+    def create_named_range(
+        self,
+        spreadsheet_id: str,
+        name: str,
+        sheet_id: int,
+        start_row: int,
+        end_row: int,
+        start_col: int,
+        end_col: int,
+    ) -> dict[str, Any]:
+        """Create a named range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            name: Name for the range (must be valid identifier).
+            sheet_id: The sheet ID.
+            start_row: Start row index (0-indexed).
+            end_row: End row index (exclusive).
+            start_col: Start column index (0-indexed).
+            end_col: End column index (exclusive).
+        """
+        try:
+            requests = [{
+                "addNamedRange": {
+                    "namedRange": {
+                        "name": name,
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": start_row,
+                            "endRowIndex": end_row,
+                            "startColumnIndex": start_col,
+                            "endColumnIndex": end_col,
+                        }
+                    }
+                }
+            }]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            named_range_id = (
+                result.get("replies", [{}])[0]
+                .get("addNamedRange", {})
+                .get("namedRange", {})
+                .get("namedRangeId")
+            )
+
+            output_success(
+                operation="sheets.create_named_range",
+                spreadsheet_id=spreadsheet_id,
+                name=name,
+                named_range_id=named_range_id,
+                range=f"R{start_row}C{start_col}:R{end_row}C{end_col}",
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.create_named_range",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def list_named_ranges(
+        self,
+        spreadsheet_id: str,
+    ) -> dict[str, Any]:
+        """List all named ranges in a spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+        """
+        try:
+            spreadsheet = (
+                self.service.spreadsheets()
+                .get(spreadsheetId=spreadsheet_id)
+                .execute()
+            )
+
+            named_ranges = []
+            for nr in spreadsheet.get("namedRanges", []):
+                range_info = nr.get("range", {})
+                named_ranges.append({
+                    "named_range_id": nr.get("namedRangeId"),
+                    "name": nr.get("name"),
+                    "sheet_id": range_info.get("sheetId"),
+                    "start_row": range_info.get("startRowIndex"),
+                    "end_row": range_info.get("endRowIndex"),
+                    "start_col": range_info.get("startColumnIndex"),
+                    "end_col": range_info.get("endColumnIndex"),
+                })
+
+            output_success(
+                operation="sheets.list_named_ranges",
+                spreadsheet_id=spreadsheet_id,
+                count=len(named_ranges),
+                named_ranges=named_ranges,
+            )
+            return {"named_ranges": named_ranges}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.list_named_ranges",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_named_range(
+        self,
+        spreadsheet_id: str,
+        named_range_id: str,
+    ) -> dict[str, Any]:
+        """Delete a named range.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            named_range_id: The named range ID to delete.
+        """
+        try:
+            requests = [{"deleteNamedRange": {"namedRangeId": named_range_id}}]
+
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="sheets.delete_named_range",
+                spreadsheet_id=spreadsheet_id,
+                named_range_id=named_range_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.delete_named_range",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

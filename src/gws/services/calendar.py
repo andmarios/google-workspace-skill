@@ -679,3 +679,244 @@ class CalendarService(BaseService):
                 message=f"Calendar API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # FREE/BUSY QUERIES
+    # =========================================================================
+
+    def get_freebusy(
+        self,
+        time_min: str,
+        time_max: str,
+        calendar_ids: list[str] | None = None,
+        timezone_str: str = "UTC",
+    ) -> dict[str, Any]:
+        """Query free/busy information for calendars.
+
+        Args:
+            time_min: Start time (ISO 8601 format).
+            time_max: End time (ISO 8601 format).
+            calendar_ids: List of calendar IDs to query (default: primary).
+            timezone_str: Timezone for the query.
+        """
+        try:
+            if not calendar_ids:
+                calendar_ids = ["primary"]
+
+            items = [{"id": cal_id} for cal_id in calendar_ids]
+
+            body = {
+                "timeMin": time_min,
+                "timeMax": time_max,
+                "timeZone": timezone_str,
+                "items": items,
+            }
+
+            result = self.service.freebusy().query(body=body).execute()
+
+            calendars = {}
+            for cal_id, cal_data in result.get("calendars", {}).items():
+                busy_times = []
+                for busy in cal_data.get("busy", []):
+                    busy_times.append({
+                        "start": busy.get("start"),
+                        "end": busy.get("end"),
+                    })
+                calendars[cal_id] = {
+                    "busy": busy_times,
+                    "errors": cal_data.get("errors", []),
+                }
+
+            output_success(
+                operation="calendar.get_freebusy",
+                time_min=time_min,
+                time_max=time_max,
+                calendars=calendars,
+            )
+            return {"calendars": calendars}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.get_freebusy",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # CALENDAR SHARING (ACL)
+    # =========================================================================
+
+    def list_acl(
+        self,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """List access control rules for a calendar.
+
+        Args:
+            calendar_id: Calendar ID.
+        """
+        try:
+            result = self.service.acl().list(calendarId=calendar_id).execute()
+
+            rules = []
+            for rule in result.get("items", []):
+                rules.append({
+                    "rule_id": rule.get("id"),
+                    "scope_type": rule.get("scope", {}).get("type"),
+                    "scope_value": rule.get("scope", {}).get("value"),
+                    "role": rule.get("role"),
+                })
+
+            output_success(
+                operation="calendar.list_acl",
+                calendar_id=calendar_id,
+                rule_count=len(rules),
+                rules=rules,
+            )
+            return {"rules": rules}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.list_acl",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def add_acl(
+        self,
+        scope_type: str,
+        scope_value: str,
+        role: str,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Add an access control rule to a calendar.
+
+        Args:
+            scope_type: Scope type (user, group, domain, default).
+            scope_value: Email address or domain.
+            role: Role to grant (reader, writer, owner, freeBusyReader, none).
+            calendar_id: Calendar ID.
+        """
+        try:
+            valid_scope_types = {"user", "group", "domain", "default"}
+            if scope_type.lower() not in valid_scope_types:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="calendar.add_acl",
+                    message=f"scope_type must be one of: {valid_scope_types}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            valid_roles = {"reader", "writer", "owner", "freeBusyReader", "none"}
+            if role.lower() not in {r.lower() for r in valid_roles}:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="calendar.add_acl",
+                    message=f"role must be one of: {valid_roles}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            body = {
+                "scope": {
+                    "type": scope_type.lower(),
+                    "value": scope_value,
+                },
+                "role": role,
+            }
+
+            result = self.service.acl().insert(calendarId=calendar_id, body=body).execute()
+
+            output_success(
+                operation="calendar.add_acl",
+                calendar_id=calendar_id,
+                rule_id=result.get("id"),
+                scope_type=scope_type,
+                scope_value=scope_value,
+                role=role,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.add_acl",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def remove_acl(
+        self,
+        rule_id: str,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Remove an access control rule from a calendar.
+
+        Args:
+            rule_id: The ACL rule ID to remove.
+            calendar_id: Calendar ID.
+        """
+        try:
+            self.service.acl().delete(calendarId=calendar_id, ruleId=rule_id).execute()
+
+            output_success(
+                operation="calendar.remove_acl",
+                calendar_id=calendar_id,
+                rule_id=rule_id,
+            )
+            return {"rule_id": rule_id, "status": "removed"}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.remove_acl",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def update_acl(
+        self,
+        rule_id: str,
+        role: str,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Update an access control rule.
+
+        Args:
+            rule_id: The ACL rule ID to update.
+            role: New role (reader, writer, owner, freeBusyReader, none).
+            calendar_id: Calendar ID.
+        """
+        try:
+            valid_roles = {"reader", "writer", "owner", "freeBusyReader", "none"}
+            if role.lower() not in {r.lower() for r in valid_roles}:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="calendar.update_acl",
+                    message=f"role must be one of: {valid_roles}",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            # First get the existing rule to preserve scope
+            existing = self.service.acl().get(calendarId=calendar_id, ruleId=rule_id).execute()
+
+            body = {
+                "scope": existing.get("scope"),
+                "role": role,
+            }
+
+            result = self.service.acl().update(
+                calendarId=calendar_id, ruleId=rule_id, body=body
+            ).execute()
+
+            output_success(
+                operation="calendar.update_acl",
+                calendar_id=calendar_id,
+                rule_id=rule_id,
+                role=role,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.update_acl",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

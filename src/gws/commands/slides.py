@@ -812,3 +812,93 @@ def reorder_slides(
         slide_ids=slide_id_list,
         insertion_index=insertion_index,
     )
+
+
+# ===== Speaker Notes =====
+
+
+@app.command("get-speaker-notes")
+def get_speaker_notes(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    slide_id: Annotated[str, typer.Argument(help="Slide object ID.")],
+) -> None:
+    """Get speaker notes for a slide."""
+    service = SlidesService()
+    service.get_speaker_notes(
+        presentation_id=presentation_id,
+        slide_id=slide_id,
+    )
+
+
+@app.command("set-speaker-notes")
+def set_speaker_notes(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    slide_id: Annotated[str, typer.Argument(help="Slide object ID.")],
+    notes_text: Annotated[str, typer.Argument(help="Speaker notes text content.")],
+) -> None:
+    """Set speaker notes for a slide."""
+    service = SlidesService()
+    service.set_speaker_notes(
+        presentation_id=presentation_id,
+        slide_id=slide_id,
+        notes_text=notes_text,
+    )
+
+
+# ===== Video =====
+
+
+@app.command("insert-video")
+def insert_video(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    page_id: Annotated[str, typer.Argument(help="Slide/page object ID.")],
+    video_url: Annotated[str, typer.Argument(help="YouTube video URL.")],
+    x: Annotated[float, typer.Argument(help="X position in points.")],
+    y: Annotated[float, typer.Argument(help="Y position in points.")],
+    width: Annotated[float, typer.Argument(help="Width in points.")],
+    height: Annotated[float, typer.Argument(help="Height in points.")],
+) -> None:
+    """Insert a YouTube video on a slide."""
+    service = SlidesService()
+    service.insert_video(
+        presentation_id=presentation_id,
+        page_object_id=page_id,
+        video_url=video_url,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
+    )
+
+
+@app.command("update-video-properties")
+def update_video_properties(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    video_object_id: Annotated[str, typer.Argument(help="Video object ID.")],
+    autoplay: Annotated[
+        Optional[bool],
+        typer.Option("--autoplay", help="Autoplay when presenting."),
+    ] = None,
+    start_time: Annotated[
+        Optional[int],
+        typer.Option("--start", "-s", help="Start time in seconds."),
+    ] = None,
+    end_time: Annotated[
+        Optional[int],
+        typer.Option("--end", "-e", help="End time in seconds."),
+    ] = None,
+    mute: Annotated[
+        Optional[bool],
+        typer.Option("--mute", "-m", help="Mute video."),
+    ] = None,
+) -> None:
+    """Update video playback properties."""
+    service = SlidesService()
+    service.update_video_properties(
+        presentation_id=presentation_id,
+        video_object_id=video_object_id,
+        autoplay=autoplay,
+        start_time=start_time,
+        end_time=end_time,
+        mute=mute,
+    )

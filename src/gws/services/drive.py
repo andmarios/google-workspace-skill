@@ -565,3 +565,422 @@ class DriveService(BaseService):
                 message=f"Google Drive API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # COMMENTS
+    # =========================================================================
+
+    def list_comments(
+        self,
+        file_id: str,
+        include_deleted: bool = False,
+        max_results: int = 20,
+    ) -> dict[str, Any]:
+        """List comments on a file.
+
+        Args:
+            file_id: The file ID.
+            include_deleted: Include deleted comments.
+            max_results: Maximum comments to return.
+        """
+        try:
+            result = (
+                self.service.comments()
+                .list(
+                    fileId=file_id,
+                    includeDeleted=include_deleted,
+                    pageSize=max_results,
+                    fields="comments(id,content,author,createdTime,modifiedTime,resolved,replies)",
+                )
+                .execute()
+            )
+
+            comments = []
+            for comment in result.get("comments", []):
+                comments.append({
+                    "comment_id": comment.get("id"),
+                    "content": comment.get("content"),
+                    "author": comment.get("author", {}).get("displayName"),
+                    "created_time": comment.get("createdTime"),
+                    "resolved": comment.get("resolved", False),
+                    "reply_count": len(comment.get("replies", [])),
+                })
+
+            output_success(
+                operation="drive.list_comments",
+                file_id=file_id,
+                comment_count=len(comments),
+                comments=comments,
+            )
+            return {"comments": comments}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.list_comments",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def add_comment(
+        self,
+        file_id: str,
+        content: str,
+    ) -> dict[str, Any]:
+        """Add a comment to a file.
+
+        Args:
+            file_id: The file ID.
+            content: The comment text.
+        """
+        try:
+            result = (
+                self.service.comments()
+                .create(
+                    fileId=file_id,
+                    body={"content": content},
+                    fields="id,content,author,createdTime",
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="drive.add_comment",
+                file_id=file_id,
+                comment_id=result.get("id"),
+                content=result.get("content"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.add_comment",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def resolve_comment(
+        self,
+        file_id: str,
+        comment_id: str,
+    ) -> dict[str, Any]:
+        """Resolve a comment on a file.
+
+        Args:
+            file_id: The file ID.
+            comment_id: The comment ID.
+        """
+        try:
+            result = (
+                self.service.comments()
+                .update(
+                    fileId=file_id,
+                    commentId=comment_id,
+                    body={"resolved": True},
+                    fields="id,content,resolved",
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="drive.resolve_comment",
+                file_id=file_id,
+                comment_id=comment_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.resolve_comment",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_comment(
+        self,
+        file_id: str,
+        comment_id: str,
+    ) -> dict[str, Any]:
+        """Delete a comment from a file.
+
+        Args:
+            file_id: The file ID.
+            comment_id: The comment ID.
+        """
+        try:
+            self.service.comments().delete(
+                fileId=file_id, commentId=comment_id
+            ).execute()
+
+            output_success(
+                operation="drive.delete_comment",
+                file_id=file_id,
+                comment_id=comment_id,
+            )
+            return {"file_id": file_id, "comment_id": comment_id}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.delete_comment",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def reply_to_comment(
+        self,
+        file_id: str,
+        comment_id: str,
+        content: str,
+    ) -> dict[str, Any]:
+        """Reply to a comment on a file.
+
+        Args:
+            file_id: The file ID.
+            comment_id: The comment ID to reply to.
+            content: The reply text.
+        """
+        try:
+            result = (
+                self.service.replies()
+                .create(
+                    fileId=file_id,
+                    commentId=comment_id,
+                    body={"content": content},
+                    fields="id,content,author,createdTime",
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="drive.reply_to_comment",
+                file_id=file_id,
+                comment_id=comment_id,
+                reply_id=result.get("id"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.reply_to_comment",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # REVISIONS
+    # =========================================================================
+
+    def list_revisions(
+        self,
+        file_id: str,
+        max_results: int = 20,
+    ) -> dict[str, Any]:
+        """List revisions of a file.
+
+        Args:
+            file_id: The file ID.
+            max_results: Maximum revisions to return.
+        """
+        try:
+            result = (
+                self.service.revisions()
+                .list(
+                    fileId=file_id,
+                    pageSize=max_results,
+                    fields="revisions(id,mimeType,modifiedTime,lastModifyingUser,originalFilename,size)",
+                )
+                .execute()
+            )
+
+            revisions = []
+            for rev in result.get("revisions", []):
+                revisions.append({
+                    "revision_id": rev.get("id"),
+                    "modified_time": rev.get("modifiedTime"),
+                    "last_modifying_user": rev.get("lastModifyingUser", {}).get("displayName"),
+                    "original_filename": rev.get("originalFilename"),
+                    "size": rev.get("size"),
+                })
+
+            output_success(
+                operation="drive.list_revisions",
+                file_id=file_id,
+                revision_count=len(revisions),
+                revisions=revisions,
+            )
+            return {"revisions": revisions}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.list_revisions",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_revision(
+        self,
+        file_id: str,
+        revision_id: str,
+    ) -> dict[str, Any]:
+        """Get metadata for a specific revision.
+
+        Args:
+            file_id: The file ID.
+            revision_id: The revision ID.
+        """
+        try:
+            result = (
+                self.service.revisions()
+                .get(
+                    fileId=file_id,
+                    revisionId=revision_id,
+                    fields="id,mimeType,modifiedTime,lastModifyingUser,originalFilename,size,keepForever,publishAuto,published",
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="drive.get_revision",
+                file_id=file_id,
+                revision_id=revision_id,
+                modified_time=result.get("modifiedTime"),
+                last_modifying_user=result.get("lastModifyingUser", {}).get("displayName"),
+                keep_forever=result.get("keepForever", False),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.get_revision",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_revision(
+        self,
+        file_id: str,
+        revision_id: str,
+    ) -> dict[str, Any]:
+        """Delete a revision (cannot delete the last remaining revision).
+
+        Args:
+            file_id: The file ID.
+            revision_id: The revision ID to delete.
+        """
+        try:
+            self.service.revisions().delete(
+                fileId=file_id, revisionId=revision_id
+            ).execute()
+
+            output_success(
+                operation="drive.delete_revision",
+                file_id=file_id,
+                revision_id=revision_id,
+            )
+            return {"file_id": file_id, "revision_id": revision_id}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.delete_revision",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # TRASH MANAGEMENT
+    # =========================================================================
+
+    def list_trash(
+        self,
+        max_results: int = 20,
+    ) -> dict[str, Any]:
+        """List files in trash.
+
+        Args:
+            max_results: Maximum files to return.
+        """
+        try:
+            result = (
+                self.service.files()
+                .list(
+                    q="trashed=true",
+                    pageSize=max_results,
+                    fields="files(id,name,mimeType,trashedTime,trashingUser)",
+                )
+                .execute()
+            )
+
+            files = []
+            for f in result.get("files", []):
+                files.append({
+                    "file_id": f.get("id"),
+                    "name": f.get("name"),
+                    "mime_type": f.get("mimeType"),
+                    "trashed_time": f.get("trashedTime"),
+                    "trashing_user": f.get("trashingUser", {}).get("displayName"),
+                })
+
+            output_success(
+                operation="drive.list_trash",
+                file_count=len(files),
+                files=files,
+            )
+            return {"files": files}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.list_trash",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def restore_from_trash(
+        self,
+        file_id: str,
+    ) -> dict[str, Any]:
+        """Restore a file from trash.
+
+        Args:
+            file_id: The file ID to restore.
+        """
+        try:
+            result = (
+                self.service.files()
+                .update(
+                    fileId=file_id,
+                    body={"trashed": False},
+                    fields="id,name,mimeType,webViewLink",
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="drive.restore_from_trash",
+                file_id=file_id,
+                name=result.get("name"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.restore_from_trash",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def empty_trash(self) -> dict[str, Any]:
+        """Permanently delete all files in trash."""
+        try:
+            self.service.files().emptyTrash().execute()
+
+            output_success(
+                operation="drive.empty_trash",
+                status="Trash emptied",
+            )
+            return {"status": "trash_emptied"}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.empty_trash",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

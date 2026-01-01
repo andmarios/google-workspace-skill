@@ -463,3 +463,170 @@ def download_attachment(
         attachment_id=attachment_id,
         output_path=output_path,
     )
+
+
+# ===== Thread Commands =====
+
+
+@app.command("threads")
+def list_threads(
+    query: Annotated[
+        Optional[str],
+        typer.Option("--query", "-q", help="Gmail search query."),
+    ] = None,
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-n", help="Maximum threads to return."),
+    ] = 10,
+    labels: Annotated[
+        Optional[str],
+        typer.Option("--labels", "-l", help="Comma-separated label IDs."),
+    ] = None,
+) -> None:
+    """List email threads."""
+    label_ids = labels.split(",") if labels else None
+
+    service = GmailService()
+    service.list_threads(
+        query=query,
+        max_results=max_results,
+        label_ids=label_ids,
+    )
+
+
+@app.command("get-thread")
+def get_thread(
+    thread_id: Annotated[str, typer.Argument(help="Thread ID.")],
+    full: Annotated[
+        bool,
+        typer.Option("--full", "-f", help="Get full message format."),
+    ] = False,
+) -> None:
+    """Get a thread with all its messages."""
+    format_type = "full" if full else "metadata"
+
+    service = GmailService()
+    service.get_thread(thread_id=thread_id, format_type=format_type)
+
+
+@app.command("trash-thread")
+def trash_thread(
+    thread_id: Annotated[str, typer.Argument(help="Thread ID to trash.")],
+) -> None:
+    """Move a thread to trash."""
+    service = GmailService()
+    service.trash_thread(thread_id=thread_id)
+
+
+@app.command("untrash-thread")
+def untrash_thread(
+    thread_id: Annotated[str, typer.Argument(help="Thread ID to restore.")],
+) -> None:
+    """Restore a thread from trash."""
+    service = GmailService()
+    service.untrash_thread(thread_id=thread_id)
+
+
+@app.command("modify-thread-labels")
+def modify_thread_labels(
+    thread_id: Annotated[str, typer.Argument(help="Thread ID.")],
+    add_labels: Annotated[
+        Optional[str],
+        typer.Option("--add", "-a", help="Comma-separated label IDs to add."),
+    ] = None,
+    remove_labels: Annotated[
+        Optional[str],
+        typer.Option("--remove", "-r", help="Comma-separated label IDs to remove."),
+    ] = None,
+) -> None:
+    """Add or remove labels from all messages in a thread."""
+    add_label_ids = [l.strip() for l in add_labels.split(",")] if add_labels else None
+    remove_label_ids = [l.strip() for l in remove_labels.split(",")] if remove_labels else None
+
+    service = GmailService()
+    service.modify_thread_labels(
+        thread_id=thread_id,
+        add_label_ids=add_label_ids,
+        remove_label_ids=remove_label_ids,
+    )
+
+
+# ===== Settings Commands =====
+
+
+@app.command("get-vacation")
+def get_vacation_settings() -> None:
+    """Get vacation responder settings."""
+    service = GmailService()
+    service.get_vacation_settings()
+
+
+@app.command("set-vacation")
+def set_vacation_settings(
+    enable: Annotated[bool, typer.Argument(help="Enable (true) or disable (false) vacation responder.")],
+    subject: Annotated[
+        Optional[str],
+        typer.Option("--subject", "-s", help="Response subject line."),
+    ] = None,
+    message: Annotated[
+        Optional[str],
+        typer.Option("--message", "-m", help="Plain text response message."),
+    ] = None,
+    html_message: Annotated[
+        Optional[str],
+        typer.Option("--html", help="HTML response message."),
+    ] = None,
+    start_time: Annotated[
+        Optional[int],
+        typer.Option("--start", help="Start time (Unix timestamp in milliseconds)."),
+    ] = None,
+    end_time: Annotated[
+        Optional[int],
+        typer.Option("--end", help="End time (Unix timestamp in milliseconds)."),
+    ] = None,
+    restrict_to_contacts: Annotated[
+        bool,
+        typer.Option("--contacts-only", help="Only respond to contacts."),
+    ] = False,
+    restrict_to_domain: Annotated[
+        bool,
+        typer.Option("--domain-only", help="Only respond to same domain."),
+    ] = False,
+) -> None:
+    """Set vacation responder settings."""
+    service = GmailService()
+    service.set_vacation_settings(
+        enable=enable,
+        subject=subject,
+        message=message,
+        html_message=html_message,
+        start_time=start_time,
+        end_time=end_time,
+        restrict_to_contacts=restrict_to_contacts,
+        restrict_to_domain=restrict_to_domain,
+    )
+
+
+@app.command("get-signature")
+def get_signature(
+    send_as_email: Annotated[
+        Optional[str],
+        typer.Option("--email", "-e", help="Send-as email address (default: primary)."),
+    ] = None,
+) -> None:
+    """Get email signature."""
+    service = GmailService()
+    service.get_signature(send_as_email=send_as_email)
+
+
+@app.command("set-signature")
+def set_signature(
+    signature: Annotated[str, typer.Argument(help="HTML signature content.")],
+    send_as_email: Annotated[
+        Optional[str],
+        typer.Option("--email", "-e", help="Send-as email address (default: primary)."),
+    ] = None,
+) -> None:
+    """Set email signature."""
+    service = GmailService()
+    service.set_signature(signature=signature, send_as_email=send_as_email)

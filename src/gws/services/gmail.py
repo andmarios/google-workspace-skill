@@ -1081,3 +1081,370 @@ class GmailService(BaseService):
                 message=f"Gmail API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # THREAD OPERATIONS
+    # =========================================================================
+
+    def list_threads(
+        self,
+        query: str | None = None,
+        max_results: int = 10,
+        label_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """List email threads.
+
+        Args:
+            query: Gmail search query (same syntax as search_messages).
+            max_results: Maximum number of threads to return.
+            label_ids: List of label IDs to filter by.
+        """
+        try:
+            params: dict[str, Any] = {
+                "userId": "me",
+                "maxResults": max_results,
+            }
+            if query:
+                params["q"] = query
+            if label_ids:
+                params["labelIds"] = label_ids
+
+            result = self.service.users().threads().list(**params).execute()
+
+            threads = []
+            for thread in result.get("threads", []):
+                thread_id = thread.get("id")
+                snippet = thread.get("snippet", "")
+                threads.append({
+                    "thread_id": thread_id,
+                    "snippet": snippet[:100] + "..." if len(snippet) > 100 else snippet,
+                })
+
+            output_success(
+                operation="gmail.list_threads",
+                thread_count=len(threads),
+                threads=threads,
+            )
+            return {"threads": threads}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.list_threads",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_thread(
+        self,
+        thread_id: str,
+        format_type: str = "metadata",
+    ) -> dict[str, Any]:
+        """Get a thread with all its messages.
+
+        Args:
+            thread_id: The thread ID.
+            format_type: Message format (full, metadata, minimal).
+        """
+        try:
+            thread = (
+                self.service.users()
+                .threads()
+                .get(userId="me", id=thread_id, format=format_type)
+                .execute()
+            )
+
+            messages = []
+            for msg in thread.get("messages", []):
+                msg_info = {
+                    "message_id": msg.get("id"),
+                    "snippet": msg.get("snippet", "")[:100],
+                }
+
+                # Extract headers if available
+                headers = msg.get("payload", {}).get("headers", [])
+                for header in headers:
+                    name = header.get("name", "").lower()
+                    if name in ("from", "to", "subject", "date"):
+                        msg_info[name] = header.get("value", "")
+
+                messages.append(msg_info)
+
+            output_success(
+                operation="gmail.get_thread",
+                thread_id=thread_id,
+                message_count=len(messages),
+                messages=messages,
+            )
+            return {"thread_id": thread_id, "messages": messages}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.get_thread",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def trash_thread(self, thread_id: str) -> dict[str, Any]:
+        """Move a thread to trash.
+
+        Args:
+            thread_id: The thread ID.
+        """
+        try:
+            self.service.users().threads().trash(userId="me", id=thread_id).execute()
+
+            output_success(
+                operation="gmail.trash_thread",
+                thread_id=thread_id,
+            )
+            return {"thread_id": thread_id, "status": "trashed"}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.trash_thread",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def untrash_thread(self, thread_id: str) -> dict[str, Any]:
+        """Remove a thread from trash.
+
+        Args:
+            thread_id: The thread ID.
+        """
+        try:
+            self.service.users().threads().untrash(userId="me", id=thread_id).execute()
+
+            output_success(
+                operation="gmail.untrash_thread",
+                thread_id=thread_id,
+            )
+            return {"thread_id": thread_id, "status": "untrashed"}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.untrash_thread",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def modify_thread_labels(
+        self,
+        thread_id: str,
+        add_label_ids: list[str] | None = None,
+        remove_label_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Add or remove labels from all messages in a thread.
+
+        Args:
+            thread_id: The thread ID.
+            add_label_ids: Label IDs to add.
+            remove_label_ids: Label IDs to remove.
+        """
+        try:
+            body: dict[str, Any] = {}
+            if add_label_ids:
+                body["addLabelIds"] = add_label_ids
+            if remove_label_ids:
+                body["removeLabelIds"] = remove_label_ids
+
+            if not body:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="gmail.modify_thread_labels",
+                    message="Must specify labels to add or remove",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            self.service.users().threads().modify(
+                userId="me", id=thread_id, body=body
+            ).execute()
+
+            output_success(
+                operation="gmail.modify_thread_labels",
+                thread_id=thread_id,
+                added_labels=add_label_ids or [],
+                removed_labels=remove_label_ids or [],
+            )
+            return {"thread_id": thread_id}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.modify_thread_labels",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # SETTINGS
+    # =========================================================================
+
+    def get_vacation_settings(self) -> dict[str, Any]:
+        """Get vacation responder settings."""
+        try:
+            settings = (
+                self.service.users()
+                .settings()
+                .getVacation(userId="me")
+                .execute()
+            )
+
+            output_success(
+                operation="gmail.get_vacation_settings",
+                enabled=settings.get("enableAutoReply", False),
+                subject=settings.get("responseSubject", ""),
+                body_plain_text=settings.get("responseBodyPlainText", ""),
+                restrict_to_contacts=settings.get("restrictToContacts", False),
+                restrict_to_domain=settings.get("restrictToDomain", False),
+                start_time=settings.get("startTime"),
+                end_time=settings.get("endTime"),
+            )
+            return settings
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.get_vacation_settings",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def set_vacation_settings(
+        self,
+        enable: bool,
+        subject: str | None = None,
+        message: str | None = None,
+        html_message: str | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+        restrict_to_contacts: bool = False,
+        restrict_to_domain: bool = False,
+    ) -> dict[str, Any]:
+        """Set vacation responder settings.
+
+        Args:
+            enable: Whether to enable the vacation responder.
+            subject: Response subject line.
+            message: Plain text response message.
+            html_message: HTML response message.
+            start_time: Start time (Unix timestamp in milliseconds).
+            end_time: End time (Unix timestamp in milliseconds).
+            restrict_to_contacts: Only respond to contacts.
+            restrict_to_domain: Only respond to same domain.
+        """
+        try:
+            body: dict[str, Any] = {
+                "enableAutoReply": enable,
+                "restrictToContacts": restrict_to_contacts,
+                "restrictToDomain": restrict_to_domain,
+            }
+
+            if subject:
+                body["responseSubject"] = subject
+            if message:
+                body["responseBodyPlainText"] = message
+            if html_message:
+                body["responseBodyHtml"] = html_message
+            if start_time:
+                body["startTime"] = start_time
+            if end_time:
+                body["endTime"] = end_time
+
+            result = (
+                self.service.users()
+                .settings()
+                .updateVacation(userId="me", body=body)
+                .execute()
+            )
+
+            output_success(
+                operation="gmail.set_vacation_settings",
+                enabled=enable,
+                subject=subject,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.set_vacation_settings",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_signature(self, send_as_email: str | None = None) -> dict[str, Any]:
+        """Get email signature.
+
+        Args:
+            send_as_email: Email address of the send-as alias (default: primary).
+        """
+        try:
+            # Get primary email if not specified
+            if not send_as_email:
+                profile = self.service.users().getProfile(userId="me").execute()
+                send_as_email = profile.get("emailAddress", "")
+
+            result = (
+                self.service.users()
+                .settings()
+                .sendAs()
+                .get(userId="me", sendAsEmail=send_as_email)
+                .execute()
+            )
+
+            output_success(
+                operation="gmail.get_signature",
+                send_as_email=send_as_email,
+                signature=result.get("signature", ""),
+                display_name=result.get("displayName", ""),
+                is_primary=result.get("isPrimary", False),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.get_signature",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def set_signature(
+        self,
+        signature: str,
+        send_as_email: str | None = None,
+    ) -> dict[str, Any]:
+        """Set email signature.
+
+        Args:
+            signature: HTML signature content.
+            send_as_email: Email address of the send-as alias (default: primary).
+        """
+        try:
+            # Get primary email if not specified
+            if not send_as_email:
+                profile = self.service.users().getProfile(userId="me").execute()
+                send_as_email = profile.get("emailAddress", "")
+
+            result = (
+                self.service.users()
+                .settings()
+                .sendAs()
+                .patch(
+                    userId="me",
+                    sendAsEmail=send_as_email,
+                    body={"signature": signature}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="gmail.set_signature",
+                send_as_email=send_as_email,
+                signature_length=len(signature),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.set_signature",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

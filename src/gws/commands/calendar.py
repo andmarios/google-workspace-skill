@@ -348,3 +348,93 @@ def quick_add(
     """
     service = CalendarService()
     service.quick_add(text=text, calendar_id=calendar_id)
+
+
+# ===== Free/Busy =====
+
+
+@app.command("freebusy")
+def get_freebusy(
+    time_min: Annotated[str, typer.Argument(help="Start time (ISO 8601 format).")],
+    time_max: Annotated[str, typer.Argument(help="End time (ISO 8601 format).")],
+    calendar_ids: Annotated[
+        Optional[str],
+        typer.Option("--calendars", "-c", help="Comma-separated calendar IDs (default: primary)."),
+    ] = None,
+    timezone_str: Annotated[
+        str,
+        typer.Option("--timezone", "-tz", help="Timezone for the query."),
+    ] = "UTC",
+) -> None:
+    """Query free/busy information for calendars."""
+    cal_ids = [c.strip() for c in calendar_ids.split(",")] if calendar_ids else None
+
+    service = CalendarService()
+    service.get_freebusy(
+        time_min=time_min,
+        time_max=time_max,
+        calendar_ids=cal_ids,
+        timezone_str=timezone_str,
+    )
+
+
+# ===== Calendar Sharing (ACL) =====
+
+
+@app.command("list-acl")
+def list_acl(
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """List access control rules (who has access to the calendar)."""
+    service = CalendarService()
+    service.list_acl(calendar_id=calendar_id)
+
+
+@app.command("add-acl")
+def add_acl(
+    scope_type: Annotated[str, typer.Argument(help="Scope type (user, group, domain, default).")],
+    scope_value: Annotated[str, typer.Argument(help="Email address or domain.")],
+    role: Annotated[str, typer.Argument(help="Role (reader, writer, owner, freeBusyReader).")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Add an access control rule to share a calendar."""
+    service = CalendarService()
+    service.add_acl(
+        scope_type=scope_type,
+        scope_value=scope_value,
+        role=role,
+        calendar_id=calendar_id,
+    )
+
+
+@app.command("remove-acl")
+def remove_acl(
+    rule_id: Annotated[str, typer.Argument(help="ACL rule ID to remove.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Remove an access control rule from a calendar."""
+    service = CalendarService()
+    service.remove_acl(rule_id=rule_id, calendar_id=calendar_id)
+
+
+@app.command("update-acl")
+def update_acl(
+    rule_id: Annotated[str, typer.Argument(help="ACL rule ID to update.")],
+    role: Annotated[str, typer.Argument(help="New role (reader, writer, owner, freeBusyReader).")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Update an access control rule's role."""
+    service = CalendarService()
+    service.update_acl(rule_id=rule_id, role=role, calendar_id=calendar_id)

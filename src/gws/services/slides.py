@@ -2065,3 +2065,320 @@ class SlidesService(BaseService):
                 message=f"Google Slides API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # SPEAKER NOTES
+    # =========================================================================
+
+    def get_speaker_notes(
+        self,
+        presentation_id: str,
+        slide_id: str,
+    ) -> dict[str, Any]:
+        """Get speaker notes for a slide.
+
+        Args:
+            presentation_id: The presentation ID.
+            slide_id: The slide object ID.
+        """
+        try:
+            presentation = (
+                self.service.presentations()
+                .get(presentationId=presentation_id)
+                .execute()
+            )
+
+            notes_text = ""
+            notes_page_id = None
+
+            for slide in presentation.get("slides", []):
+                if slide.get("objectId") == slide_id:
+                    notes_page = slide.get("slideProperties", {}).get("notesPage", {})
+                    notes_page_id = notes_page.get("objectId")
+
+                    # Find the notes shape within the notes page
+                    for element in notes_page.get("pageElements", []):
+                        shape = element.get("shape", {})
+                        if shape.get("shapeType") == "TEXT_BOX":
+                            placeholder = shape.get("placeholder", {})
+                            if placeholder.get("type") == "BODY":
+                                text_content = shape.get("text", {})
+                                for text_element in text_content.get("textElements", []):
+                                    if "textRun" in text_element:
+                                        notes_text += text_element["textRun"].get("content", "")
+                    break
+
+            output_success(
+                operation="slides.get_speaker_notes",
+                presentation_id=presentation_id,
+                slide_id=slide_id,
+                notes_page_id=notes_page_id,
+                notes_text=notes_text.strip(),
+            )
+            return {"notes_text": notes_text.strip(), "notes_page_id": notes_page_id}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.get_speaker_notes",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def set_speaker_notes(
+        self,
+        presentation_id: str,
+        slide_id: str,
+        notes_text: str,
+    ) -> dict[str, Any]:
+        """Set speaker notes for a slide.
+
+        Args:
+            presentation_id: The presentation ID.
+            slide_id: The slide object ID.
+            notes_text: The speaker notes text content.
+        """
+        try:
+            # First, get the presentation to find the notes shape ID
+            presentation = (
+                self.service.presentations()
+                .get(presentationId=presentation_id)
+                .execute()
+            )
+
+            notes_shape_id = None
+
+            for slide in presentation.get("slides", []):
+                if slide.get("objectId") == slide_id:
+                    notes_page = slide.get("slideProperties", {}).get("notesPage", {})
+
+                    for element in notes_page.get("pageElements", []):
+                        shape = element.get("shape", {})
+                        if shape.get("shapeType") == "TEXT_BOX":
+                            placeholder = shape.get("placeholder", {})
+                            if placeholder.get("type") == "BODY":
+                                notes_shape_id = element.get("objectId")
+                                break
+                    break
+
+            if not notes_shape_id:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="slides.set_speaker_notes",
+                    message=f"Speaker notes shape not found for slide {slide_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+
+            # Delete existing text and insert new text
+            requests = [
+                {
+                    "deleteText": {
+                        "objectId": notes_shape_id,
+                        "textRange": {"type": "ALL"},
+                    }
+                },
+                {
+                    "insertText": {
+                        "objectId": notes_shape_id,
+                        "insertionIndex": 0,
+                        "text": notes_text,
+                    }
+                },
+            ]
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": requests}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.set_speaker_notes",
+                presentation_id=presentation_id,
+                slide_id=slide_id,
+                notes_shape_id=notes_shape_id,
+                text_length=len(notes_text),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.set_speaker_notes",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # VIDEO INSERTION
+    # =========================================================================
+
+    def insert_video(
+        self,
+        presentation_id: str,
+        page_object_id: str,
+        video_url: str,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+    ) -> dict[str, Any]:
+        """Insert a video on a slide.
+
+        Args:
+            presentation_id: The presentation ID.
+            page_object_id: The slide/page object ID.
+            video_url: YouTube video URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID).
+            x: X position in points.
+            y: Y position in points.
+            width: Width in points.
+            height: Height in points.
+        """
+        try:
+            import re
+
+            # Extract YouTube video ID from URL
+            video_id = None
+            patterns = [
+                r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})',
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, video_url)
+                if match:
+                    video_id = match.group(1)
+                    break
+
+            if not video_id:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="slides.insert_video",
+                    message="Invalid YouTube URL. Please provide a valid YouTube video URL.",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            object_id = self._generate_object_id()
+
+            request = {
+                "createVideo": {
+                    "objectId": object_id,
+                    "source": "YOUTUBE",
+                    "id": video_id,
+                    "elementProperties": {
+                        "pageObjectId": page_object_id,
+                        "size": {
+                            "width": {"magnitude": width, "unit": "PT"},
+                            "height": {"magnitude": height, "unit": "PT"},
+                        },
+                        "transform": {
+                            "scaleX": 1,
+                            "scaleY": 1,
+                            "translateX": x,
+                            "translateY": y,
+                            "unit": "PT",
+                        },
+                    },
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.insert_video",
+                presentation_id=presentation_id,
+                page_object_id=page_object_id,
+                video_object_id=object_id,
+                video_id=video_id,
+                position={"x": x, "y": y, "width": width, "height": height},
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.insert_video",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def update_video_properties(
+        self,
+        presentation_id: str,
+        video_object_id: str,
+        autoplay: bool | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+        mute: bool | None = None,
+    ) -> dict[str, Any]:
+        """Update video playback properties.
+
+        Args:
+            presentation_id: The presentation ID.
+            video_object_id: The video object ID.
+            autoplay: Whether the video autoplays when presenting.
+            start_time: Start time in seconds.
+            end_time: End time in seconds.
+            mute: Whether the video is muted.
+        """
+        try:
+            video_properties: dict[str, Any] = {}
+            fields = []
+
+            if autoplay is not None:
+                video_properties["autoPlay"] = autoplay
+                fields.append("autoPlay")
+
+            if start_time is not None:
+                video_properties["start"] = start_time
+                fields.append("start")
+
+            if end_time is not None:
+                video_properties["end"] = end_time
+                fields.append("end")
+
+            if mute is not None:
+                video_properties["mute"] = mute
+                fields.append("mute")
+
+            if not fields:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="slides.update_video_properties",
+                    message="At least one video property required",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            request = {
+                "updateVideoProperties": {
+                    "objectId": video_object_id,
+                    "videoProperties": video_properties,
+                    "fields": ",".join(fields),
+                }
+            }
+
+            result = (
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="slides.update_video_properties",
+                presentation_id=presentation_id,
+                video_object_id=video_object_id,
+                properties_updated=fields,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.update_video_properties",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

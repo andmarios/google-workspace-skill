@@ -2176,3 +2176,153 @@ class DocsService(BaseService):
                 message=f"Google Docs API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # SUGGESTION OPERATIONS (Phase 8)
+    # =========================================================================
+
+    def _extract_suggestions_from_content(
+        self, content: list[dict], suggestions: list[dict]
+    ) -> None:
+        """Recursively extract suggestions from document content."""
+        for element in content:
+            if "paragraph" in element:
+                for elem in element["paragraph"].get("elements", []):
+                    if "textRun" in elem:
+                        text_run = elem["textRun"]
+                        text = text_run.get("content", "")
+
+                        # Check for suggested insertions
+                        insertion_ids = text_run.get("suggestedInsertionIds", [])
+                        for sid in insertion_ids:
+                            suggestions.append({
+                                "type": "insertion",
+                                "suggestion_id": sid,
+                                "text": text,
+                                "start_index": elem.get("startIndex"),
+                                "end_index": elem.get("endIndex"),
+                            })
+
+                        # Check for suggested deletions
+                        deletion_ids = text_run.get("suggestedDeletionIds", [])
+                        for sid in deletion_ids:
+                            suggestions.append({
+                                "type": "deletion",
+                                "suggestion_id": sid,
+                                "text": text,
+                                "start_index": elem.get("startIndex"),
+                                "end_index": elem.get("endIndex"),
+                            })
+
+                        # Check for suggested text style changes
+                        style_changes = text_run.get("suggestedTextStyleChanges", {})
+                        for sid, change in style_changes.items():
+                            suggestions.append({
+                                "type": "style_change",
+                                "suggestion_id": sid,
+                                "text": text,
+                                "start_index": elem.get("startIndex"),
+                                "end_index": elem.get("endIndex"),
+                                "style_change": change.get("textStyle", {}),
+                            })
+
+            elif "table" in element:
+                for row in element["table"].get("tableRows", []):
+                    for cell in row.get("tableCells", []):
+                        self._extract_suggestions_from_content(
+                            cell.get("content", []), suggestions
+                        )
+
+    def get_suggestions(self, document_id: str) -> dict[str, Any]:
+        """Get all pending suggestions (tracked changes) in the document.
+
+        Returns suggestions including insertions, deletions, and style changes
+        made while in "Suggesting" mode.
+        """
+        try:
+            doc = self.service.documents().get(
+                documentId=document_id,
+                suggestionsViewMode="PREVIEW_SUGGESTIONS_ACCEPTED"
+            ).execute()
+
+            # Also get with suggestions visible to see what's pending
+            doc_with_suggestions = self.service.documents().get(
+                documentId=document_id,
+                suggestionsViewMode="SUGGESTIONS_INLINE"
+            ).execute()
+
+            content = doc_with_suggestions.get("body", {}).get("content", [])
+            suggestions: list[dict] = []
+            self._extract_suggestions_from_content(content, suggestions)
+
+            # Group by suggestion ID to consolidate fragments
+            grouped: dict[str, dict] = {}
+            for s in suggestions:
+                sid = s["suggestion_id"]
+                if sid not in grouped:
+                    grouped[sid] = {
+                        "suggestion_id": sid,
+                        "type": s["type"],
+                        "fragments": [],
+                    }
+                grouped[sid]["fragments"].append({
+                    "text": s["text"],
+                    "start_index": s["start_index"],
+                    "end_index": s["end_index"],
+                    "style_change": s.get("style_change"),
+                })
+
+            suggestion_list = list(grouped.values())
+
+            output_success(
+                operation="docs.get_suggestions",
+                document_id=document_id,
+                suggestion_count=len(suggestion_list),
+                suggestions=suggestion_list,
+            )
+            return {"suggestions": suggestion_list}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.get_suggestions",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_document_mode(self, document_id: str) -> dict[str, Any]:
+        """Get document's current revision mode and suggestion state.
+
+        Returns information about whether the document has pending suggestions
+        and metadata about the document state.
+        """
+        try:
+            doc = self.service.documents().get(documentId=document_id).execute()
+
+            # Check for any suggestions in the document
+            content = doc.get("body", {}).get("content", [])
+            suggestions: list[dict] = []
+            self._extract_suggestions_from_content(content, suggestions)
+
+            has_suggestions = len(suggestions) > 0
+            suggestion_ids = list(set(s["suggestion_id"] for s in suggestions))
+
+            output_success(
+                operation="docs.get_document_mode",
+                document_id=document_id,
+                title=doc.get("title", ""),
+                revision_id=doc.get("revisionId"),
+                has_pending_suggestions=has_suggestions,
+                pending_suggestion_count=len(suggestion_ids),
+                suggestion_ids=suggestion_ids[:10],  # Limit output
+            )
+            return {
+                "has_suggestions": has_suggestions,
+                "suggestion_count": len(suggestion_ids),
+            }
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.get_document_mode",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
