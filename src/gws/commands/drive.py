@@ -329,3 +329,65 @@ def empty_trash() -> None:
     """Permanently delete all files in trash."""
     service = DriveService()
     service.empty_trash()
+
+
+# ===== Permissions =====
+
+
+@app.command("list-permissions")
+def list_permissions(
+    file_id: Annotated[str, typer.Argument(help="File ID to list permissions for.")],
+) -> None:
+    """List all permissions on a file (who has access)."""
+    service = DriveService()
+    service.list_permissions(file_id=file_id)
+
+
+@app.command("get-permission")
+def get_permission(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    permission_id: Annotated[str, typer.Argument(help="Permission ID.")],
+) -> None:
+    """Get details of a specific permission."""
+    service = DriveService()
+    service.get_permission(file_id=file_id, permission_id=permission_id)
+
+
+@app.command("update-permission")
+def update_permission(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    permission_id: Annotated[str, typer.Argument(help="Permission ID to update.")],
+    role: Annotated[str, typer.Argument(help="New role (reader, commenter, writer, organizer).")],
+    expiration: Annotated[
+        Optional[str],
+        typer.Option("--expiration", "-e", help="Expiration time (ISO 8601 format)."),
+    ] = None,
+) -> None:
+    """Update a permission's role."""
+    service = DriveService()
+    service.update_permission(
+        file_id=file_id,
+        permission_id=permission_id,
+        role=role,
+        expiration_time=expiration,
+    )
+
+
+@app.command("delete-permission")
+def delete_permission(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    permission_id: Annotated[str, typer.Argument(help="Permission ID to remove.")],
+) -> None:
+    """Remove a permission from a file (unshare)."""
+    service = DriveService()
+    service.delete_permission(file_id=file_id, permission_id=permission_id)
+
+
+@app.command("transfer-ownership")
+def transfer_ownership(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    new_owner_email: Annotated[str, typer.Argument(help="Email of the new owner.")],
+) -> None:
+    """Transfer ownership of a file to another user."""
+    service = DriveService()
+    service.transfer_ownership(file_id=file_id, new_owner_email=new_owner_email)

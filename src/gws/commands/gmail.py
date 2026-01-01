@@ -630,3 +630,112 @@ def set_signature(
     """Set email signature."""
     service = GmailService()
     service.set_signature(signature=signature, send_as_email=send_as_email)
+
+
+# ===== Filters =====
+
+
+@app.command("filters")
+def list_filters() -> None:
+    """List all mail filters."""
+    service = GmailService()
+    service.list_filters()
+
+
+@app.command("get-filter")
+def get_filter(
+    filter_id: Annotated[str, typer.Argument(help="Filter ID to retrieve.")],
+) -> None:
+    """Get a specific mail filter."""
+    service = GmailService()
+    service.get_filter(filter_id=filter_id)
+
+
+@app.command("create-filter")
+def create_filter(
+    from_address: Annotated[
+        Optional[str],
+        typer.Option("--from", "-f", help="Match messages from this address."),
+    ] = None,
+    to_address: Annotated[
+        Optional[str],
+        typer.Option("--to", "-t", help="Match messages to this address."),
+    ] = None,
+    subject: Annotated[
+        Optional[str],
+        typer.Option("--subject", "-s", help="Match messages with this subject."),
+    ] = None,
+    query: Annotated[
+        Optional[str],
+        typer.Option("--query", "-q", help="Gmail search query to match."),
+    ] = None,
+    has_attachment: Annotated[
+        Optional[bool],
+        typer.Option("--has-attachment", help="Match messages with attachments."),
+    ] = None,
+    add_labels: Annotated[
+        Optional[str],
+        typer.Option("--add-labels", help="Comma-separated label IDs to add."),
+    ] = None,
+    remove_labels: Annotated[
+        Optional[str],
+        typer.Option("--remove-labels", help="Comma-separated label IDs to remove."),
+    ] = None,
+    archive: Annotated[
+        bool,
+        typer.Option("--archive", help="Skip inbox (archive) matching messages."),
+    ] = False,
+    star: Annotated[
+        bool,
+        typer.Option("--star", help="Star matching messages."),
+    ] = False,
+    mark_important: Annotated[
+        Optional[bool],
+        typer.Option("--important/--not-important", help="Mark as important or not."),
+    ] = None,
+    never_spam: Annotated[
+        bool,
+        typer.Option("--never-spam", help="Never send to spam."),
+    ] = False,
+    trash: Annotated[
+        bool,
+        typer.Option("--trash", help="Delete matching messages."),
+    ] = False,
+    forward_to: Annotated[
+        Optional[str],
+        typer.Option("--forward", help="Forward to this email address."),
+    ] = None,
+) -> None:
+    """Create a mail filter.
+
+    Example: Create filter to archive newsletters:
+        gws gmail create-filter --from newsletter@example.com --archive --add-labels Label_123
+    """
+    add_label_ids = [l.strip() for l in add_labels.split(",")] if add_labels else None
+    remove_label_ids = [l.strip() for l in remove_labels.split(",")] if remove_labels else None
+
+    service = GmailService()
+    service.create_filter(
+        from_address=from_address,
+        to_address=to_address,
+        subject=subject,
+        query=query,
+        has_attachment=has_attachment,
+        add_label_ids=add_label_ids,
+        remove_label_ids=remove_label_ids,
+        archive=archive,
+        star=star,
+        mark_important=mark_important,
+        never_spam=never_spam,
+        trash=trash,
+        forward_to=forward_to,
+    )
+
+
+@app.command("delete-filter")
+def delete_filter(
+    filter_id: Annotated[str, typer.Argument(help="Filter ID to delete.")],
+) -> None:
+    """Delete a mail filter."""
+    service = GmailService()
+    service.delete_filter(filter_id=filter_id)

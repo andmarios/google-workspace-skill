@@ -968,10 +968,8 @@ def get_suggestions(
     """Get all pending suggestions (tracked changes) in the document.
 
     Returns suggestions including insertions, deletions, and style changes
-    made while in "Suggesting" mode in Google Docs.
-
-    Note: The Docs API can read suggestions but cannot accept/reject them
-    programmatically. Use the Google Docs UI to accept or reject.
+    made while in "Suggesting" mode in Google Docs. Use the suggestion_id
+    with accept-suggestion or reject-suggestion commands.
     """
     service = DocsService()
     service.get_suggestions(document_id=document_id)
@@ -988,3 +986,47 @@ def get_document_mode(
     """
     service = DocsService()
     service.get_document_mode(document_id=document_id)
+
+
+@app.command("accept-suggestion")
+def accept_suggestion(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    suggestion_id: Annotated[str, typer.Argument(help="Suggestion ID to accept.")],
+) -> None:
+    """Accept a suggestion (tracked change) in the document.
+
+    The suggestion_id can be obtained from the 'suggestions' command.
+    """
+    service = DocsService()
+    service.accept_suggestion(document_id=document_id, suggestion_id=suggestion_id)
+
+
+@app.command("reject-suggestion")
+def reject_suggestion(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    suggestion_id: Annotated[str, typer.Argument(help="Suggestion ID to reject.")],
+) -> None:
+    """Reject a suggestion (tracked change) in the document.
+
+    The suggestion_id can be obtained from the 'suggestions' command.
+    """
+    service = DocsService()
+    service.reject_suggestion(document_id=document_id, suggestion_id=suggestion_id)
+
+
+@app.command("accept-all-suggestions")
+def accept_all_suggestions(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+) -> None:
+    """Accept all pending suggestions in the document."""
+    service = DocsService()
+    service.accept_all_suggestions(document_id=document_id)
+
+
+@app.command("reject-all-suggestions")
+def reject_all_suggestions(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+) -> None:
+    """Reject all pending suggestions in the document."""
+    service = DocsService()
+    service.reject_all_suggestions(document_id=document_id)

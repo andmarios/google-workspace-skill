@@ -1448,3 +1448,245 @@ class GmailService(BaseService):
                 message=f"Gmail API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # ===== Filters =====
+
+    def list_filters(self) -> dict[str, Any]:
+        """List all mail filters."""
+        try:
+            result = (
+                self.service.users()
+                .settings()
+                .filters()
+                .list(userId="me")
+                .execute()
+            )
+
+            filters = []
+            for f in result.get("filter", []):
+                criteria = f.get("criteria", {})
+                action = f.get("action", {})
+
+                filters.append({
+                    "id": f.get("id"),
+                    "criteria": {
+                        "from": criteria.get("from"),
+                        "to": criteria.get("to"),
+                        "subject": criteria.get("subject"),
+                        "query": criteria.get("query"),
+                        "has_attachment": criteria.get("hasAttachment"),
+                        "size": criteria.get("size"),
+                        "size_comparison": criteria.get("sizeComparison"),
+                    },
+                    "action": {
+                        "add_label_ids": action.get("addLabelIds", []),
+                        "remove_label_ids": action.get("removeLabelIds", []),
+                        "forward": action.get("forward"),
+                        "star": action.get("star", False),
+                        "mark_important": action.get("markImportant", False),
+                        "archive": "INBOX" in action.get("removeLabelIds", []),
+                        "trash": "TRASH" in action.get("addLabelIds", []),
+                        "never_spam": "SPAM" in action.get("removeLabelIds", []),
+                    },
+                })
+
+            output_success(
+                operation="gmail.list_filters",
+                filter_count=len(filters),
+                filters=filters,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.list_filters",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_filter(self, filter_id: str) -> dict[str, Any]:
+        """Get a specific mail filter."""
+        try:
+            result = (
+                self.service.users()
+                .settings()
+                .filters()
+                .get(userId="me", id=filter_id)
+                .execute()
+            )
+
+            criteria = result.get("criteria", {})
+            action = result.get("action", {})
+
+            output_success(
+                operation="gmail.get_filter",
+                filter_id=filter_id,
+                criteria={
+                    "from": criteria.get("from"),
+                    "to": criteria.get("to"),
+                    "subject": criteria.get("subject"),
+                    "query": criteria.get("query"),
+                    "has_attachment": criteria.get("hasAttachment"),
+                },
+                action={
+                    "add_label_ids": action.get("addLabelIds", []),
+                    "remove_label_ids": action.get("removeLabelIds", []),
+                    "forward": action.get("forward"),
+                    "star": action.get("star", False),
+                    "mark_important": action.get("markImportant", False),
+                },
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="gmail.get_filter",
+                    message=f"Filter not found: {filter_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.get_filter",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def create_filter(
+        self,
+        from_address: str | None = None,
+        to_address: str | None = None,
+        subject: str | None = None,
+        query: str | None = None,
+        has_attachment: bool | None = None,
+        add_label_ids: list[str] | None = None,
+        remove_label_ids: list[str] | None = None,
+        archive: bool = False,
+        star: bool = False,
+        mark_important: bool | None = None,
+        never_spam: bool = False,
+        trash: bool = False,
+        forward_to: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a mail filter.
+
+        Args:
+            from_address: Match messages from this address.
+            to_address: Match messages to this address.
+            subject: Match messages with this subject.
+            query: Gmail search query to match.
+            has_attachment: Match messages with attachments.
+            add_label_ids: Label IDs to add to matching messages.
+            remove_label_ids: Label IDs to remove from matching messages.
+            archive: Skip inbox (archive) matching messages.
+            star: Star matching messages.
+            mark_important: Mark matching messages as important (True/False/None).
+            never_spam: Never send matching messages to spam.
+            trash: Delete matching messages.
+            forward_to: Forward matching messages to this address.
+        """
+        try:
+            # Build criteria
+            criteria: dict[str, Any] = {}
+            if from_address:
+                criteria["from"] = from_address
+            if to_address:
+                criteria["to"] = to_address
+            if subject:
+                criteria["subject"] = subject
+            if query:
+                criteria["query"] = query
+            if has_attachment is not None:
+                criteria["hasAttachment"] = has_attachment
+
+            if not criteria:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="gmail.create_filter",
+                    message="At least one filter criteria is required",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            # Build action
+            action: dict[str, Any] = {}
+            add_labels = list(add_label_ids) if add_label_ids else []
+            remove_labels = list(remove_label_ids) if remove_label_ids else []
+
+            if archive:
+                remove_labels.append("INBOX")
+            if trash:
+                add_labels.append("TRASH")
+            if never_spam:
+                remove_labels.append("SPAM")
+
+            if add_labels:
+                action["addLabelIds"] = add_labels
+            if remove_labels:
+                action["removeLabelIds"] = remove_labels
+            if star:
+                action["star"] = True
+            if mark_important is not None:
+                action["markImportant"] = mark_important
+            if forward_to:
+                action["forward"] = forward_to
+
+            if not action:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="gmail.create_filter",
+                    message="At least one filter action is required",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            body = {"criteria": criteria, "action": action}
+
+            result = (
+                self.service.users()
+                .settings()
+                .filters()
+                .create(userId="me", body=body)
+                .execute()
+            )
+
+            output_success(
+                operation="gmail.create_filter",
+                filter_id=result.get("id"),
+                criteria=criteria,
+                action=action,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.create_filter",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_filter(self, filter_id: str) -> dict[str, Any]:
+        """Delete a mail filter."""
+        try:
+            self.service.users().settings().filters().delete(
+                userId="me", id=filter_id
+            ).execute()
+
+            output_success(
+                operation="gmail.delete_filter",
+                filter_id=filter_id,
+                deleted=True,
+            )
+            return {"deleted": True, "filter_id": filter_id}
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="gmail.delete_filter",
+                    message=f"Filter not found: {filter_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.delete_filter",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

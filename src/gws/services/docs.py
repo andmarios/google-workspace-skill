@@ -2326,3 +2326,197 @@ class DocsService(BaseService):
                 message=f"Google Docs API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    def accept_suggestion(
+        self,
+        document_id: str,
+        suggestion_id: str,
+    ) -> dict[str, Any]:
+        """Accept a suggestion (tracked change) in the document.
+
+        Args:
+            document_id: The document ID.
+            suggestion_id: The suggestion ID to accept.
+        """
+        try:
+            requests = [
+                {
+                    "acceptSuggestion": {
+                        "suggestionId": suggestion_id,
+                    }
+                }
+            ]
+
+            result = (
+                self.service.documents()
+                .batchUpdate(documentId=document_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="docs.accept_suggestion",
+                document_id=document_id,
+                suggestion_id=suggestion_id,
+                accepted=True,
+            )
+            return result
+        except HttpError as e:
+            if "not found" in str(e.reason).lower():
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="docs.accept_suggestion",
+                    message=f"Suggestion not found: {suggestion_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.accept_suggestion",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def reject_suggestion(
+        self,
+        document_id: str,
+        suggestion_id: str,
+    ) -> dict[str, Any]:
+        """Reject a suggestion (tracked change) in the document.
+
+        Args:
+            document_id: The document ID.
+            suggestion_id: The suggestion ID to reject.
+        """
+        try:
+            requests = [
+                {
+                    "rejectSuggestion": {
+                        "suggestionId": suggestion_id,
+                    }
+                }
+            ]
+
+            result = (
+                self.service.documents()
+                .batchUpdate(documentId=document_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="docs.reject_suggestion",
+                document_id=document_id,
+                suggestion_id=suggestion_id,
+                rejected=True,
+            )
+            return result
+        except HttpError as e:
+            if "not found" in str(e.reason).lower():
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="docs.reject_suggestion",
+                    message=f"Suggestion not found: {suggestion_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.reject_suggestion",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def accept_all_suggestions(
+        self,
+        document_id: str,
+    ) -> dict[str, Any]:
+        """Accept all pending suggestions in the document.
+
+        Args:
+            document_id: The document ID.
+        """
+        try:
+            # First get all suggestions
+            suggestions_result = self.get_suggestions(document_id)
+            suggestions = suggestions_result.get("suggestions", [])
+
+            if not suggestions:
+                output_success(
+                    operation="docs.accept_all_suggestions",
+                    document_id=document_id,
+                    accepted_count=0,
+                    message="No pending suggestions to accept",
+                )
+                return {"accepted_count": 0}
+
+            # Build batch request
+            requests = [
+                {"acceptSuggestion": {"suggestionId": s["suggestion_id"]}}
+                for s in suggestions
+            ]
+
+            result = (
+                self.service.documents()
+                .batchUpdate(documentId=document_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="docs.accept_all_suggestions",
+                document_id=document_id,
+                accepted_count=len(suggestions),
+            )
+            return {"accepted_count": len(suggestions)}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.accept_all_suggestions",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def reject_all_suggestions(
+        self,
+        document_id: str,
+    ) -> dict[str, Any]:
+        """Reject all pending suggestions in the document.
+
+        Args:
+            document_id: The document ID.
+        """
+        try:
+            # First get all suggestions
+            suggestions_result = self.get_suggestions(document_id)
+            suggestions = suggestions_result.get("suggestions", [])
+
+            if not suggestions:
+                output_success(
+                    operation="docs.reject_all_suggestions",
+                    document_id=document_id,
+                    rejected_count=0,
+                    message="No pending suggestions to reject",
+                )
+                return {"rejected_count": 0}
+
+            # Build batch request
+            requests = [
+                {"rejectSuggestion": {"suggestionId": s["suggestion_id"]}}
+                for s in suggestions
+            ]
+
+            result = (
+                self.service.documents()
+                .batchUpdate(documentId=document_id, body={"requests": requests})
+                .execute()
+            )
+
+            output_success(
+                operation="docs.reject_all_suggestions",
+                document_id=document_id,
+                rejected_count=len(suggestions),
+            )
+            return {"rejected_count": len(suggestions)}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.reject_all_suggestions",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

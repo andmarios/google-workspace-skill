@@ -984,3 +984,238 @@ class DriveService(BaseService):
                 message=f"Google Drive API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # PERMISSIONS
+    # =========================================================================
+
+    def list_permissions(
+        self,
+        file_id: str,
+    ) -> dict[str, Any]:
+        """List all permissions on a file.
+
+        Args:
+            file_id: The file ID.
+        """
+        try:
+            result = (
+                self.service.permissions()
+                .list(
+                    fileId=file_id,
+                    fields="permissions(id,type,role,emailAddress,displayName,domain,expirationTime,deleted)",
+                )
+                .execute()
+            )
+
+            permissions = []
+            for perm in result.get("permissions", []):
+                permissions.append({
+                    "permission_id": perm.get("id"),
+                    "type": perm.get("type"),
+                    "role": perm.get("role"),
+                    "email_address": perm.get("emailAddress"),
+                    "display_name": perm.get("displayName"),
+                    "domain": perm.get("domain"),
+                    "expiration_time": perm.get("expirationTime"),
+                    "deleted": perm.get("deleted", False),
+                })
+
+            output_success(
+                operation="drive.list_permissions",
+                file_id=file_id,
+                permission_count=len(permissions),
+                permissions=permissions,
+            )
+            return {"permissions": permissions}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.list_permissions",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_permission(
+        self,
+        file_id: str,
+        permission_id: str,
+    ) -> dict[str, Any]:
+        """Get a specific permission.
+
+        Args:
+            file_id: The file ID.
+            permission_id: The permission ID.
+        """
+        try:
+            result = (
+                self.service.permissions()
+                .get(
+                    fileId=file_id,
+                    permissionId=permission_id,
+                    fields="id,type,role,emailAddress,displayName,domain,expirationTime,deleted,pendingOwner",
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="drive.get_permission",
+                file_id=file_id,
+                permission_id=permission_id,
+                type=result.get("type"),
+                role=result.get("role"),
+                email_address=result.get("emailAddress"),
+                display_name=result.get("displayName"),
+                domain=result.get("domain"),
+                expiration_time=result.get("expirationTime"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.get_permission",
+                    message=f"Permission not found: {permission_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.get_permission",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def update_permission(
+        self,
+        file_id: str,
+        permission_id: str,
+        role: str,
+        expiration_time: str | None = None,
+    ) -> dict[str, Any]:
+        """Update a permission's role.
+
+        Args:
+            file_id: The file ID.
+            permission_id: The permission ID.
+            role: New role (reader, commenter, writer, organizer, owner).
+            expiration_time: Optional expiration (ISO 8601 format).
+        """
+        try:
+            body: dict[str, Any] = {"role": role}
+            if expiration_time:
+                body["expirationTime"] = expiration_time
+
+            result = (
+                self.service.permissions()
+                .update(
+                    fileId=file_id,
+                    permissionId=permission_id,
+                    body=body,
+                    fields="id,type,role,emailAddress,expirationTime",
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="drive.update_permission",
+                file_id=file_id,
+                permission_id=permission_id,
+                new_role=role,
+                email_address=result.get("emailAddress"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.update_permission",
+                    message=f"Permission not found: {permission_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.update_permission",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_permission(
+        self,
+        file_id: str,
+        permission_id: str,
+    ) -> dict[str, Any]:
+        """Remove a permission from a file (unshare).
+
+        Args:
+            file_id: The file ID.
+            permission_id: The permission ID to remove.
+        """
+        try:
+            self.service.permissions().delete(
+                fileId=file_id,
+                permissionId=permission_id,
+            ).execute()
+
+            output_success(
+                operation="drive.delete_permission",
+                file_id=file_id,
+                permission_id=permission_id,
+                deleted=True,
+            )
+            return {"deleted": True, "permission_id": permission_id}
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.delete_permission",
+                    message=f"Permission not found: {permission_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.delete_permission",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def transfer_ownership(
+        self,
+        file_id: str,
+        new_owner_email: str,
+    ) -> dict[str, Any]:
+        """Transfer ownership of a file to another user.
+
+        Args:
+            file_id: The file ID.
+            new_owner_email: Email address of the new owner.
+        """
+        try:
+            result = (
+                self.service.permissions()
+                .create(
+                    fileId=file_id,
+                    body={
+                        "type": "user",
+                        "role": "owner",
+                        "emailAddress": new_owner_email,
+                    },
+                    transferOwnership=True,
+                    fields="id,emailAddress,role",
+                )
+                .execute()
+            )
+
+            output_success(
+                operation="drive.transfer_ownership",
+                file_id=file_id,
+                new_owner=new_owner_email,
+                permission_id=result.get("id"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.transfer_ownership",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

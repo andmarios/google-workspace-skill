@@ -438,3 +438,124 @@ def update_acl(
     """Update an access control rule's role."""
     service = CalendarService()
     service.update_acl(rule_id=rule_id, role=role, calendar_id=calendar_id)
+
+
+# ===== Reminders =====
+
+
+@app.command("get-reminders")
+def get_event_reminders(
+    event_id: Annotated[str, typer.Argument(help="Event ID.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Get reminders for an event."""
+    service = CalendarService()
+    service.get_event_reminders(event_id=event_id, calendar_id=calendar_id)
+
+
+@app.command("set-reminders")
+def set_event_reminders(
+    event_id: Annotated[str, typer.Argument(help="Event ID.")],
+    reminders: Annotated[
+        Optional[str],
+        typer.Option(
+            "--reminders", "-r",
+            help="Comma-separated reminders (format: method:minutes, e.g., 'popup:10,email:60').",
+        ),
+    ] = None,
+    use_default: Annotated[
+        bool,
+        typer.Option("--use-default", help="Use calendar's default reminders."),
+    ] = False,
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Set reminders for an event.
+
+    Examples:
+        Set a popup 10 minutes before and email 1 hour before:
+            gws calendar set-reminders EVENT_ID --reminders "popup:10,email:60"
+
+        Use calendar's default reminders:
+            gws calendar set-reminders EVENT_ID --use-default
+    """
+    reminder_list = None
+    if reminders and not use_default:
+        reminder_list = []
+        for r in reminders.split(","):
+            parts = r.strip().split(":")
+            if len(parts) == 2:
+                method, minutes = parts
+                reminder_list.append({
+                    "method": method.strip(),
+                    "minutes": int(minutes.strip()),
+                })
+
+    service = CalendarService()
+    service.set_event_reminders(
+        event_id=event_id,
+        reminders=reminder_list,
+        use_default=use_default,
+        calendar_id=calendar_id,
+    )
+
+
+@app.command("clear-reminders")
+def clear_event_reminders(
+    event_id: Annotated[str, typer.Argument(help="Event ID.")],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Remove all reminders from an event."""
+    service = CalendarService()
+    service.clear_event_reminders(event_id=event_id, calendar_id=calendar_id)
+
+
+@app.command("get-default-reminders")
+def get_default_reminders(
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Get default reminders for a calendar."""
+    service = CalendarService()
+    service.get_default_reminders(calendar_id=calendar_id)
+
+
+@app.command("set-default-reminders")
+def set_default_reminders(
+    reminders: Annotated[
+        str,
+        typer.Argument(help="Comma-separated reminders (format: method:minutes, e.g., 'popup:10,email:60')."),
+    ],
+    calendar_id: Annotated[
+        str,
+        typer.Option("--calendar", "-c", help="Calendar ID (default: primary)."),
+    ] = "primary",
+) -> None:
+    """Set default reminders for a calendar.
+
+    Example:
+        Set popup 10 minutes and email 30 minutes before as defaults:
+            gws calendar set-default-reminders "popup:10,email:30"
+    """
+    reminder_list = []
+    for r in reminders.split(","):
+        parts = r.strip().split(":")
+        if len(parts) == 2:
+            method, minutes = parts
+            reminder_list.append({
+                "method": method.strip(),
+                "minutes": int(minutes.strip()),
+            })
+
+    service = CalendarService()
+    service.set_default_reminders(reminders=reminder_list, calendar_id=calendar_id)

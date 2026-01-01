@@ -920,3 +920,226 @@ class CalendarService(BaseService):
                 message=f"Calendar API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # REMINDERS
+    # =========================================================================
+
+    def get_event_reminders(
+        self,
+        event_id: str,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Get reminders for an event.
+
+        Args:
+            event_id: The event ID.
+            calendar_id: Calendar ID.
+        """
+        try:
+            event = self.service.events().get(
+                calendarId=calendar_id, eventId=event_id
+            ).execute()
+
+            reminders = event.get("reminders", {})
+
+            output_success(
+                operation="calendar.get_event_reminders",
+                calendar_id=calendar_id,
+                event_id=event_id,
+                event_title=event.get("summary", ""),
+                use_default=reminders.get("useDefault", True),
+                overrides=reminders.get("overrides", []),
+            )
+            return reminders
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.get_event_reminders",
+                    message=f"Event not found: {event_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.get_event_reminders",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def set_event_reminders(
+        self,
+        event_id: str,
+        reminders: list[dict[str, Any]] | None = None,
+        use_default: bool = False,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Set reminders for an event.
+
+        Args:
+            event_id: The event ID.
+            reminders: List of reminders [{method: "email"|"popup", minutes: int}].
+            use_default: Use calendar's default reminders.
+            calendar_id: Calendar ID.
+        """
+        try:
+            body: dict[str, Any] = {
+                "reminders": {
+                    "useDefault": use_default,
+                }
+            }
+
+            if not use_default and reminders:
+                body["reminders"]["overrides"] = reminders
+
+            result = self.service.events().patch(
+                calendarId=calendar_id,
+                eventId=event_id,
+                body=body,
+            ).execute()
+
+            output_success(
+                operation="calendar.set_event_reminders",
+                calendar_id=calendar_id,
+                event_id=event_id,
+                use_default=use_default,
+                reminders=reminders if not use_default else "using defaults",
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.set_event_reminders",
+                    message=f"Event not found: {event_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.set_event_reminders",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_default_reminders(
+        self,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Get default reminders for a calendar.
+
+        Args:
+            calendar_id: Calendar ID.
+        """
+        try:
+            calendar = self.service.calendarList().get(
+                calendarId=calendar_id
+            ).execute()
+
+            reminders = calendar.get("defaultReminders", [])
+
+            output_success(
+                operation="calendar.get_default_reminders",
+                calendar_id=calendar_id,
+                calendar_summary=calendar.get("summary", ""),
+                default_reminders=reminders,
+            )
+            return {"default_reminders": reminders}
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.get_default_reminders",
+                    message=f"Calendar not found: {calendar_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.get_default_reminders",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def set_default_reminders(
+        self,
+        reminders: list[dict[str, Any]],
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Set default reminders for a calendar.
+
+        Args:
+            reminders: List of reminders [{method: "email"|"popup", minutes: int}].
+            calendar_id: Calendar ID.
+        """
+        try:
+            result = self.service.calendarList().patch(
+                calendarId=calendar_id,
+                body={"defaultReminders": reminders},
+            ).execute()
+
+            output_success(
+                operation="calendar.set_default_reminders",
+                calendar_id=calendar_id,
+                default_reminders=reminders,
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.set_default_reminders",
+                    message=f"Calendar not found: {calendar_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.set_default_reminders",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def clear_event_reminders(
+        self,
+        event_id: str,
+        calendar_id: str = "primary",
+    ) -> dict[str, Any]:
+        """Remove all reminders from an event.
+
+        Args:
+            event_id: The event ID.
+            calendar_id: Calendar ID.
+        """
+        try:
+            body = {
+                "reminders": {
+                    "useDefault": False,
+                    "overrides": [],
+                }
+            }
+
+            result = self.service.events().patch(
+                calendarId=calendar_id,
+                eventId=event_id,
+                body=body,
+            ).execute()
+
+            output_success(
+                operation="calendar.clear_event_reminders",
+                calendar_id=calendar_id,
+                event_id=event_id,
+                cleared=True,
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.clear_event_reminders",
+                    message=f"Event not found: {event_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.clear_event_reminders",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

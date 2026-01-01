@@ -105,12 +105,12 @@ uv run gws auth logout
 
 | Service | Operations | Description |
 |---------|------------|-------------|
-| `drive` | 22 | File upload, download, share, organize, comments, revisions, trash |
-| `docs` | 44 | Full document editing, tables, formatting, headers/footers, lists, named ranges, footnotes, suggestions |
+| `drive` | 28 | File upload, download, share, organize, comments, revisions, trash, permissions |
+| `docs` | 48 | Full document editing, tables, formatting, headers/footers, lists, named ranges, footnotes, suggestions (accept/reject) |
 | `sheets` | 49 | Read, write, format, borders, merge, conditional formatting, charts, data validation, sorting, filters, pivot tables, protected ranges, named ranges |
 | `slides` | 36 | Create, edit, shapes, tables, backgrounds, bullets, lines, cell merging, speaker notes, videos |
-| `gmail` | 31 | List, read, send, search, labels, drafts, attachments, threads, vacation, signatures |
-| `calendar` | 18 | Manage calendar events, recurring events, attendees, RSVP, free/busy, calendar sharing |
+| `gmail` | 35 | List, read, send, search, labels, drafts, attachments, threads, vacation, signatures, filters |
+| `calendar` | 23 | Manage calendar events, recurring events, attendees, RSVP, free/busy, calendar sharing, reminders |
 | `contacts` | 15 | Manage contacts, groups, photos (People API) |
 | `convert` | 3 | Markdown to Docs/Slides/PDF |
 
@@ -202,6 +202,31 @@ uv run gws drive restore <file_id>
 # Permanently delete all files in trash
 uv run gws drive empty-trash
 ```
+
+### Permissions
+
+```bash
+# List all permissions on a file (who has access)
+uv run gws drive list-permissions <file_id>
+
+# Get details of a specific permission
+uv run gws drive get-permission <file_id> <permission_id>
+
+# Update a permission's role
+uv run gws drive update-permission <file_id> <permission_id> writer
+
+# Set permission with expiration
+uv run gws drive update-permission <file_id> <permission_id> reader \
+    --expiration "2025-12-31T23:59:59Z"
+
+# Remove a permission (unshare)
+uv run gws drive delete-permission <file_id> <permission_id>
+
+# Transfer file ownership to another user
+uv run gws drive transfer-ownership <file_id> "newowner@example.com"
+```
+
+**Roles**: reader, commenter, writer, organizer (shared drives only), owner
 
 ## Docs Operations
 
@@ -400,9 +425,21 @@ uv run gws docs suggestions <document_id>
 
 # Check if document has pending suggestions
 uv run gws docs document-mode <document_id>
+
+# Accept a specific suggestion
+uv run gws docs accept-suggestion <document_id> <suggestion_id>
+
+# Reject a specific suggestion
+uv run gws docs reject-suggestion <document_id> <suggestion_id>
+
+# Accept all pending suggestions
+uv run gws docs accept-all-suggestions <document_id>
+
+# Reject all pending suggestions
+uv run gws docs reject-all-suggestions <document_id>
 ```
 
-**Note**: The Docs API can read suggestions (insertions, deletions, style changes) but cannot accept or reject them programmatically. Use the Google Docs UI to accept or reject suggestions.
+**Note**: Suggestion IDs can be obtained from the `suggestions` command output.
 
 ## Sheets Operations
 
@@ -1115,6 +1152,34 @@ uv run gws gmail get-signature
 uv run gws gmail set-signature "<p><b>John Doe</b><br>Software Engineer</p>"
 ```
 
+### Filters
+
+```bash
+# List all mail filters
+uv run gws gmail filters
+
+# Get filter details
+uv run gws gmail get-filter <filter_id>
+
+# Create filter to archive emails from a sender
+uv run gws gmail create-filter --from "newsletter@example.com" --archive
+
+# Create filter to label emails and skip inbox
+uv run gws gmail create-filter --from "team@company.com" --add-labels "Label_123" --archive
+
+# Create filter matching a query with multiple actions
+uv run gws gmail create-filter --query "subject:urgent" --star --important
+
+# Create filter to never send to spam
+uv run gws gmail create-filter --from "important@partner.com" --never-spam
+
+# Create filter to auto-delete (trash)
+uv run gws gmail create-filter --from "spam@example.com" --trash
+
+# Delete a filter
+uv run gws gmail delete-filter <filter_id>
+```
+
 ## Calendar Operations
 
 ### Basic Operations
@@ -1229,6 +1294,31 @@ uv run gws calendar remove-acl <rule_id>
 
 **Scope types**: user, group, domain, default
 **Roles**: reader, writer, owner, freeBusyReader
+
+### Reminders
+
+```bash
+# Get reminders for an event
+uv run gws calendar get-reminders <event_id>
+
+# Set custom reminders (popup 10 min, email 1 hour before)
+uv run gws calendar set-reminders <event_id> --reminders "popup:10,email:60"
+
+# Use calendar's default reminders
+uv run gws calendar set-reminders <event_id> --use-default
+
+# Remove all reminders from an event
+uv run gws calendar clear-reminders <event_id>
+
+# Get calendar's default reminders
+uv run gws calendar get-default-reminders
+
+# Set calendar's default reminders
+uv run gws calendar set-default-reminders "popup:10,email:30"
+```
+
+**Reminder methods**: popup (browser notification), email
+**Minutes**: Time before event (e.g., 10 = 10 minutes before)
 
 ## Contacts Operations
 
