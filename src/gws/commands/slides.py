@@ -230,3 +230,348 @@ def format_text(
         font_size=font_size,
         foreground_color=color,
     )
+
+
+@app.command("format-text-extended")
+def format_text_extended(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_id: Annotated[str, typer.Argument(help="Shape object ID.")],
+    start_index: Annotated[
+        Optional[int],
+        typer.Option("--start", help="Start character index (0-based)."),
+    ] = None,
+    end_index: Annotated[
+        Optional[int],
+        typer.Option("--end", help="End character index (exclusive)."),
+    ] = None,
+    bold: Annotated[
+        Optional[bool],
+        typer.Option("--bold/--no-bold", "-b", help="Bold formatting."),
+    ] = None,
+    italic: Annotated[
+        Optional[bool],
+        typer.Option("--italic/--no-italic", "-i", help="Italic formatting."),
+    ] = None,
+    underline: Annotated[
+        Optional[bool],
+        typer.Option("--underline/--no-underline", "-u", help="Underline formatting."),
+    ] = None,
+    strikethrough: Annotated[
+        Optional[bool],
+        typer.Option("--strikethrough/--no-strikethrough", help="Strikethrough."),
+    ] = None,
+    small_caps: Annotated[
+        Optional[bool],
+        typer.Option("--small-caps/--no-small-caps", help="Small caps."),
+    ] = None,
+    font_family: Annotated[
+        Optional[str],
+        typer.Option("--font", "-f", help="Font family (e.g., Arial, Roboto)."),
+    ] = None,
+    font_weight: Annotated[
+        Optional[int],
+        typer.Option("--weight", "-w", help="Font weight (100-900)."),
+    ] = None,
+    font_size: Annotated[
+        Optional[int],
+        typer.Option("--size", "-s", help="Font size in points."),
+    ] = None,
+    foreground_color: Annotated[
+        Optional[str],
+        typer.Option("--color", help="Text color (hex, e.g., #FF0000)."),
+    ] = None,
+    background_color: Annotated[
+        Optional[str],
+        typer.Option("--bg-color", help="Background/highlight color (hex)."),
+    ] = None,
+    baseline_offset: Annotated[
+        Optional[str],
+        typer.Option("--baseline", help="Baseline offset (SUPERSCRIPT, SUBSCRIPT)."),
+    ] = None,
+    link_url: Annotated[
+        Optional[str],
+        typer.Option("--link", help="URL to link the text to."),
+    ] = None,
+) -> None:
+    """Apply extended formatting to text with all options."""
+    service = SlidesService()
+    service.format_text_extended(
+        presentation_id=presentation_id,
+        object_id=object_id,
+        start_index=start_index,
+        end_index=end_index,
+        bold=bold,
+        italic=italic,
+        underline=underline,
+        strikethrough=strikethrough,
+        small_caps=small_caps,
+        font_family=font_family,
+        font_weight=font_weight,
+        font_size=font_size,
+        foreground_color=foreground_color,
+        background_color=background_color,
+        baseline_offset=baseline_offset,
+        link_url=link_url,
+    )
+
+
+@app.command("format-paragraph")
+def format_paragraph(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_id: Annotated[str, typer.Argument(help="Shape object ID.")],
+    start_index: Annotated[
+        Optional[int],
+        typer.Option("--start", help="Start character index (0-based)."),
+    ] = None,
+    end_index: Annotated[
+        Optional[int],
+        typer.Option("--end", help="End character index (exclusive)."),
+    ] = None,
+    alignment: Annotated[
+        Optional[str],
+        typer.Option("--align", "-a", help="Alignment (START, CENTER, END, JUSTIFIED)."),
+    ] = None,
+    line_spacing: Annotated[
+        Optional[float],
+        typer.Option("--line-spacing", help="Line spacing as percentage (100=single)."),
+    ] = None,
+    space_above: Annotated[
+        Optional[float],
+        typer.Option("--space-above", help="Space above paragraph in points."),
+    ] = None,
+    space_below: Annotated[
+        Optional[float],
+        typer.Option("--space-below", help="Space below paragraph in points."),
+    ] = None,
+    indent_first_line: Annotated[
+        Optional[float],
+        typer.Option("--indent-first", help="First line indent in points."),
+    ] = None,
+    indent_start: Annotated[
+        Optional[float],
+        typer.Option("--indent-start", help="Start (left) indent in points."),
+    ] = None,
+    indent_end: Annotated[
+        Optional[float],
+        typer.Option("--indent-end", help="End (right) indent in points."),
+    ] = None,
+) -> None:
+    """Apply paragraph formatting (alignment, spacing, indentation)."""
+    service = SlidesService()
+    service.format_paragraph(
+        presentation_id=presentation_id,
+        object_id=object_id,
+        start_index=start_index,
+        end_index=end_index,
+        alignment=alignment,
+        line_spacing=line_spacing,
+        space_above=space_above,
+        space_below=space_below,
+        indent_first_line=indent_first_line,
+        indent_start=indent_start,
+        indent_end=indent_end,
+    )
+
+
+@app.command("create-shape")
+def create_shape(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    page_id: Annotated[str, typer.Argument(help="Page/slide object ID.")],
+    shape_type: Annotated[
+        str, typer.Argument(help="Shape type (RECTANGLE, ELLIPSE, etc.).")
+    ],
+    x: Annotated[float, typer.Option("--x", help="X position in points.")],
+    y: Annotated[float, typer.Option("--y", help="Y position in points.")],
+    width: Annotated[float, typer.Option("--width", "-w", help="Width in points.")],
+    height: Annotated[float, typer.Option("--height", "-h", help="Height in points.")],
+) -> None:
+    """Create a shape on a slide."""
+    service = SlidesService()
+    service.create_shape(
+        presentation_id=presentation_id,
+        page_object_id=page_id,
+        shape_type=shape_type,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
+    )
+
+
+@app.command("format-shape")
+def format_shape(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_id: Annotated[str, typer.Argument(help="Shape object ID.")],
+    fill_color: Annotated[
+        Optional[str],
+        typer.Option("--fill", help="Fill color (hex, e.g., #FF0000)."),
+    ] = None,
+    outline_color: Annotated[
+        Optional[str],
+        typer.Option("--outline-color", help="Outline color (hex)."),
+    ] = None,
+    outline_weight: Annotated[
+        Optional[float],
+        typer.Option("--outline-weight", help="Outline weight in points."),
+    ] = None,
+    outline_dash_style: Annotated[
+        Optional[str],
+        typer.Option("--outline-style", help="Dash style (SOLID, DOT, DASH, etc.)."),
+    ] = None,
+) -> None:
+    """Format a shape's fill and outline."""
+    service = SlidesService()
+    service.format_shape(
+        presentation_id=presentation_id,
+        object_id=object_id,
+        fill_color=fill_color,
+        outline_color=outline_color,
+        outline_weight=outline_weight,
+        outline_dash_style=outline_dash_style,
+    )
+
+
+@app.command("insert-table")
+def insert_table(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    page_id: Annotated[str, typer.Argument(help="Page/slide object ID.")],
+    rows: Annotated[int, typer.Argument(help="Number of rows.")],
+    columns: Annotated[int, typer.Argument(help="Number of columns.")],
+    x: Annotated[float, typer.Option("--x", help="X position in points.")],
+    y: Annotated[float, typer.Option("--y", help="Y position in points.")],
+    width: Annotated[float, typer.Option("--width", "-w", help="Width in points.")],
+    height: Annotated[float, typer.Option("--height", "-h", help="Height in points.")],
+) -> None:
+    """Insert a table on a slide."""
+    service = SlidesService()
+    service.insert_table(
+        presentation_id=presentation_id,
+        page_object_id=page_id,
+        rows=rows,
+        columns=columns,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
+    )
+
+
+@app.command("insert-table-row")
+def insert_table_row(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    row_index: Annotated[int, typer.Argument(help="Row index to insert at.")],
+    below: Annotated[
+        bool,
+        typer.Option("--below/--above", help="Insert below (default) or above."),
+    ] = True,
+) -> None:
+    """Insert a row in a table."""
+    service = SlidesService()
+    service.insert_table_row(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        row_index=row_index,
+        insert_below=below,
+    )
+
+
+@app.command("insert-table-column")
+def insert_table_column(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    column_index: Annotated[int, typer.Argument(help="Column index to insert at.")],
+    right: Annotated[
+        bool,
+        typer.Option("--right/--left", help="Insert right (default) or left."),
+    ] = True,
+) -> None:
+    """Insert a column in a table."""
+    service = SlidesService()
+    service.insert_table_column(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        column_index=column_index,
+        insert_right=right,
+    )
+
+
+@app.command("delete-table-row")
+def delete_table_row(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    row_index: Annotated[int, typer.Argument(help="Row index to delete.")],
+) -> None:
+    """Delete a row from a table."""
+    service = SlidesService()
+    service.delete_table_row(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        row_index=row_index,
+    )
+
+
+@app.command("delete-table-column")
+def delete_table_column(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    column_index: Annotated[int, typer.Argument(help="Column index to delete.")],
+) -> None:
+    """Delete a column from a table."""
+    service = SlidesService()
+    service.delete_table_column(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        column_index=column_index,
+    )
+
+
+@app.command("style-table-cell")
+def style_table_cell(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    row_index: Annotated[int, typer.Argument(help="Starting row index.")],
+    column_index: Annotated[int, typer.Argument(help="Starting column index.")],
+    background_color: Annotated[
+        Optional[str],
+        typer.Option("--bg-color", help="Background color (hex)."),
+    ] = None,
+    end_row_index: Annotated[
+        Optional[int],
+        typer.Option("--end-row", help="Ending row index (exclusive)."),
+    ] = None,
+    end_column_index: Annotated[
+        Optional[int],
+        typer.Option("--end-col", help="Ending column index (exclusive)."),
+    ] = None,
+) -> None:
+    """Style table cells (background color)."""
+    service = SlidesService()
+    service.style_table_cell(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        row_index=row_index,
+        column_index=column_index,
+        background_color=background_color,
+        end_row_index=end_row_index,
+        end_column_index=end_column_index,
+    )
+
+
+@app.command("insert-table-text")
+def insert_table_text(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    table_id: Annotated[str, typer.Argument(help="Table object ID.")],
+    row_index: Annotated[int, typer.Argument(help="Row index.")],
+    column_index: Annotated[int, typer.Argument(help="Column index.")],
+    text: Annotated[str, typer.Argument(help="Text to insert.")],
+) -> None:
+    """Insert text into a table cell."""
+    service = SlidesService()
+    service.insert_text_in_table_cell(
+        presentation_id=presentation_id,
+        table_id=table_id,
+        row_index=row_index,
+        column_index=column_index,
+        text=text,
+    )

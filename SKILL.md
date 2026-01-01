@@ -19,9 +19,9 @@ Manage Google Workspace documents, spreadsheets, presentations, drive files, ema
 
 **Google Docs:** Read, create, insert/append text, find-replace, format (text, paragraph, extended), tables (insert, style, merge, row/column ops), headers/footers, lists/bullets, page breaks, section breaks, document styling, images
 
-**Google Sheets:** Read, create, write/append data, format cells, manage sheets
+**Google Sheets:** Read, create, write/append data, full cell formatting (fonts, colors, alignment, number formats), borders, merge/unmerge cells, row/column sizing, freeze panes, conditional formatting (rules and color scales)
 
-**Google Slides:** Read, create presentations, add/delete slides, text boxes, images, formatting
+**Google Slides:** Read, create presentations, add/delete slides, text boxes, images, full text formatting (fonts, colors, effects, superscript/subscript, links), paragraph formatting (alignment, spacing, indentation), shapes (create and style), tables (insert, style cells, add/delete rows/columns)
 
 **Google Drive:** Upload, download, search, share, create folders, move, copy, delete
 
@@ -107,8 +107,8 @@ uv run gws auth logout
 |---------|------------|-------------|
 | `drive` | 11 | File upload, download, share, organize |
 | `docs` | 37 | Full document editing, tables, formatting, headers/footers, lists |
-| `sheets` | 11 | Read, write, format spreadsheets |
-| `slides` | 12 | Create and edit presentations |
+| `sheets` | 23 | Read, write, format, borders, merge, conditional formatting |
+| `slides` | 24 | Create, edit, shapes, tables, professional formatting |
 | `gmail` | 8 | List, read, send, search, mark read/unread |
 | `calendar` | 6 | Manage calendar events |
 | `contacts` | 5 | Manage contacts (People API) |
@@ -317,6 +317,8 @@ uv run gws docs document-style <document_id> --first-page-diff
 
 ## Sheets Operations
 
+### Basic Operations
+
 ```bash
 # Get spreadsheet metadata
 uv run gws sheets metadata <spreadsheet_id>
@@ -337,6 +339,13 @@ uv run gws sheets append <spreadsheet_id> "A1:C1" --values '[["New","Row","Data"
 # Clear range
 uv run gws sheets clear <spreadsheet_id> "A1:C10"
 
+# Batch get multiple ranges
+uv run gws sheets batch-get <spreadsheet_id> "A1:B5,C1:D5"
+```
+
+### Sheet Management
+
+```bash
 # Add new sheet
 uv run gws sheets add-sheet <spreadsheet_id> "New Sheet"
 
@@ -345,15 +354,128 @@ uv run gws sheets rename-sheet <spreadsheet_id> <sheet_id> "Renamed Sheet"
 
 # Delete sheet
 uv run gws sheets delete-sheet <spreadsheet_id> <sheet_id>
-
-# Format cells (bold, background color)
-uv run gws sheets format <spreadsheet_id> <sheet_id> 0 5 0 3 --bold --bg-color "#FFE0B2"
-
-# Batch get multiple ranges
-uv run gws sheets batch-get <spreadsheet_id> "A1:B5,C1:D5"
 ```
 
+### Cell Formatting
+
+```bash
+# Basic formatting (bold, background color)
+uv run gws sheets format <spreadsheet_id> <sheet_id> 0 5 0 3 --bold --bg-color "#FFE0B2"
+
+# Extended formatting (full typography and alignment control)
+uv run gws sheets format-extended <spreadsheet_id> <sheet_id> 0 10 0 5 \
+    --bold --italic --font "Arial" --size 12 \
+    --color "#000000" --bg-color "#E3F2FD" \
+    --h-align CENTER --v-align MIDDLE --wrap WRAP
+
+# Number formatting
+uv run gws sheets format-extended <spreadsheet_id> <sheet_id> 1 10 2 3 \
+    --number-format "#,##0.00"      # Currency style
+uv run gws sheets format-extended <spreadsheet_id> <sheet_id> 1 10 4 5 \
+    --number-format "0%"             # Percentage style
+```
+
+**Horizontal alignment**: LEFT, CENTER, RIGHT
+**Vertical alignment**: TOP, MIDDLE, BOTTOM
+**Text wrap**: OVERFLOW_CELL, CLIP, WRAP
+**Number formats**: Use spreadsheet pattern syntax (e.g., `#,##0.00`, `0%`, `yyyy-mm-dd`)
+
+### Cell Borders
+
+```bash
+# Add borders to all sides of a range
+uv run gws sheets set-borders <spreadsheet_id> <sheet_id> 0 10 0 5 \
+    --all --color "#000000" --style SOLID --width 1
+
+# Custom border configuration
+uv run gws sheets set-borders <spreadsheet_id> <sheet_id> 0 10 0 5 \
+    --top --bottom --left --right \
+    --color "#0000FF" --style DASHED --width 2
+
+# Grid lines (inner borders)
+uv run gws sheets set-borders <spreadsheet_id> <sheet_id> 0 10 0 5 \
+    --all --inner-horizontal --inner-vertical
+```
+
+**Border styles**: SOLID, DOTTED, DASHED, SOLID_MEDIUM, SOLID_THICK, DOUBLE
+
+### Merge and Unmerge Cells
+
+```bash
+# Merge all cells in range
+uv run gws sheets merge-cells <spreadsheet_id> <sheet_id> 0 3 0 4
+
+# Merge types
+uv run gws sheets merge-cells <spreadsheet_id> <sheet_id> 0 3 0 4 --type MERGE_ALL
+uv run gws sheets merge-cells <spreadsheet_id> <sheet_id> 0 3 0 4 --type MERGE_COLUMNS
+uv run gws sheets merge-cells <spreadsheet_id> <sheet_id> 0 3 0 4 --type MERGE_ROWS
+
+# Unmerge cells
+uv run gws sheets unmerge-cells <spreadsheet_id> <sheet_id> 0 3 0 4
+```
+
+**Merge types**: MERGE_ALL (single cell), MERGE_COLUMNS (merge within columns), MERGE_ROWS (merge within rows)
+
+### Row and Column Sizing
+
+```bash
+# Set column width (pixels)
+uv run gws sheets set-column-width <spreadsheet_id> <sheet_id> 0 3 150
+
+# Set row height (pixels)
+uv run gws sheets set-row-height <spreadsheet_id> <sheet_id> 0 5 30
+
+# Auto-resize columns to fit content
+uv run gws sheets auto-resize-columns <spreadsheet_id> <sheet_id> 0 5
+```
+
+### Freeze Panes
+
+```bash
+# Freeze header rows (first N rows stay visible when scrolling)
+uv run gws sheets freeze-rows <spreadsheet_id> <sheet_id> 1
+
+# Freeze columns (first N columns stay visible)
+uv run gws sheets freeze-columns <spreadsheet_id> <sheet_id> 2
+
+# Unfreeze (set to 0)
+uv run gws sheets freeze-rows <spreadsheet_id> <sheet_id> 0
+uv run gws sheets freeze-columns <spreadsheet_id> <sheet_id> 0
+```
+
+### Conditional Formatting
+
+```bash
+# Highlight cells greater than a value
+uv run gws sheets add-conditional-format <spreadsheet_id> <sheet_id> 1 100 2 3 \
+    --condition NUMBER_GREATER --values 100 --bg-color "#FFCDD2"
+
+# Highlight cells containing text
+uv run gws sheets add-conditional-format <spreadsheet_id> <sheet_id> 1 100 0 1 \
+    --condition TEXT_CONTAINS --values "urgent" \
+    --bg-color "#FFEB3B" --color "#000000" --bold
+
+# Highlight blank cells
+uv run gws sheets add-conditional-format <spreadsheet_id> <sheet_id> 1 100 0 5 \
+    --condition BLANK --bg-color "#E0E0E0"
+
+# Color scale (gradient from min to max)
+uv run gws sheets add-color-scale <spreadsheet_id> <sheet_id> 1 100 2 3 \
+    --min-color "#FFFFFF" --max-color "#4CAF50"
+
+# Three-color scale (with midpoint)
+uv run gws sheets add-color-scale <spreadsheet_id> <sheet_id> 1 100 2 3 \
+    --min-color "#F44336" --mid-color "#FFEB3B" --max-color "#4CAF50"
+
+# Clear all conditional formatting from sheet
+uv run gws sheets clear-conditional-formats <spreadsheet_id> <sheet_id>
+```
+
+**Condition types**: NUMBER_GREATER, NUMBER_LESS, NUMBER_EQ, NUMBER_BETWEEN, TEXT_CONTAINS, TEXT_NOT_CONTAINS, TEXT_STARTS_WITH, TEXT_ENDS_WITH, BLANK, NOT_BLANK, DATE_BEFORE, DATE_AFTER
+
 ## Slides Operations
+
+### Basic Operations
 
 ```bash
 # Get presentation metadata
@@ -373,7 +495,13 @@ uv run gws slides delete-slide <presentation_id> <slide_id>
 
 # Duplicate slide
 uv run gws slides duplicate-slide <presentation_id> <slide_id>
+```
 
+**Slide layouts**: BLANK, TITLE, TITLE_AND_BODY, TITLE_AND_TWO_COLUMNS, TITLE_ONLY, SECTION_HEADER, CAPTION_ONLY, BIG_NUMBER
+
+### Text Boxes and Content
+
+```bash
 # Create textbox
 uv run gws slides create-textbox <presentation_id> <slide_id> "Text content" \
     --x 100 --y 100 --width 400 --height 50
@@ -384,9 +512,6 @@ uv run gws slides insert-text <presentation_id> <element_id> "Text to insert" --
 # Replace text in presentation
 uv run gws slides replace-text <presentation_id> "{{placeholder}}" "Replacement"
 
-# Format text
-uv run gws slides format-text <presentation_id> <element_id> --bold --font-size 24
-
 # Insert image
 uv run gws slides insert-image <presentation_id> <slide_id> "https://example.com/image.png" \
     --x 100 --y 100 --width 300 --height 200
@@ -395,7 +520,126 @@ uv run gws slides insert-image <presentation_id> <slide_id> "https://example.com
 uv run gws slides delete-element <presentation_id> <element_id>
 ```
 
-**Slide layouts**: BLANK, TITLE, TITLE_AND_BODY, TITLE_AND_TWO_COLUMNS, TITLE_ONLY, SECTION_HEADER, CAPTION_ONLY, BIG_NUMBER
+### Text Formatting
+
+```bash
+# Basic formatting
+uv run gws slides format-text <presentation_id> <element_id> --bold --font-size 24
+
+# Extended formatting (full typography control)
+uv run gws slides format-text-extended <presentation_id> <element_id> \
+    --bold --italic --underline --strikethrough \
+    --font "Arial" --weight 700 --size 18 \
+    --color "#1A237E" --bg-color "#E3F2FD"
+
+# Format specific text range (start_index to end_index)
+uv run gws slides format-text-extended <presentation_id> <element_id> \
+    --start 0 --end 10 --bold --color "#FF0000"
+
+# Superscript/subscript
+uv run gws slides format-text-extended <presentation_id> <element_id> \
+    --start 5 --end 7 --baseline SUPERSCRIPT
+uv run gws slides format-text-extended <presentation_id> <element_id> \
+    --start 10 --end 12 --baseline SUBSCRIPT
+
+# Add hyperlink
+uv run gws slides format-text-extended <presentation_id> <element_id> \
+    --start 0 --end 15 --link "https://example.com"
+
+# Small caps
+uv run gws slides format-text-extended <presentation_id> <element_id> --small-caps
+```
+
+**Baseline offsets**: SUPERSCRIPT, SUBSCRIPT, NONE
+**Font weights**: 100 (thin) to 900 (black), 400 is normal, 700 is bold
+
+### Paragraph Formatting
+
+```bash
+# Paragraph alignment
+uv run gws slides format-paragraph <presentation_id> <element_id> --align CENTER
+
+# Line spacing and paragraph spacing (points)
+uv run gws slides format-paragraph <presentation_id> <element_id> \
+    --line-spacing 150 --space-above 12 --space-below 6
+
+# Indentation (points)
+uv run gws slides format-paragraph <presentation_id> <element_id> \
+    --indent-first 36 --indent-start 18 --indent-end 0
+
+# Format specific paragraph range
+uv run gws slides format-paragraph <presentation_id> <element_id> \
+    --start 0 --end 100 --align JUSTIFIED
+```
+
+**Alignments**: START, CENTER, END, JUSTIFIED
+
+### Shapes
+
+```bash
+# Create shape
+uv run gws slides create-shape <presentation_id> <slide_id> RECTANGLE \
+    --x 100 --y 100 --width 200 --height 100
+
+# Create other shape types
+uv run gws slides create-shape <presentation_id> <slide_id> ELLIPSE \
+    --x 350 --y 100 --width 150 --height 150
+uv run gws slides create-shape <presentation_id> <slide_id> ROUND_RECTANGLE \
+    --x 100 --y 250 --width 200 --height 80
+
+# Format shape appearance
+uv run gws slides format-shape <presentation_id> <shape_id> \
+    --fill-color "#4CAF50" --outline-color "#2E7D32" \
+    --outline-weight 2 --outline-dash SOLID
+
+# Dashed outline
+uv run gws slides format-shape <presentation_id> <shape_id> \
+    --outline-dash DASH --outline-weight 3
+```
+
+**Shape types**: RECTANGLE, ROUND_RECTANGLE, ELLIPSE, TRIANGLE, RIGHT_TRIANGLE, PARALLELOGRAM, TRAPEZOID, PENTAGON, HEXAGON, HEPTAGON, OCTAGON, STAR_4, STAR_5, STAR_6, ARROW_EAST, ARROW_NORTH, PLUS, and many more
+
+**Outline dash styles**: SOLID, DASH, DOT, DASH_DOT, LONG_DASH, LONG_DASH_DOT
+
+### Tables
+
+```bash
+# Insert table
+uv run gws slides insert-table <presentation_id> <slide_id> 4 3 \
+    --x 100 --y 150 --width 500 --height 200
+
+# Insert text into table cell
+uv run gws slides insert-table-text <presentation_id> <table_id> 0 0 "Header 1"
+uv run gws slides insert-table-text <presentation_id> <table_id> 0 1 "Header 2"
+uv run gws slides insert-table-text <presentation_id> <table_id> 1 0 "Row 1 Data"
+
+# Style table cell (background color)
+uv run gws slides style-table-cell <presentation_id> <table_id> 0 0 \
+    --bg-color "#1565C0"
+
+# Style header row
+uv run gws slides style-table-cell <presentation_id> <table_id> 0 0 --bg-color "#E3F2FD"
+uv run gws slides style-table-cell <presentation_id> <table_id> 0 1 --bg-color "#E3F2FD"
+uv run gws slides style-table-cell <presentation_id> <table_id> 0 2 --bg-color "#E3F2FD"
+
+# Insert row (below specified row index)
+uv run gws slides insert-table-row <presentation_id> <table_id> 2
+
+# Insert row above
+uv run gws slides insert-table-row <presentation_id> <table_id> 0 --above
+
+# Insert column (right of specified column index)
+uv run gws slides insert-table-column <presentation_id> <table_id> 1
+
+# Insert column to the left
+uv run gws slides insert-table-column <presentation_id> <table_id> 0 --left
+
+# Delete row
+uv run gws slides delete-table-row <presentation_id> <table_id> 3
+
+# Delete column
+uv run gws slides delete-table-column <presentation_id> <table_id> 2
+```
 
 ## Gmail Operations
 
