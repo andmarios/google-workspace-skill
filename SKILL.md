@@ -8,7 +8,7 @@ when_to_use: Document operations, spreadsheet data, presentations, Drive file ma
 allowed_tools:
   - Bash(uv run gws:*)
   - Bash(cd * && uv run gws:*)
-  - Read(/home/piper/.claude/.google/**)
+  - Read(/home/piper/.claude/.google-workspace/**)
 ---
 
 # Google Workspace Skill
@@ -96,7 +96,7 @@ uv run gws auth --force
 uv run gws auth logout
 ```
 
-**Credential files** are stored in `~/.claude/.google/`:
+**Credential files** are stored in `~/.claude/.google-workspace/`:
 - `client_secret.json` - OAuth client credentials (required)
 - `token.json` - User access token (auto-generated)
 - `gws_config.json` - Service enable/disable config

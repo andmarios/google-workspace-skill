@@ -16,8 +16,8 @@ from gws.exceptions import AuthError
 class AuthManager:
     """Manages OAuth authentication for all Google services."""
 
-    CREDENTIALS_PATH = Path.home() / ".claude" / ".google" / "client_secret.json"
-    TOKEN_PATH = Path.home() / ".claude" / ".google" / "token.json"
+    CREDENTIALS_PATH = Path.home() / ".claude" / ".google-workspace" / "client_secret.json"
+    TOKEN_PATH = Path.home() / ".claude" / ".google-workspace" / "token.json"
     LOOPBACK_IP = "127.0.0.1"
     PORT_RANGE = range(8080, 8100)
 

@@ -103,7 +103,7 @@ uv run ruff check .
 
 ## Credentials
 
-Stored in `~/.claude/.google/`:
+Stored in `~/.claude/.google-workspace/`:
 - `client_secret.json` - OAuth client credentials (user provides)
 - `token.json` - Access token (auto-generated)
 - `gws_config.json` - Configuration (enabled services, Kroki URL)

@@ -10,7 +10,7 @@ from typing import ClassVar
 class Config:
     """CLI configuration with enabled services."""
 
-    CONFIG_PATH: ClassVar[Path] = Path.home() / ".claude" / ".google" / "gws_config.json"
+    CONFIG_PATH: ClassVar[Path] = Path.home() / ".claude" / ".google-workspace" / "gws_config.json"
 
     ALL_SERVICES: ClassVar[list[str]] = [
         "docs",

@@ -38,7 +38,7 @@ git clone https://github.com/your-username/google-workspace ~/.claude/skills/goo
 4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
 5. Select **Desktop application**
 6. Download the JSON file
-7. Save it as `~/.claude/.google/client_secret.json`
+7. Save it as `~/.claude/.google-workspace/client_secret.json`
 
 ### 3. Authenticate
 
@@ -97,7 +97,7 @@ export GWS_KROKI_URL=http://localhost:8000
 
 ## Credential Storage
 
-All credentials are stored in `~/.claude/.google/`:
+All credentials are stored in `~/.claude/.google-workspace/`:
 
 | File | Purpose |
 |------|---------|
