@@ -27,7 +27,7 @@ git clone https://github.com/your-username/google-workspace ~/.claude/skills/goo
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Create a new project (or select existing)
-3. Enable these APIs:
+3. Enable only the APIs you need (services are configurable):
    - Google Drive API
    - Google Docs API
    - Google Sheets API
@@ -35,6 +35,9 @@ git clone https://github.com/your-username/google-workspace ~/.claude/skills/goo
    - Gmail API
    - Google Calendar API
    - People API
+
+   **Note:** You don't need to enable all APIs. Only enable the ones you plan to use, then disable the rest in the skill config (see Configuration section below).
+
 4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
 5. Select **Desktop application**
 6. Download the JSON file
@@ -64,7 +67,7 @@ Claude will use the skill automatically when your request involves Google Worksp
 
 ### Enable/Disable Services
 
-For security, you can disable services you don't need:
+Services are configurable. You can disable services you don't need (or haven't enabled APIs for):
 
 ```bash
 # Disable Gmail access
@@ -76,6 +79,21 @@ uv run gws config enable gmail
 # See what's enabled
 uv run gws config list
 ```
+
+The config file (`~/.claude/.google-workspace/gws_config.json`) is created automatically when you first run a config command. You can also create it manually:
+
+```json
+{
+  "enabled_services": [
+    "docs",
+    "sheets",
+    "drive"
+  ],
+  "kroki_url": "https://kroki.io"
+}
+```
+
+Available services: `docs`, `sheets`, `slides`, `drive`, `gmail`, `calendar`, `contacts`, `convert`
 
 ### Custom Kroki Server
 

@@ -1,6 +1,6 @@
 ---
 name: google-workspace
-description: Manage Google Workspace with Docs, Sheets, Slides, Drive, Gmail, Calendar, and Contacts operations. Full document/spreadsheet/presentation editing, file management, email, and scheduling.
+description: Manage Google Workspace with Docs, Sheets, Slides, Drive, Gmail, Calendar, and Contacts. Create professional documents, engaging presentations, reports from markdown. Convert markdown to Google Docs/Slides/PDF. Full editing, formatting, file management, email, and scheduling.
 category: productivity
 version: 1.0.0
 key_capabilities: Docs (read/edit/format), Sheets (read/write/format), Slides (create/edit), Drive (upload/download/share), Gmail (send/search), Calendar (events), Contacts (manage), Convert (markdown)
@@ -43,6 +43,66 @@ Manage Google Workspace documents, spreadsheets, presentations, drive files, ema
 - User wants to convert Markdown to Google formats
 - Keywords: "Google Doc", "spreadsheet", "presentation", "slides", "Drive", "upload", "share", "email", "calendar", "contacts"
 
+## Quick Start: Common Workflows
+
+### Create a professional document from markdown
+```bash
+uv run gws convert md-to-doc /path/to/file.md -t "Document Title"
+```
+
+### Create or enhance documents with rich content
+When creating documents from scratch or enhancing converted documents, use all available tools:
+- **Image generation** (DALL-E, etc.) - Create illustrations, diagrams, or infographics
+- **Diagram rendering** - Use `--render-diagrams` flag or generate via Kroki
+- **Tables** - Structure data clearly with `insert-table` and styling
+- **Charts/visualizations** - Generate and insert as images
+
+```bash
+# Insert image into document
+uv run gws docs insert-image $DOC_ID "https://example.com/image.png" --index 50
+
+# Or use diagram rendering during conversion
+uv run gws convert md-to-doc report.md -t "Report" --render-diagrams
+```
+
+### Create an engaging presentation (manual approach recommended)
+```bash
+# 1. Create presentation
+uv run gws slides create "Presentation Title"
+
+# 2. Add slides with layouts (TITLE, TITLE_AND_BODY, SECTION_HEADER, etc.)
+uv run gws slides add-slide $PRES_ID --layout TITLE_AND_BODY
+
+# 3. Read to get element IDs
+uv run gws slides read $PRES_ID
+
+# 4. Insert text into elements
+uv run gws slides insert-text $PRES_ID $ELEMENT_ID "Your content"
+
+# 5. Apply styling
+uv run gws slides set-background $PRES_ID $SLIDE_ID --color "#1A365D"
+uv run gws slides format-text $PRES_ID $ELEMENT_ID --bold --font-size 24
+```
+
+### Slide content limits (see [SKILL-advanced.md](SKILL-advanced.md) for design best practices)
+- Maximum 6 bullet points per slide
+- Maximum 6 words per bullet
+- Under 40 words total per slide
+- One idea per slide
+
+### Enhance presentations with visuals
+Great presentations use **images, diagrams, charts, and infographics** to communicate ideas effectively. Use all available tools:
+- **Image generation** (DALL-E, etc.) - Create custom illustrations, icons, or backgrounds
+- **Diagram tools** (Mermaid, PlantUML) - Render flowcharts, architecture diagrams, timelines
+- **Charts from data** - Visualize metrics and trends
+- **Screenshots/mockups** - Show products, interfaces, or examples
+
+Insert visuals with:
+```bash
+uv run gws slides insert-image $PRES_ID $SLIDE_ID "https://example.com/image.png" \
+    --x 100 --y 100 --width 400 --height 300
+```
+
 ## Safety Guidelines
 
 **Destructive operations** - Always confirm with user before:
@@ -75,6 +135,15 @@ Manage Google Workspace documents, spreadsheets, presentations, drive files, ema
    - This preserves the user's original file formatting
 
 3. **Read before modify**: ALWAYS read the document first before making changes to understand structure and indices.
+
+4. **Use metadata for sheets**: When working with spreadsheets that have multiple tabs, use `uv run gws sheets metadata <spreadsheet_id>` FIRST to discover all sheet names and IDs. This avoids trial-and-error when reading specific sheets.
+   ```bash
+   # Get all sheet names in a spreadsheet
+   uv run gws sheets metadata <spreadsheet_id>
+   # Then read a specific sheet
+   # IMPORTANT: Use single quotes for the range to prevent bash history expansion
+   uv run gws sheets read <spreadsheet_id> 'Sheet Name!A1:Z100'
+   ```
 
 ## Quick Reference
 
@@ -187,12 +256,16 @@ uv run gws contacts delete-photo <resource_name>
 # Markdown to Google Doc (uses Google's native MD import)
 uv run gws convert md-to-doc /path/to/document.md --title "My Document"
 
-# Markdown to Google Slides
+# Markdown to Google Slides (simple presentations only)
 uv run gws convert md-to-slides /path/to/presentation.md --title "My Presentation"
 
 # Markdown to PDF (via temp Google Doc)
 uv run gws convert md-to-pdf /path/to/document.md /path/to/output.pdf
 ```
+
+> **⚠️ Limitation**: `md-to-slides` creates slides without proper element ID mapping, which prevents applying themes, backgrounds, and text formatting afterward. For professional presentations requiring styling, use the manual approach shown in "Quick Start" above.
+
+> **💡 Tip**: After converting a document, you can enhance it by inserting images, diagrams, or infographics. Use image generation tools (DALL-E, etc.) to create visuals, then insert them with `docs insert-image`.
 
 **Markdown formatting requirements**:
 - Bullet lists MUST use asterisks (`*`) not dashes (`-`) for proper rendering
@@ -220,6 +293,75 @@ Mermaid diagrams use the `neutral` theme by default for professional grayscale o
 - `- item` or `* item` - Bullet points
 - `1. item` - Numbered list items
 - `---` - Force slide break
+
+**Content limits for slides** (see [SKILL-advanced.md](SKILL-advanced.md) for design best practices):
+- 6×6 rule: max 6 bullets, max 6 words each
+- Keep slides under 40 words total
+- Text extending past slide boundaries won't be visible
+
+### Example: Complete Presentation Workflow
+
+> **Note**: Use the manual approach (not `md-to-slides`) for professional presentations. Manual creation gives you proper element IDs for styling and theming.
+
+1. **Create the presentation**:
+```bash
+uv run gws slides create "My Presentation"
+# Returns: presentation_id
+```
+
+2. **Add slides with appropriate layouts**:
+```bash
+# Title slide is created automatically. Add content slides:
+uv run gws slides add-slide $PRES_ID --layout TITLE_AND_BODY --index 1
+uv run gws slides add-slide $PRES_ID --layout TITLE_AND_BODY --index 2
+uv run gws slides add-slide $PRES_ID --layout SECTION_HEADER --index 3
+```
+
+3. **Read to get element IDs**:
+```bash
+uv run gws slides read $PRES_ID
+# Returns slide IDs and element IDs (title box, body box, etc.)
+```
+
+4. **Insert content** (keep it minimal - 6×6 rule):
+```bash
+# Title slide
+uv run gws slides insert-text $PRES_ID "i0" "Presentation Title"
+uv run gws slides insert-text $PRES_ID "i1" "Your subtitle here"
+
+# Content slide (use element IDs from step 3)
+uv run gws slides insert-text $PRES_ID $TITLE_ELEMENT "First Topic"
+uv run gws slides insert-text $PRES_ID $BODY_ELEMENT "Key point one
+Key point two
+Key point three"
+```
+
+5. **Apply professional styling** (see [reference/slides.md](reference/slides.md)):
+```bash
+# Set dark background for title slide
+uv run gws slides set-background $PRES_ID $SLIDE_ID --color "#1A365D"
+
+# Format title text (white on dark background)
+uv run gws slides format-text $PRES_ID $TITLE_ELEMENT --bold --font-size 44 --color "#FFFFFF"
+
+# Create proper bullet lists
+uv run gws slides create-bullets $PRES_ID $BODY_ELEMENT --preset BULLET_DISC_CIRCLE_SQUARE
+```
+
+6. **Add visuals** - Use all tools at your disposal:
+```bash
+# Generate an image with DALL-E or other image tools, then insert it
+uv run gws slides insert-image $PRES_ID $SLIDE_ID "https://generated-image-url.png" \
+    --x 350 --y 150 --width 300 --height 250
+
+# Or render a diagram via Kroki and insert it
+# (flowcharts, architecture diagrams, timelines, etc.)
+```
+
+7. **Add speaker notes** for presentation guidance:
+```bash
+uv run gws slides set-speaker-notes $PRES_ID $SLIDE_ID "Key talking points for this slide..."
+```
 
 ## Configuration
 

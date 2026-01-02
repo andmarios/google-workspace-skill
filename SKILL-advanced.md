@@ -484,7 +484,10 @@ Yellow:   #B45309 (4.6:1)  — Caution (not pure yellow)
 4. Apply visual hierarchy (title dominant)
 5. Add visuals that reinforce, not decorate
 6. Reduce text to absolute minimum
-7. Practice the narrative flow
+7. **Add speaker notes** with talking points, statistics, and context
+8. Practice the narrative flow
+
+> **For investor/executive presentations**: Speaker notes are essential. They contain the data, context, and talking points that support minimal slide text. Always add them after creating slides.
 
 ### Creating a Data Dashboard (Sheets)
 
@@ -902,6 +905,12 @@ TITLE_SLIDE=$(echo "$SLIDES" | jq -r '.slides[0].object_id')
 for SLIDE_ID in $(echo "$SLIDES" | jq -r '.slides[].object_id'); do
   uv run gws slides insert-image "$PRES_ID" "$SLIDE_ID" "https://example.com/logo.png" \
     --x 620 --y 10 --width 80 --height 40
+done
+
+# Step 6: Add speaker notes (ESSENTIAL for investor/executive presentations)
+# Speaker notes contain talking points, statistics, and context not shown on slides
+for SLIDE_ID in $(echo "$SLIDES" | jq -r '.slides[].object_id'); do
+  uv run gws slides set-speaker-notes "$PRES_ID" "$SLIDE_ID" "Key talking points for this slide..."
 done
 ```
 
