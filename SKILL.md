@@ -145,6 +145,33 @@ uv run gws slides insert-image $PRES_ID $SLIDE_ID "https://example.com/image.png
    uv run gws sheets read <spreadsheet_id> 'Sheet Name!A1:Z100'
    ```
 
+5. **Never rewrite user content**: When creating or converting documents:
+   - PRESERVE the user's exact text, words, and phrasing
+   - Only ADD formatting, structure, headers, footers
+   - NEVER rephrase, summarize, expand, or "improve" text
+   - If content changes are needed, ASK USER FIRST
+   - The user's words are sacred — apply styling only
+
+6. **Table consistency is mandatory**: All tables in a document MUST have:
+   - Same border style and color
+   - Same header background color
+   - Same alignment conventions (text left, numbers right)
+   - Same cell padding
+   - See [SKILL-typesetting.md](SKILL-typesetting.md) for standards
+
+7. **Always add document structure**: Every document should include:
+   - Header with document title
+   - Footer with page numbers
+   - Page breaks after major sections
+   - Proper heading hierarchy (H1, H2, H3 — not just bold)
+   - See [SKILL-typesetting.md](SKILL-typesetting.md) for complete guidelines
+
+8. **Images are standalone elements**: When inserting images:
+   - NEVER place images inside bullet lists
+   - Images get their own paragraph with caption below
+   - Number figures sequentially (Figure 1, Figure 2)
+   - Reference by number ("See Figure 3"), not position ("see below")
+
 ## Quick Reference
 
 All commands use `uv run gws <service> <command>`. Authentication is automatic on first use.
@@ -183,7 +210,9 @@ uv run gws auth logout
 | `contacts` | 15 | (below) | Manage contacts, groups, photos (People API) |
 | `convert` | 3 | (below) | Markdown to Docs/Slides/PDF |
 
-For design best practices (typography, visual hierarchy, API efficiency), see [SKILL-advanced.md](SKILL-advanced.md).
+**Additional guides:**
+- [SKILL-typesetting.md](SKILL-typesetting.md) — Document formatting standards (fonts, tables, images, headers/footers, pagination)
+- [SKILL-advanced.md](SKILL-advanced.md) — Content strategy, presentation storytelling, API efficiency
 
 ## Contacts Operations
 
