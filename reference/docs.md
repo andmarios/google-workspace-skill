@@ -2,6 +2,9 @@
 
 ## Contents
 - [Basic Operations](#basic-operations)
+- [Markdown Insertion](#markdown-insertion)
+- [Page Format (Pageless Mode)](#page-format-pageless-mode)
+- [Document Tabs](#document-tabs)
 - [Text Formatting](#text-formatting)
 - [Paragraph Formatting](#paragraph-formatting)
 - [Tables](#tables)
@@ -42,6 +45,113 @@ uv run gws docs page-break <document_id> 100
 # Insert image from URL
 uv run gws docs insert-image <document_id> "https://example.com/image.png" --width 300
 ```
+
+## Markdown Insertion
+
+Insert markdown content into an existing document with automatic formatting conversion. Google converts the markdown to formatted text (bold, italic, links, headings, etc.).
+
+```bash
+# Insert markdown at the beginning of the document
+uv run gws docs insert-markdown <document_id> "# New Section\n\n**Bold** and *italic* text"
+
+# Insert at a specific position
+uv run gws docs insert-markdown <document_id> "## Subheading" --index 50
+
+# Insert from a markdown file
+uv run gws docs insert-markdown <document_id> --file notes.md
+
+# Insert from stdin (piping)
+cat notes.md | uv run gws docs insert-markdown <document_id> --stdin
+
+# Insert into a specific tab
+uv run gws docs insert-markdown <document_id> --file content.md --tab <tab_id>
+```
+
+**Supported Markdown Features**: Headers, bold, italic, links, code blocks, lists, and other standard markdown formatting.
+
+## Page Format (Pageless Mode)
+
+Google Docs supports two page formats:
+- **PAGES**: Traditional page-based format with page breaks
+- **PAGELESS**: Continuous scrolling format without page breaks
+
+```bash
+# Get current page format
+uv run gws docs get-page-format <document_id>
+
+# Switch to pageless mode
+uv run gws docs set-page-format <document_id> pageless
+
+# Switch back to pages mode
+uv run gws docs set-page-format <document_id> pages
+```
+
+**Note**: Switching to PAGELESS mode hides headers, footers, page numbers, and other page-specific elements. Content remains but these features become invisible.
+
+## Document Tabs
+
+Google Docs supports multiple tabs within a single document. All reading and editing commands support an optional `--tab` parameter to target a specific tab.
+
+### Listing and Reading Tabs
+
+```bash
+# List all tabs in a document
+uv run gws docs list-tabs <document_id>
+
+# Read content from a specific tab
+uv run gws docs read <document_id> --tab <tab_id>
+
+# Get structure of a specific tab
+uv run gws docs structure <document_id> --tab <tab_id>
+```
+
+### Editing Within Tabs
+
+All editing commands support the `--tab` option:
+
+```bash
+# Insert text into a specific tab
+uv run gws docs insert <document_id> "Text" --index 10 --tab <tab_id>
+
+# Append to a specific tab
+uv run gws docs append <document_id> "Text" --tab <tab_id>
+
+# Replace text in a specific tab
+uv run gws docs replace <document_id> "old" "new" --tab <tab_id>
+
+# Format text in a specific tab
+uv run gws docs format <document_id> 1 50 --bold --tab <tab_id>
+
+# Delete content in a specific tab
+uv run gws docs delete <document_id> 10 50 --tab <tab_id>
+
+# Insert page break in a specific tab
+uv run gws docs page-break <document_id> 100 --tab <tab_id>
+
+# Insert image in a specific tab
+uv run gws docs insert-image <document_id> "https://..." --tab <tab_id>
+```
+
+### Tab Management
+
+```bash
+# Create a new tab
+uv run gws docs create-tab <document_id> "Tab Title"
+
+# Create tab at specific position (0-indexed)
+uv run gws docs create-tab <document_id> "Tab Title" --index 0
+
+# Rename a tab
+uv run gws docs rename-tab <document_id> <tab_id> "New Title"
+
+# Move tab to a new position
+uv run gws docs reorder-tab <document_id> <tab_id> 2
+
+# Delete a tab
+uv run gws docs delete-tab <document_id> <tab_id>
+```
+
+**Note**: Tab IDs are returned by the `list-tabs` command. When no `--tab` is specified, operations target the first (default) tab.
 
 ## Text Formatting
 

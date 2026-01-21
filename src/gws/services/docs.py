@@ -50,18 +50,301 @@ class DocsService(BaseService):
                     })
         return headings
 
-    def read(self, document_id: str) -> dict[str, Any]:
-        """Read document content as plain text."""
-        try:
-            doc = self.service.documents().get(documentId=document_id).execute()
+    def _get_tab_content(self, doc: dict, tab_id: str | None = None) -> list[dict]:
+        """Get content from a specific tab or the default (first) tab.
 
-            content = doc.get("body", {}).get("content", [])
+        Args:
+            doc: The document response from the API.
+            tab_id: Optional tab ID. If None, returns content from the first tab
+                   or falls back to the legacy body.content.
+
+        Returns:
+            List of content elements from the specified tab.
+
+        Raises:
+            ValueError: If tab_id is specified but not found.
+        """
+        tabs = doc.get("tabs", [])
+
+        if tab_id:
+            # Search for specific tab (including nested tabs)
+            tab = self._find_tab_by_id(tabs, tab_id)
+            if tab:
+                return tab.get("documentTab", {}).get("body", {}).get("content", [])
+            raise ValueError(f"Tab not found: {tab_id}")
+
+        # Default: use first tab if available, otherwise legacy body
+        if tabs:
+            first_tab = tabs[0]
+            return first_tab.get("documentTab", {}).get("body", {}).get("content", [])
+        return doc.get("body", {}).get("content", [])
+
+    def _find_tab_by_id(self, tabs: list[dict], tab_id: str) -> dict | None:
+        """Recursively find a tab by ID (tabs can be nested)."""
+        for tab in tabs:
+            props = tab.get("tabProperties", {})
+            if props.get("tabId") == tab_id:
+                return tab
+            # Check child tabs
+            child_tabs = tab.get("childTabs", [])
+            if child_tabs:
+                found = self._find_tab_by_id(child_tabs, tab_id)
+                if found:
+                    return found
+        return None
+
+    def _extract_tabs_info(self, tabs: list[dict], parent_index: int | None = None) -> list[dict]:
+        """Extract tab information from tabs array (recursive for child tabs)."""
+        result = []
+        for i, tab in enumerate(tabs):
+            props = tab.get("tabProperties", {})
+            doc_tab = tab.get("documentTab", {})
+
+            # Get content length for info
+            body_content = doc_tab.get("body", {}).get("content", [])
+            content_length = len(body_content)
+
+            tab_info = {
+                "tab_id": props.get("tabId"),
+                "title": props.get("title", ""),
+                "index": props.get("index", i),
+                "parent_index": parent_index,
+                "content_elements": content_length,
+            }
+            result.append(tab_info)
+
+            # Process child tabs
+            child_tabs = tab.get("childTabs", [])
+            if child_tabs:
+                result.extend(self._extract_tabs_info(child_tabs, parent_index=i))
+
+        return result
+
+    def list_tabs(self, document_id: str) -> dict[str, Any]:
+        """List all tabs in a document.
+
+        Returns tab IDs, titles, and positions.
+        """
+        try:
+            # Include tabs content to get full tab structure
+            doc = self.service.documents().get(
+                documentId=document_id,
+                includeTabsContent=True,
+            ).execute()
+
+            tabs = doc.get("tabs", [])
+            tabs_info = self._extract_tabs_info(tabs)
+
+            output_success(
+                operation="docs.list_tabs",
+                document_id=document_id,
+                title=doc.get("title", ""),
+                tab_count=len(tabs_info),
+                tabs=tabs_info,
+            )
+            return {"tabs": tabs_info}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.list_tabs",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def create_tab(
+        self,
+        document_id: str,
+        title: str,
+        index: int | None = None,
+    ) -> dict[str, Any]:
+        """Create a new tab in the document.
+
+        Args:
+            document_id: The document ID.
+            title: Title for the new tab.
+            index: Optional position (0-based). If None, appends to end.
+        """
+        try:
+            tab_properties: dict[str, Any] = {"title": title}
+            if index is not None:
+                tab_properties["index"] = index
+
+            requests = [{"addDocumentTab": {"tabProperties": tab_properties}}]
+
+            result = (
+                self.service.documents()
+                .batchUpdate(documentId=document_id, body={"requests": requests})
+                .execute()
+            )
+
+            # Extract the created tab ID from response
+            replies = result.get("replies", [{}])
+            created_tab = replies[0].get("addDocumentTab", {})
+            new_tab_id = created_tab.get("tabProperties", {}).get("tabId")
+
+            output_success(
+                operation="docs.create_tab",
+                document_id=document_id,
+                tab_id=new_tab_id,
+                title=title,
+                index=index,
+            )
+            return {"tab_id": new_tab_id, "title": title}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.create_tab",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_tab(self, document_id: str, tab_id: str) -> dict[str, Any]:
+        """Delete a tab from the document.
+
+        Args:
+            document_id: The document ID.
+            tab_id: The tab ID to delete.
+
+        Note: Cannot delete the last remaining tab.
+        """
+        try:
+            requests = [{"deleteTab": {"tabId": tab_id}}]
+
+            self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            output_success(
+                operation="docs.delete_tab",
+                document_id=document_id,
+                tab_id=tab_id,
+            )
+            return {"deleted": True, "tab_id": tab_id}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.delete_tab",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def rename_tab(
+        self,
+        document_id: str,
+        tab_id: str,
+        title: str,
+    ) -> dict[str, Any]:
+        """Rename a tab.
+
+        Args:
+            document_id: The document ID.
+            tab_id: The tab ID to rename.
+            title: New title for the tab.
+        """
+        try:
+            requests = [
+                {
+                    "updateDocumentTabProperties": {
+                        "tabId": tab_id,
+                        "tabProperties": {"title": title},
+                        "fields": "title",
+                    }
+                }
+            ]
+
+            self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            output_success(
+                operation="docs.rename_tab",
+                document_id=document_id,
+                tab_id=tab_id,
+                new_title=title,
+            )
+            return {"tab_id": tab_id, "title": title}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.rename_tab",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def reorder_tab(
+        self,
+        document_id: str,
+        tab_id: str,
+        new_index: int,
+    ) -> dict[str, Any]:
+        """Move a tab to a new position.
+
+        Args:
+            document_id: The document ID.
+            tab_id: The tab ID to move.
+            new_index: New position (0-based).
+        """
+        try:
+            requests = [
+                {
+                    "updateDocumentTabProperties": {
+                        "tabId": tab_id,
+                        "tabProperties": {"index": new_index},
+                        "fields": "index",
+                    }
+                }
+            ]
+
+            self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            output_success(
+                operation="docs.reorder_tab",
+                document_id=document_id,
+                tab_id=tab_id,
+                new_index=new_index,
+            )
+            return {"tab_id": tab_id, "index": new_index}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.reorder_tab",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def read(self, document_id: str, tab_id: str | None = None) -> dict[str, Any]:
+        """Read document content as plain text.
+
+        Args:
+            document_id: The document ID.
+            tab_id: Optional tab ID to read from. If None, reads the first tab.
+        """
+        try:
+            # Include tabs content when tab_id specified or to use new API structure
+            doc = self.service.documents().get(
+                documentId=document_id,
+                includeTabsContent=True,
+            ).execute()
+
+            try:
+                content = self._get_tab_content(doc, tab_id)
+            except ValueError as e:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="docs.read",
+                    message=str(e),
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+
             text = self._extract_text(content)
 
             output_success(
                 operation="docs.read",
                 document_id=document_id,
                 title=doc.get("title", ""),
+                tab_id=tab_id,
                 content=text,
                 revision_id=doc.get("revisionId"),
             )
@@ -74,18 +357,36 @@ class DocsService(BaseService):
             )
             raise SystemExit(ExitCode.API_ERROR)
 
-    def structure(self, document_id: str) -> dict[str, Any]:
-        """Get document heading structure."""
-        try:
-            doc = self.service.documents().get(documentId=document_id).execute()
+    def structure(self, document_id: str, tab_id: str | None = None) -> dict[str, Any]:
+        """Get document heading structure.
 
-            content = doc.get("body", {}).get("content", [])
+        Args:
+            document_id: The document ID.
+            tab_id: Optional tab ID to get structure from. If None, uses the first tab.
+        """
+        try:
+            doc = self.service.documents().get(
+                documentId=document_id,
+                includeTabsContent=True,
+            ).execute()
+
+            try:
+                content = self._get_tab_content(doc, tab_id)
+            except ValueError as e:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="docs.structure",
+                    message=str(e),
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+
             headings = self._extract_structure(content)
 
             output_success(
                 operation="docs.structure",
                 document_id=document_id,
                 title=doc.get("title", ""),
+                tab_id=tab_id,
                 headings=headings,
                 heading_count=len(headings),
             )
@@ -159,13 +460,25 @@ class DocsService(BaseService):
         document_id: str,
         text: str,
         index: int = 1,
+        tab_id: str | None = None,
     ) -> dict[str, Any]:
-        """Insert text at a specific index."""
+        """Insert text at a specific index.
+
+        Args:
+            document_id: The document ID.
+            text: Text to insert.
+            index: Character index to insert at (default: 1, start of document).
+            tab_id: Optional tab ID to insert into.
+        """
         try:
+            location: dict[str, Any] = {"index": index}
+            if tab_id:
+                location["tabId"] = tab_id
+
             requests = [
                 {
                     "insertText": {
-                        "location": {"index": index},
+                        "location": location,
                         "text": text,
                     }
                 }
@@ -181,6 +494,7 @@ class DocsService(BaseService):
                 operation="docs.insert",
                 document_id=document_id,
                 index=index,
+                tab_id=tab_id,
                 text_length=len(text),
             )
             return result
@@ -192,12 +506,35 @@ class DocsService(BaseService):
             )
             raise SystemExit(ExitCode.API_ERROR)
 
-    def append(self, document_id: str, text: str) -> dict[str, Any]:
-        """Append text to the end of the document."""
+    def append(
+        self,
+        document_id: str,
+        text: str,
+        tab_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Append text to the end of the document (or tab).
+
+        Args:
+            document_id: The document ID.
+            text: Text to append.
+            tab_id: Optional tab ID to append to.
+        """
         try:
             # Get document to find end index
-            doc = self.service.documents().get(documentId=document_id).execute()
-            content = doc.get("body", {}).get("content", [])
+            doc = self.service.documents().get(
+                documentId=document_id,
+                includeTabsContent=True,
+            ).execute()
+
+            try:
+                content = self._get_tab_content(doc, tab_id)
+            except ValueError as e:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="docs.append",
+                    message=str(e),
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
 
             # Find the end index (last element's endIndex - 1)
             end_index = 1
@@ -205,10 +542,14 @@ class DocsService(BaseService):
                 last_element = content[-1]
                 end_index = last_element.get("endIndex", 1) - 1
 
+            location: dict[str, Any] = {"index": end_index}
+            if tab_id:
+                location["tabId"] = tab_id
+
             requests = [
                 {
                     "insertText": {
-                        "location": {"index": end_index},
+                        "location": location,
                         "text": text,
                     }
                 }
@@ -224,6 +565,7 @@ class DocsService(BaseService):
                 operation="docs.append",
                 document_id=document_id,
                 index=end_index,
+                tab_id=tab_id,
                 text_length=len(text),
             )
             return result
@@ -241,20 +583,31 @@ class DocsService(BaseService):
         find: str,
         replace_with: str,
         match_case: bool = False,
+        tab_id: str | None = None,
     ) -> dict[str, Any]:
-        """Replace text throughout the document."""
+        """Replace text throughout the document (or specific tab).
+
+        Args:
+            document_id: The document ID.
+            find: Text to find.
+            replace_with: Replacement text.
+            match_case: Case-sensitive matching.
+            tab_id: Optional tab ID to restrict replacement to.
+        """
         try:
-            requests = [
-                {
-                    "replaceAllText": {
-                        "containsText": {
-                            "text": find,
-                            "matchCase": match_case,
-                        },
-                        "replaceText": replace_with,
-                    }
-                }
-            ]
+            replace_request: dict[str, Any] = {
+                "containsText": {
+                    "text": find,
+                    "matchCase": match_case,
+                },
+                "replaceText": replace_with,
+            }
+
+            # Restrict to specific tab if provided
+            if tab_id:
+                replace_request["tabsCriteria"] = {"tabIds": [tab_id]}
+
+            requests = [{"replaceAllText": replace_request}]
 
             result = (
                 self.service.documents()
@@ -273,6 +626,7 @@ class DocsService(BaseService):
                 document_id=document_id,
                 find=find,
                 replace_with=replace_with,
+                tab_id=tab_id,
                 occurrences_changed=occurrences,
             )
             return result
@@ -294,8 +648,21 @@ class DocsService(BaseService):
         underline: bool | None = None,
         font_size: int | None = None,
         foreground_color: str | None = None,
+        tab_id: str | None = None,
     ) -> dict[str, Any]:
-        """Apply formatting to a text range."""
+        """Apply formatting to a text range.
+
+        Args:
+            document_id: The document ID.
+            start_index: Start index of range.
+            end_index: End index of range.
+            bold: Bold formatting.
+            italic: Italic formatting.
+            underline: Underline formatting.
+            font_size: Font size in points.
+            foreground_color: Text color (hex).
+            tab_id: Optional tab ID.
+        """
         try:
             text_style: dict[str, Any] = {}
             fields = []
@@ -327,13 +694,17 @@ class DocsService(BaseService):
                 )
                 raise SystemExit(ExitCode.INVALID_ARGS)
 
+            range_obj: dict[str, Any] = {
+                "startIndex": start_index,
+                "endIndex": end_index,
+            }
+            if tab_id:
+                range_obj["tabId"] = tab_id
+
             requests = [
                 {
                     "updateTextStyle": {
-                        "range": {
-                            "startIndex": start_index,
-                            "endIndex": end_index,
-                        },
+                        "range": range_obj,
                         "textStyle": text_style,
                         "fields": ",".join(fields),
                     }
@@ -351,6 +722,7 @@ class DocsService(BaseService):
                 document_id=document_id,
                 start_index=start_index,
                 end_index=end_index,
+                tab_id=tab_id,
                 formatting=fields,
             )
             return result
@@ -367,19 +739,25 @@ class DocsService(BaseService):
         document_id: str,
         start_index: int,
         end_index: int,
+        tab_id: str | None = None,
     ) -> dict[str, Any]:
-        """Delete content in a range."""
+        """Delete content in a range.
+
+        Args:
+            document_id: The document ID.
+            start_index: Start index of range.
+            end_index: End index of range.
+            tab_id: Optional tab ID.
+        """
         try:
-            requests = [
-                {
-                    "deleteContentRange": {
-                        "range": {
-                            "startIndex": start_index,
-                            "endIndex": end_index,
-                        }
-                    }
-                }
-            ]
+            range_obj: dict[str, Any] = {
+                "startIndex": start_index,
+                "endIndex": end_index,
+            }
+            if tab_id:
+                range_obj["tabId"] = tab_id
+
+            requests = [{"deleteContentRange": {"range": range_obj}}]
 
             result = (
                 self.service.documents()
@@ -392,6 +770,7 @@ class DocsService(BaseService):
                 document_id=document_id,
                 start_index=start_index,
                 end_index=end_index,
+                tab_id=tab_id,
                 deleted_length=end_index - start_index,
             )
             return result
@@ -407,16 +786,21 @@ class DocsService(BaseService):
         self,
         document_id: str,
         index: int,
+        tab_id: str | None = None,
     ) -> dict[str, Any]:
-        """Insert a page break at the specified index."""
+        """Insert a page break at the specified index.
+
+        Args:
+            document_id: The document ID.
+            index: Character index to insert page break.
+            tab_id: Optional tab ID.
+        """
         try:
-            requests = [
-                {
-                    "insertPageBreak": {
-                        "location": {"index": index},
-                    }
-                }
-            ]
+            location: dict[str, Any] = {"index": index}
+            if tab_id:
+                location["tabId"] = tab_id
+
+            requests = [{"insertPageBreak": {"location": location}}]
 
             result = (
                 self.service.documents()
@@ -428,6 +812,7 @@ class DocsService(BaseService):
                 operation="docs.page_break",
                 document_id=document_id,
                 index=index,
+                tab_id=tab_id,
             )
             return result
         except HttpError as e:
@@ -445,20 +830,45 @@ class DocsService(BaseService):
         index: int | None = None,
         width: float | None = None,
         height: float | None = None,
+        tab_id: str | None = None,
     ) -> dict[str, Any]:
-        """Insert an image from a URL."""
+        """Insert an image from a URL.
+
+        Args:
+            document_id: The document ID.
+            image_url: URL of the image to insert.
+            index: Character index (default: end of document).
+            width: Image width in points.
+            height: Image height in points.
+            tab_id: Optional tab ID.
+        """
         try:
             # If no index specified, append at end
             if index is None:
-                doc = self.service.documents().get(documentId=document_id).execute()
-                content = doc.get("body", {}).get("content", [])
+                doc = self.service.documents().get(
+                    documentId=document_id,
+                    includeTabsContent=True,
+                ).execute()
+                try:
+                    content = self._get_tab_content(doc, tab_id)
+                except ValueError as e:
+                    output_error(
+                        error_code="NOT_FOUND",
+                        operation="docs.insert_image",
+                        message=str(e),
+                    )
+                    raise SystemExit(ExitCode.NOT_FOUND)
                 if content:
                     index = content[-1].get("endIndex", 1) - 1
                 else:
                     index = 1
 
+            location: dict[str, Any] = {"index": index}
+            if tab_id:
+                location["tabId"] = tab_id
+
             insert_inline_image: dict[str, Any] = {
-                "location": {"index": index},
+                "location": location,
                 "uri": image_url,
             }
 
@@ -483,6 +893,7 @@ class DocsService(BaseService):
                 operation="docs.insert_image",
                 document_id=document_id,
                 index=index,
+                tab_id=tab_id,
                 image_url=image_url,
             )
             return result
@@ -1922,6 +2333,94 @@ class DocsService(BaseService):
             )
             raise SystemExit(ExitCode.API_ERROR)
 
+    def get_page_format(self, document_id: str) -> dict[str, Any]:
+        """Get the document's page format (PAGES or PAGELESS).
+
+        Args:
+            document_id: The document ID.
+
+        Returns:
+            Dict with page_format and related info.
+        """
+        try:
+            doc = self.service.documents().get(documentId=document_id).execute()
+            doc_style = doc.get("documentStyle", {})
+            doc_format = doc_style.get("documentFormat", {})
+            mode = doc_format.get("documentMode", "PAGES")
+
+            result = {
+                "document_id": document_id,
+                "page_format": mode,
+                "is_pageless": mode == "PAGELESS",
+            }
+
+            output_success(operation="docs.get_page_format", **result)
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.get_page_format",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def set_page_format(
+        self,
+        document_id: str,
+        mode: str,
+    ) -> dict[str, Any]:
+        """Set the document's page format to PAGES or PAGELESS.
+
+        Args:
+            document_id: The document ID.
+            mode: Either "PAGES" or "PAGELESS".
+
+        Note:
+            Switching to PAGELESS will disable headers, footers, page numbers,
+            and other page-specific features. Content remains but these elements
+            become invisible.
+        """
+        mode = mode.upper()
+        if mode not in ("PAGES", "PAGELESS"):
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="docs.set_page_format",
+                message=f"Invalid mode '{mode}'. Must be 'PAGES' or 'PAGELESS'.",
+            )
+            raise SystemExit(ExitCode.INVALID_ARGS)
+
+        try:
+            requests = [{
+                "updateDocumentStyle": {
+                    "documentStyle": {
+                        "documentFormat": {
+                            "documentMode": mode,
+                        }
+                    },
+                    "fields": "documentFormat",
+                }
+            }]
+
+            self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            result = {
+                "document_id": document_id,
+                "page_format": mode,
+                "is_pageless": mode == "PAGELESS",
+            }
+
+            output_success(operation="docs.set_page_format", **result)
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.set_page_format",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
     # =========================================================================
     # NAMED RANGE OPERATIONS (Phase 7)
     # =========================================================================
@@ -2520,3 +3019,266 @@ class DocsService(BaseService):
                 message=f"Google Docs API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # MARKDOWN INSERTION OPERATIONS
+    # =========================================================================
+
+    def insert_markdown(
+        self,
+        document_id: str,
+        markdown_content: str,
+        index: int = 1,
+        tab_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Insert markdown content into an existing document.
+
+        Leverages Google's native markdown parsing by:
+        1. Creating a temporary document from the markdown
+        2. Reading its formatted content
+        3. Inserting the content (with formatting) at the specified position
+        4. Deleting the temporary document
+
+        Args:
+            document_id: The target document ID.
+            markdown_content: Markdown text to insert.
+            index: Character index where to insert (default: 1, start of document).
+            tab_id: Optional tab ID for documents with multiple tabs.
+
+        Returns:
+            Dict with insertion details.
+        """
+        from googleapiclient.http import MediaIoBaseUpload
+        import io
+
+        temp_doc_id = None
+
+        try:
+            # Step 1: Create a temporary Google Doc from the markdown
+            markdown_bytes = markdown_content.encode("utf-8")
+            media = MediaIoBaseUpload(
+                io.BytesIO(markdown_bytes),
+                mimetype="text/markdown",
+                resumable=True,
+            )
+
+            temp_file = (
+                self.drive_service.files()
+                .create(
+                    body={
+                        "name": "_temp_markdown_insert",
+                        "mimeType": "application/vnd.google-apps.document",
+                    },
+                    media_body=media,
+                    fields="id",
+                )
+                .execute()
+            )
+            temp_doc_id = temp_file["id"]
+
+            # Step 2: Read the structured content from the temp doc
+            temp_doc = (
+                self.service.documents()
+                .get(documentId=temp_doc_id, includeTabsContent=True)
+                .execute()
+            )
+
+            # Get the body content from the temp doc
+            temp_content = self._get_tab_content(temp_doc, None)
+
+            # Step 3: Build insert requests from the temp doc content
+            requests = self._build_insert_requests_from_content(
+                temp_content, index, tab_id
+            )
+
+            if not requests:
+                output_error(
+                    error_code="EMPTY_CONTENT",
+                    operation="docs.insert_markdown",
+                    message="No content to insert from markdown.",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            # Step 4: Execute the insert requests on the target document
+            self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            # Calculate inserted length for reporting
+            inserted_text = self._extract_text_from_content(temp_content)
+            inserted_length = len(inserted_text)
+
+            result = {
+                "document_id": document_id,
+                "inserted_at_index": index,
+                "inserted_length": inserted_length,
+            }
+            if tab_id:
+                result["tab_id"] = tab_id
+
+            output_success(operation="docs.insert_markdown", **result)
+            return result
+
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.insert_markdown",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+        finally:
+            # Step 5: Clean up - delete the temporary document
+            if temp_doc_id:
+                try:
+                    self.drive_service.files().delete(fileId=temp_doc_id).execute()
+                except Exception:
+                    pass  # Ignore cleanup errors
+
+    def _build_insert_requests_from_content(
+        self,
+        content: list[dict],
+        target_index: int,
+        tab_id: str | None = None,
+    ) -> list[dict]:
+        """Build batchUpdate requests to insert content at a target position.
+
+        Processes content elements and generates insertText and formatting requests.
+        """
+        requests: list[dict] = []
+
+        # Extract all text and formatting info
+        text_parts: list[dict] = []
+
+        for element in content:
+            if "paragraph" not in element:
+                continue
+
+            para = element["paragraph"]
+            para_elements = para.get("elements", [])
+
+            for pe in para_elements:
+                if "textRun" not in pe:
+                    continue
+
+                text_run = pe["textRun"]
+                text = text_run.get("content", "")
+                style = text_run.get("textStyle", {})
+
+                if text:
+                    text_parts.append({
+                        "text": text,
+                        "style": style,
+                    })
+
+        if not text_parts:
+            return []
+
+        # Combine all text for a single insert
+        full_text = "".join(tp["text"] for tp in text_parts)
+
+        # Don't insert if it's just a single newline (empty doc)
+        if full_text.strip() == "":
+            return []
+
+        # Build the insert location
+        location: dict[str, Any] = {"index": target_index}
+        if tab_id:
+            location["tabId"] = tab_id
+
+        # Insert all the text at once
+        requests.append({
+            "insertText": {
+                "location": location,
+                "text": full_text,
+            }
+        })
+
+        # Now apply formatting for each text part
+        current_index = target_index
+        for tp in text_parts:
+            text = tp["text"]
+            style = tp["style"]
+            text_len = len(text)
+
+            if text_len == 0:
+                continue
+
+            # Build text style update if there's any formatting
+            style_updates: dict[str, Any] = {}
+            fields: list[str] = []
+
+            if style.get("bold"):
+                style_updates["bold"] = True
+                fields.append("bold")
+
+            if style.get("italic"):
+                style_updates["italic"] = True
+                fields.append("italic")
+
+            if style.get("underline"):
+                style_updates["underline"] = True
+                fields.append("underline")
+
+            if style.get("strikethrough"):
+                style_updates["strikethrough"] = True
+                fields.append("strikethrough")
+
+            if style.get("link"):
+                style_updates["link"] = style["link"]
+                fields.append("link")
+
+            if style.get("foregroundColor"):
+                style_updates["foregroundColor"] = style["foregroundColor"]
+                fields.append("foregroundColor")
+
+            if style.get("backgroundColor"):
+                style_updates["backgroundColor"] = style["backgroundColor"]
+                fields.append("backgroundColor")
+
+            if style.get("fontSize"):
+                style_updates["fontSize"] = style["fontSize"]
+                fields.append("fontSize")
+
+            if style.get("weightedFontFamily"):
+                style_updates["weightedFontFamily"] = style["weightedFontFamily"]
+                fields.append("weightedFontFamily")
+
+            if style.get("baselineOffset"):
+                style_updates["baselineOffset"] = style["baselineOffset"]
+                fields.append("baselineOffset")
+
+            if style.get("smallCaps"):
+                style_updates["smallCaps"] = True
+                fields.append("smallCaps")
+
+            # Only add formatting request if there's something to format
+            if fields:
+                range_spec: dict[str, Any] = {
+                    "startIndex": current_index,
+                    "endIndex": current_index + text_len,
+                }
+                if tab_id:
+                    range_spec["tabId"] = tab_id
+
+                requests.append({
+                    "updateTextStyle": {
+                        "range": range_spec,
+                        "textStyle": style_updates,
+                        "fields": ",".join(fields),
+                    }
+                })
+
+            current_index += text_len
+
+        return requests
+
+    def _extract_text_from_content(self, content: list[dict]) -> str:
+        """Extract plain text from document content elements."""
+        text_parts = []
+        for element in content:
+            if "paragraph" in element:
+                para = element["paragraph"]
+                for pe in para.get("elements", []):
+                    if "textRun" in pe:
+                        text_parts.append(pe["textRun"].get("content", ""))
+        return "".join(text_parts)

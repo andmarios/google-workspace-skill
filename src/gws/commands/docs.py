@@ -14,22 +14,88 @@ app = typer.Typer(
 )
 
 
+@app.command("list-tabs")
+def list_tabs(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+) -> None:
+    """List all tabs in a document."""
+    service = DocsService()
+    service.list_tabs(document_id=document_id)
+
+
+@app.command("create-tab")
+def create_tab(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    title: Annotated[str, typer.Argument(help="Title for the new tab.")],
+    index: Annotated[
+        Optional[int],
+        typer.Option("--index", "-i", help="Position for the tab (0-based)."),
+    ] = None,
+) -> None:
+    """Create a new tab in the document."""
+    service = DocsService()
+    service.create_tab(document_id=document_id, title=title, index=index)
+
+
+@app.command("delete-tab")
+def delete_tab(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    tab_id: Annotated[str, typer.Argument(help="Tab ID to delete.")],
+) -> None:
+    """Delete a tab from the document.
+
+    Note: Cannot delete the last remaining tab.
+    """
+    service = DocsService()
+    service.delete_tab(document_id=document_id, tab_id=tab_id)
+
+
+@app.command("rename-tab")
+def rename_tab(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    tab_id: Annotated[str, typer.Argument(help="Tab ID to rename.")],
+    title: Annotated[str, typer.Argument(help="New title for the tab.")],
+) -> None:
+    """Rename a tab."""
+    service = DocsService()
+    service.rename_tab(document_id=document_id, tab_id=tab_id, title=title)
+
+
+@app.command("reorder-tab")
+def reorder_tab(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    tab_id: Annotated[str, typer.Argument(help="Tab ID to move.")],
+    index: Annotated[int, typer.Argument(help="New position (0-based).")],
+) -> None:
+    """Move a tab to a new position."""
+    service = DocsService()
+    service.reorder_tab(document_id=document_id, tab_id=tab_id, new_index=index)
+
+
 @app.command("read")
 def read_document(
     document_id: Annotated[str, typer.Argument(help="Document ID to read.")],
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID to read from."),
+    ] = None,
 ) -> None:
     """Read document content as plain text."""
     service = DocsService()
-    service.read(document_id=document_id)
+    service.read(document_id=document_id, tab_id=tab_id)
 
 
 @app.command("structure")
 def get_structure(
     document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID to get structure from."),
+    ] = None,
 ) -> None:
     """Get document heading structure."""
     service = DocsService()
-    service.structure(document_id=document_id)
+    service.structure(document_id=document_id, tab_id=tab_id)
 
 
 @app.command("create")
@@ -64,10 +130,14 @@ def insert_text(
         int,
         typer.Option("--index", "-i", help="Index to insert at (default: 1)."),
     ] = 1,
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID to insert into."),
+    ] = None,
 ) -> None:
     """Insert text at a specific index."""
     service = DocsService()
-    service.insert(document_id=document_id, text=text, index=index)
+    service.insert(document_id=document_id, text=text, index=index, tab_id=tab_id)
 
 
 @app.command("append")
@@ -81,8 +151,12 @@ def append_text(
         bool,
         typer.Option("--stdin", help="Read text from stdin."),
     ] = False,
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID to append to."),
+    ] = None,
 ) -> None:
-    """Append text to the end of the document."""
+    """Append text to the end of the document (or tab)."""
     if stdin:
         text = sys.stdin.read()
     elif text is None:
@@ -90,7 +164,65 @@ def append_text(
         raise typer.Exit(1)
 
     service = DocsService()
-    service.append(document_id=document_id, text=text)
+    service.append(document_id=document_id, text=text, tab_id=tab_id)
+
+
+@app.command("insert-markdown")
+def insert_markdown(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    markdown: Annotated[
+        Optional[str],
+        typer.Argument(help="Markdown content to insert."),
+    ] = None,
+    index: Annotated[
+        int,
+        typer.Option("--index", "-i", help="Character index for insertion."),
+    ] = 1,
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID for documents with tabs."),
+    ] = None,
+    stdin: Annotated[
+        bool,
+        typer.Option("--stdin", "-s", help="Read markdown content from stdin."),
+    ] = False,
+    file: Annotated[
+        Optional[str],
+        typer.Option("--file", "-f", help="Read markdown from file path."),
+    ] = None,
+) -> None:
+    """Insert markdown content with automatic formatting conversion.
+
+    Google converts the markdown to formatted text (bold, italic, links, etc.).
+
+    Examples:
+        gws docs insert-markdown DOC_ID "# Heading\\n\\n**Bold** text"
+        gws docs insert-markdown DOC_ID --file notes.md
+        cat notes.md | gws docs insert-markdown DOC_ID --stdin
+    """
+    # Determine the source of markdown content
+    if stdin:
+        markdown_content = sys.stdin.read()
+    elif file:
+        from pathlib import Path
+        path = Path(file)
+        if not path.exists():
+            typer.echo(f"Error: File not found: {file}", err=True)
+            raise typer.Exit(1)
+        markdown_content = path.read_text(encoding="utf-8")
+    elif markdown:
+        markdown_content = markdown
+    else:
+        typer.echo("Error: Provide markdown argument, --file, or --stdin", err=True)
+        raise typer.Exit(1)
+
+    service = DocsService()
+    service.insert_markdown(
+        document_id=document_id,
+        markdown_content=markdown_content,
+        index=index,
+        tab_id=tab_id,
+    )
 
 
 @app.command("replace")
@@ -102,14 +234,19 @@ def replace_text(
         bool,
         typer.Option("--match-case", "-m", help="Case-sensitive matching."),
     ] = False,
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID to restrict replacement to."),
+    ] = None,
 ) -> None:
-    """Replace text throughout the document."""
+    """Replace text throughout the document (or specific tab)."""
     service = DocsService()
     service.replace(
         document_id=document_id,
         find=find,
         replace_with=replace_with,
         match_case=match_case,
+        tab_id=tab_id,
     )
 
 
@@ -138,6 +275,10 @@ def format_text(
         Optional[str],
         typer.Option("--color", help="Text color (hex, e.g., #FF0000)."),
     ] = None,
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID."),
+    ] = None,
 ) -> None:
     """Apply formatting to a text range."""
     service = DocsService()
@@ -150,6 +291,7 @@ def format_text(
         underline=underline,
         font_size=font_size,
         foreground_color=color,
+        tab_id=tab_id,
     )
 
 
@@ -158,6 +300,10 @@ def delete_content(
     document_id: Annotated[str, typer.Argument(help="Document ID.")],
     start_index: Annotated[int, typer.Argument(help="Start index.")],
     end_index: Annotated[int, typer.Argument(help="End index.")],
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID."),
+    ] = None,
 ) -> None:
     """Delete content in a range."""
     service = DocsService()
@@ -165,6 +311,7 @@ def delete_content(
         document_id=document_id,
         start_index=start_index,
         end_index=end_index,
+        tab_id=tab_id,
     )
 
 
@@ -172,10 +319,14 @@ def delete_content(
 def insert_page_break(
     document_id: Annotated[str, typer.Argument(help="Document ID.")],
     index: Annotated[int, typer.Argument(help="Index to insert page break.")],
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID."),
+    ] = None,
 ) -> None:
     """Insert a page break at the specified index."""
     service = DocsService()
-    service.insert_page_break(document_id=document_id, index=index)
+    service.insert_page_break(document_id=document_id, index=index, tab_id=tab_id)
 
 
 @app.command("insert-image")
@@ -194,6 +345,10 @@ def insert_image(
         Optional[float],
         typer.Option("--height", "-h", help="Height in points."),
     ] = None,
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID."),
+    ] = None,
 ) -> None:
     """Insert an image from a URL."""
     service = DocsService()
@@ -203,6 +358,7 @@ def insert_image(
         index=index,
         width=width,
         height=height,
+        tab_id=tab_id,
     )
 
 
@@ -875,6 +1031,37 @@ def document_style(
         page_height=page_height,
         use_first_page_header_footer=use_first_page_header_footer,
     )
+
+
+# =============================================================================
+# PAGE FORMAT COMMANDS (Pageless Mode)
+# =============================================================================
+
+
+@app.command("get-page-format")
+def get_page_format(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+) -> None:
+    """Get the document's page format (PAGES or PAGELESS)."""
+    service = DocsService()
+    service.get_page_format(document_id=document_id)
+
+
+@app.command("set-page-format")
+def set_page_format(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    mode: Annotated[
+        str,
+        typer.Argument(help="Page format: 'pages' (traditional) or 'pageless' (continuous)."),
+    ],
+) -> None:
+    """Set the document's page format to PAGES or PAGELESS.
+
+    PAGELESS mode removes page breaks for continuous scrolling.
+    Note: Headers, footers, and page numbers are hidden in pageless mode.
+    """
+    service = DocsService()
+    service.set_page_format(document_id=document_id, mode=mode)
 
 
 # =============================================================================

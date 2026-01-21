@@ -165,13 +165,20 @@ def share_file(
         Optional[str],
         typer.Option("--type", "-t", help="Share type: user, group, domain, anyone."),
     ] = None,
+    domain: Annotated[
+        Optional[str],
+        typer.Option("--domain", "-d", help="Domain for domain-wide sharing (e.g., company.com)."),
+    ] = None,
 ) -> None:
-    """Share a file with a user or make public.
+    """Share a file with a user, domain, or make public.
 
-    Without --email, shares with 'anyone' (public link).
+    Examples:
+      Share with user: --email user@example.com
+      Share with domain: --domain company.com (anyone at company.com)
+      Make public: (no options, creates 'anyone' link)
     """
     service = DriveService()
-    service.share(file_id=file_id, email=email, role=role, share_type=share_type)
+    service.share(file_id=file_id, email=email, role=role, share_type=share_type, domain=domain)
 
 
 @app.command("update")

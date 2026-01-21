@@ -37,6 +37,7 @@ uv run gws drive move <file_id> <target_folder_id>
 # Share file
 uv run gws drive share <file_id> --role reader  # anyone with link
 uv run gws drive share <file_id> --email user@example.com --role writer
+uv run gws drive share <file_id> --domain company.com --role reader  # anyone at domain
 
 # Update file content
 uv run gws drive update <file_id> /path/to/new-content.pdf
@@ -120,3 +121,21 @@ uv run gws drive transfer-ownership <file_id> "newowner@example.com"
 ```
 
 **Roles**: reader, commenter, writer, organizer (shared drives only), owner
+
+### Sharing Options
+
+```bash
+# Share with anyone (public link)
+uv run gws drive share <file_id> --role reader
+
+# Share with specific user
+uv run gws drive share <file_id> --email user@example.com --role writer
+
+# Share with anyone at a domain (domain-restricted)
+uv run gws drive share <file_id> --domain company.com --role reader
+
+# Share with a group
+uv run gws drive share <file_id> --email group@example.com --type group --role reader
+```
+
+**Share types**: user, group, domain, anyone (auto-detected from options)

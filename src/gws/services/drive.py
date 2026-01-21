@@ -410,22 +410,54 @@ class DriveService(BaseService):
         email: str | None = None,
         role: str = "reader",
         share_type: str | None = None,
+        domain: str | None = None,
     ) -> dict[str, Any]:
-        """Share a file with a user or make public."""
+        """Share a file with a user, group, domain, or make public.
+
+        Args:
+            file_id: The file ID to share.
+            email: Email address for user/group sharing.
+            role: Permission role (reader, writer, commenter).
+            share_type: Type of sharing (user, group, domain, anyone).
+            domain: Domain for domain-wide sharing (e.g., 'company.com').
+                   Auto-sets share_type to 'domain' if provided.
+        """
         try:
+            # Auto-detect type from domain parameter
+            if domain:
+                if share_type and share_type != "domain":
+                    output_error(
+                        error_code="INVALID_ARGUMENT",
+                        operation="drive.share",
+                        message=f"Cannot use --domain with --type {share_type}. Domain sharing requires type 'domain'.",
+                    )
+                    raise SystemExit(ExitCode.INVALID_ARGS)
+                share_type = "domain"
+
+            # Validate domain sharing has a domain
+            if share_type == "domain" and not domain:
+                output_error(
+                    error_code="INVALID_ARGUMENT",
+                    operation="drive.share",
+                    message="Domain sharing requires --domain parameter (e.g., --domain company.com).",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
             # Determine permission type
             perm_type = share_type or ("user" if email else "anyone")
 
             permission: dict[str, Any] = {"type": perm_type, "role": role}
             if email and perm_type == "user":
                 permission["emailAddress"] = email
+            if domain and perm_type == "domain":
+                permission["domain"] = domain
 
             result = (
                 self.service.permissions()
                 .create(
                     fileId=file_id,
                     body=permission,
-                    fields="id, type, role, emailAddress",
+                    fields="id, type, role, emailAddress, domain",
                 )
                 .execute()
             )
@@ -444,6 +476,7 @@ class DriveService(BaseService):
                     "type": result.get("type"),
                     "role": result.get("role"),
                     "email": result.get("emailAddress"),
+                    "domain": result.get("domain"),
                 },
                 web_view_link=file.get("webViewLink"),
                 web_content_link=file.get("webContentLink"),
