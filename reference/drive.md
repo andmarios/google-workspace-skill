@@ -2,6 +2,7 @@
 
 ## Contents
 - [Basic Operations](#basic-operations)
+- [Response Structure](#response-structure)
 - [Comments](#comments)
 - [Revisions](#revisions)
 - [Trash Management](#trash-management)
@@ -47,6 +48,35 @@ uv run gws drive delete <file_id>
 
 # Export Google file format
 uv run gws drive export <file_id> /path/to/output.pdf --format pdf
+```
+
+## Response Structure
+
+Commands return JSON with different structures depending on the operation:
+
+**File operations** (upload, get, copy) return file data in a `file` object:
+```json
+{
+  "status": "success",
+  "operation": "drive.upload",
+  "file": {
+    "id": "14mGid9UpxOIG-ALG8D-NQkOaC3TEJQuu",
+    "name": "report.pdf",
+    "mimeType": "application/pdf",
+    "webViewLink": "https://drive.google.com/file/d/.../view"
+  }
+}
+```
+
+**Important**: Access the file ID via `file.id`, not `file_id` at the top level.
+
+**List operations** return data in arrays:
+```json
+{
+  "status": "success",
+  "operation": "drive.list",
+  "files": [{"id": "...", "name": "..."}, ...]
+}
 ```
 
 ## Comments

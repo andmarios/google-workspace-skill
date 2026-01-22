@@ -1116,3 +1116,343 @@ class TestColorParsing:
         # Invalid hex characters raise ValueError when parsed
         with pytest.raises(ValueError):
             parse_hex_color("#GGGGGG")
+
+
+# =============================================================================
+# FIND TEXT TESTS
+# =============================================================================
+
+
+class TestFindText:
+    """Test find_text functionality for locating text positions."""
+
+    def test_find_text_single_occurrence(self, docs_service, capsys):
+        """Test finding text that appears once."""
+        doc_data = {
+            "documentId": "doc-123",
+            "title": "Test Doc",
+            "tabs": [{
+                "tabProperties": {"tabId": "t.0"},
+                "documentTab": {
+                    "body": {
+                        "content": [
+                            {"endIndex": 1},
+                            {
+                                "paragraph": {
+                                    "elements": [
+                                        {
+                                            "startIndex": 1,
+                                            "endIndex": 14,
+                                            "textRun": {"content": "Hello World!\n"},
+                                        }
+                                    ]
+                                },
+                                "startIndex": 1,
+                                "endIndex": 14,
+                            },
+                        ]
+                    }
+                }
+            }],
+        }
+        docs_service.service.documents().get.return_value.execute.return_value = doc_data
+
+        docs_service.find_text(document_id="doc-123", search_text="World")
+
+        output = json.loads(capsys.readouterr().out)
+        assert output["status"] == "success"
+        assert output["operation"] == "docs.find_text"
+        assert output["index"] == 7  # "Hello " is 6 chars, so World starts at index 7
+        assert output["end_index"] == 12
+        assert output["length"] == 5
+        assert output["total_occurrences"] == 1
+
+    def test_find_text_multiple_occurrences(self, docs_service, capsys):
+        """Test finding a specific occurrence when text appears multiple times."""
+        doc_data = {
+            "documentId": "doc-123",
+            "title": "Test Doc",
+            "tabs": [{
+                "tabProperties": {"tabId": "t.0"},
+                "documentTab": {
+                    "body": {
+                        "content": [
+                            {"endIndex": 1},
+                            {
+                                "paragraph": {
+                                    "elements": [
+                                        {
+                                            "startIndex": 1,
+                                            "endIndex": 25,
+                                            "textRun": {"content": "foo bar foo baz foo end\n"},
+                                        }
+                                    ]
+                                },
+                                "startIndex": 1,
+                                "endIndex": 25,
+                            },
+                        ]
+                    }
+                }
+            }],
+        }
+        docs_service.service.documents().get.return_value.execute.return_value = doc_data
+
+        # Find the second occurrence
+        docs_service.find_text(
+            document_id="doc-123",
+            search_text="foo",
+            occurrence=2,
+        )
+
+        output = json.loads(capsys.readouterr().out)
+        assert output["status"] == "success"
+        assert output["occurrence"] == 2
+        assert output["total_occurrences"] == 3
+        # "foo bar " is 8 chars, so second foo starts at index 9
+        assert output["index"] == 9
+
+    def test_find_text_not_found(self, docs_service, capsys):
+        """Test error when text is not found."""
+        doc_data = {
+            "documentId": "doc-123",
+            "title": "Test Doc",
+            "tabs": [{
+                "tabProperties": {"tabId": "t.0"},
+                "documentTab": {
+                    "body": {
+                        "content": [
+                            {"endIndex": 1},
+                            {
+                                "paragraph": {
+                                    "elements": [
+                                        {
+                                            "startIndex": 1,
+                                            "endIndex": 14,
+                                            "textRun": {"content": "Hello World!\n"},
+                                        }
+                                    ]
+                                },
+                                "startIndex": 1,
+                                "endIndex": 14,
+                            },
+                        ]
+                    }
+                }
+            }],
+        }
+        docs_service.service.documents().get.return_value.execute.return_value = doc_data
+
+        with pytest.raises(SystemExit) as exc_info:
+            docs_service.find_text(document_id="doc-123", search_text="nonexistent")
+
+        assert exc_info.value.code == 4  # NOT_FOUND
+        output = json.loads(capsys.readouterr().out)
+        assert output["status"] == "error"
+        assert output["error_code"] == "NOT_FOUND"
+
+    def test_find_text_occurrence_out_of_range(self, docs_service, capsys):
+        """Test error when occurrence number exceeds actual occurrences."""
+        doc_data = {
+            "documentId": "doc-123",
+            "title": "Test Doc",
+            "tabs": [{
+                "tabProperties": {"tabId": "t.0"},
+                "documentTab": {
+                    "body": {
+                        "content": [
+                            {"endIndex": 1},
+                            {
+                                "paragraph": {
+                                    "elements": [
+                                        {
+                                            "startIndex": 1,
+                                            "endIndex": 12,
+                                            "textRun": {"content": "test test\n"},
+                                        }
+                                    ]
+                                },
+                                "startIndex": 1,
+                                "endIndex": 12,
+                            },
+                        ]
+                    }
+                }
+            }],
+        }
+        docs_service.service.documents().get.return_value.execute.return_value = doc_data
+
+        with pytest.raises(SystemExit) as exc_info:
+            docs_service.find_text(
+                document_id="doc-123",
+                search_text="test",
+                occurrence=5,  # Only 2 occurrences exist
+            )
+
+        assert exc_info.value.code == 3  # INVALID_ARGS
+        output = json.loads(capsys.readouterr().out)
+        assert output["status"] == "error"
+        assert "out of range" in output["message"]
+
+
+# =============================================================================
+# INSERT IMAGE AT TEXT TESTS
+# =============================================================================
+
+
+class TestInsertImageAtText:
+    """Test insert_image_at_text functionality."""
+
+    def test_insert_image_at_text_success(self, docs_service, capsys):
+        """Test inserting image after specific text."""
+        # Setup doc response for find_text
+        doc_data = {
+            "documentId": "doc-123",
+            "title": "Test Doc",
+            "tabs": [{
+                "tabProperties": {"tabId": "t.0"},
+                "documentTab": {
+                    "body": {
+                        "content": [
+                            {"endIndex": 1},
+                            {
+                                "paragraph": {
+                                    "elements": [
+                                        {
+                                            "startIndex": 1,
+                                            "endIndex": 20,
+                                            "textRun": {"content": "Figure 1: Caption\n"},
+                                        }
+                                    ]
+                                },
+                                "startIndex": 1,
+                                "endIndex": 20,
+                            },
+                        ]
+                    }
+                }
+            }],
+        }
+        docs_service.service.documents().get.return_value.execute.return_value = doc_data
+
+        # Setup batch response for insert_image
+        batch_response = {
+            "documentId": "doc-123",
+            "replies": [{}],
+        }
+        docs_service.service.documents().batchUpdate.return_value.execute.return_value = batch_response
+
+        docs_service.insert_image_at_text(
+            document_id="doc-123",
+            image_url="https://example.com/image.png",
+            after_text="Figure 1:",
+            width=300,
+            height=200,
+        )
+
+        # Parse the output - it contains two pretty-printed JSON objects
+        output = capsys.readouterr().out
+
+        # Check both operations are present in output
+        assert '"operation": "docs.find_text"' in output
+        assert '"operation": "docs.insert_image"' in output
+        assert '"status": "success"' in output
+        # Verify the index was found (Figure 1: starts at position 1)
+        assert '"index": 1' in output
+
+
+# =============================================================================
+# RETRY UTILITY TESTS
+# =============================================================================
+
+
+class TestRetryUtility:
+    """Test retry logic for transient API errors."""
+
+    def test_execute_with_retry_success_first_try(self):
+        """Test successful execution on first try."""
+        from gws.utils.retry import execute_with_retry
+
+        mock_request = MagicMock()
+        mock_request.execute.return_value = {"id": "file-123"}
+
+        result = execute_with_retry(mock_request, max_retries=3)
+
+        assert result == {"id": "file-123"}
+        assert mock_request.execute.call_count == 1
+
+    def test_execute_with_retry_success_after_retry(self):
+        """Test successful execution after transient failure."""
+        from gws.utils.retry import execute_with_retry
+        from googleapiclient.errors import HttpError
+
+        mock_request = MagicMock()
+        # First call raises 500, second succeeds
+        mock_response = MagicMock()
+        mock_response.status = 500
+        error = HttpError(mock_response, b"Internal Error")
+
+        mock_request.execute.side_effect = [
+            error,
+            {"id": "file-123"},
+        ]
+
+        result = execute_with_retry(mock_request, max_retries=3, initial_delay=0.01)
+
+        assert result == {"id": "file-123"}
+        assert mock_request.execute.call_count == 2
+
+    def test_execute_with_retry_gives_up_after_max_retries(self):
+        """Test that retry gives up after max attempts."""
+        from gws.utils.retry import execute_with_retry
+        from googleapiclient.errors import HttpError
+
+        mock_request = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status = 500
+        error = HttpError(mock_response, b"Internal Error")
+
+        mock_request.execute.side_effect = error
+
+        with pytest.raises(HttpError):
+            execute_with_retry(mock_request, max_retries=2, initial_delay=0.01)
+
+        # Initial + 2 retries = 3 attempts
+        assert mock_request.execute.call_count == 3
+
+    def test_execute_with_retry_non_retryable_error(self):
+        """Test that non-retryable errors are raised immediately."""
+        from gws.utils.retry import execute_with_retry
+        from googleapiclient.errors import HttpError
+
+        mock_request = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status = 404  # Not retryable
+        error = HttpError(mock_response, b"Not Found")
+
+        mock_request.execute.side_effect = error
+
+        with pytest.raises(HttpError):
+            execute_with_retry(mock_request, max_retries=3, initial_delay=0.01)
+
+        # Should fail immediately without retry
+        assert mock_request.execute.call_count == 1
+
+    def test_is_retryable_error(self):
+        """Test detection of retryable errors."""
+        from gws.utils.retry import is_retryable_error
+        from googleapiclient.errors import HttpError
+
+        # Retryable status codes
+        for status in [429, 500, 502, 503]:
+            mock_response = MagicMock()
+            mock_response.status = status
+            error = HttpError(mock_response, b"Error")
+            assert is_retryable_error(error) is True
+
+        # Non-retryable status codes
+        for status in [400, 401, 403, 404, 409]:
+            mock_response = MagicMock()
+            mock_response.status = status
+            error = HttpError(mock_response, b"Error")
+            assert is_retryable_error(error) is False

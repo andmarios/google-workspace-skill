@@ -14,6 +14,7 @@ from gws.services.base import BaseService
 from gws.output import output_success, output_error
 from gws.exceptions import ExitCode
 from gws.utils.diagrams import render_diagrams_in_markdown, find_diagram_blocks
+from gws.utils.retry import execute_with_retry
 
 
 class ConvertService(BaseService):
@@ -275,11 +276,11 @@ class ConvertService(BaseService):
                 resumable=True,
             )
 
-            file = (
-                self.drive_service.files()
-                .create(body=file_metadata, media_body=media, fields="id,name,webViewLink")
-                .execute()
+            # Use retry logic for transient API errors (500, 502, 503)
+            request = self.drive_service.files().create(
+                body=file_metadata, media_body=media, fields="id,name,webViewLink"
             )
+            file = execute_with_retry(request)
 
             # Resize any oversized images to fit the page
             images_resized = self._resize_document_images(file["id"])
@@ -371,11 +372,11 @@ class ConvertService(BaseService):
                 resumable=True,
             )
 
-            file = (
-                self.drive_service.files()
-                .create(body=file_metadata, media_body=media, fields="id")
-                .execute()
+            # Use retry logic for transient API errors (500, 502, 503)
+            request = self.drive_service.files().create(
+                body=file_metadata, media_body=media, fields="id"
             )
+            file = execute_with_retry(request)
 
             doc_id = file["id"]
 

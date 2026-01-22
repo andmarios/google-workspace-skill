@@ -3282,3 +3282,164 @@ class DocsService(BaseService):
                     if "textRun" in pe:
                         text_parts.append(pe["textRun"].get("content", ""))
         return "".join(text_parts)
+
+    def find_text(
+        self,
+        document_id: str,
+        search_text: str,
+        tab_id: str | None = None,
+        occurrence: int = 1,
+    ) -> dict[str, Any]:
+        """Find text in document and return its position.
+
+        Args:
+            document_id: The document ID.
+            search_text: Text to search for.
+            tab_id: Optional tab ID to search in.
+            occurrence: Which occurrence to find (1-based, default: 1).
+
+        Returns:
+            Dict with index, end_index, length, and total_occurrences.
+        """
+        try:
+            doc = self.service.documents().get(
+                documentId=document_id,
+                includeTabsContent=True,
+            ).execute()
+
+            try:
+                content = self._get_tab_content(doc, tab_id)
+            except ValueError as e:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="docs.find_text",
+                    message=str(e),
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+
+            # Build text with position tracking
+            text_positions: list[tuple[str, int]] = []  # (text, start_index)
+            for element in content:
+                if "paragraph" in element:
+                    para = element["paragraph"]
+                    for pe in para.get("elements", []):
+                        if "textRun" in pe:
+                            start_idx = pe.get("startIndex", 0)
+                            text_content = pe["textRun"].get("content", "")
+                            text_positions.append((text_content, start_idx))
+
+            # Concatenate all text
+            full_text = "".join(t[0] for t in text_positions)
+
+            # Find all occurrences
+            occurrences = []
+            start = 0
+            while True:
+                idx = full_text.find(search_text, start)
+                if idx == -1:
+                    break
+                occurrences.append(idx)
+                start = idx + 1
+
+            if not occurrences:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="docs.find_text",
+                    message=f"Text not found: '{search_text}'",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+
+            if occurrence < 1 or occurrence > len(occurrences):
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="docs.find_text",
+                    message=f"Occurrence {occurrence} out of range (found {len(occurrences)})",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            text_offset = occurrences[occurrence - 1]
+
+            # Map text offset to document index
+            # Need to find which element contains this offset and calculate real index
+            current_offset = 0
+            doc_index = 1  # Default to start
+            for text, start_idx in text_positions:
+                if current_offset + len(text) > text_offset:
+                    # This element contains our target
+                    char_offset = text_offset - current_offset
+                    doc_index = start_idx + char_offset
+                    break
+                current_offset += len(text)
+
+            result = {
+                "index": doc_index,
+                "end_index": doc_index + len(search_text),
+                "length": len(search_text),
+                "occurrence": occurrence,
+                "total_occurrences": len(occurrences),
+            }
+
+            output_success(
+                operation="docs.find_text",
+                document_id=document_id,
+                search_text=search_text,
+                **result,
+            )
+            return result
+
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.find_text",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def insert_image_at_text(
+        self,
+        document_id: str,
+        image_url: str,
+        after_text: str,
+        width: float | None = None,
+        height: float | None = None,
+        tab_id: str | None = None,
+        occurrence: int = 1,
+    ) -> dict[str, Any]:
+        """Insert an image after specified text.
+
+        This is a convenience method that finds the text and inserts
+        the image immediately after it, avoiding paragraph boundary issues.
+
+        Args:
+            document_id: The document ID.
+            image_url: URL of the image to insert.
+            after_text: Text to insert image after.
+            width: Image width in points.
+            height: Image height in points.
+            tab_id: Optional tab ID.
+            occurrence: Which occurrence of text (1-based, default: 1).
+        """
+        # First, find the text position
+        try:
+            position = self.find_text(
+                document_id=document_id,
+                search_text=after_text,
+                tab_id=tab_id,
+                occurrence=occurrence,
+            )
+        except SystemExit:
+            # find_text already output the error
+            raise
+
+        # Insert image at the end of the found text
+        insert_index = position["end_index"]
+
+        # Now insert the image at that position
+        return self.insert_image(
+            document_id=document_id,
+            image_url=image_url,
+            index=insert_index,
+            width=width,
+            height=height,
+            tab_id=tab_id,
+        )

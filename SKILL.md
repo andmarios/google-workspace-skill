@@ -107,7 +107,7 @@ uv run gws slides insert-image $PRES_ID $SLIDE_ID "https://example.com/image.png
 
 **Destructive operations** - Always confirm with user before:
 - Deleting documents, files, sheets, or slides (even to trash)
-- Using `replace` or `replace-text` which affects ALL occurrences
+- Using `docs replace` (docs) or `slides replace-text` (slides), which affect ALL occurrences
 - Deleting content ranges from documents
 - Clearing spreadsheet ranges
 - Sending emails
@@ -306,15 +306,25 @@ uv run gws convert md-to-doc report.md --render-diagrams
 uv run gws convert md-to-pdf report.md output.pdf -d
 ```
 
-Supported diagram types (rendered via Kroki API):
+When using `--render-diagrams`, the conversion automatically:
+1. Finds all diagram code blocks (```mermaid, ```plantuml, etc.)
+2. Renders each diagram as a PNG via the Kroki API
+3. Uploads rendered images to Google Drive (made publicly accessible)
+4. Replaces code blocks with embedded images in the document
+5. Resizes images to fit the page width (max 450pt wide, 600pt tall)
+
+**Supported diagram types** (via Kroki API):
 - Mermaid (flowcharts, sequence, class, state, ER, Gantt)
 - PlantUML
 - GraphViz/DOT
 - D2, Excalidraw, Ditaa, and 15+ more
 
-Diagrams are automatically resized to fit the page width and height.
-
 Mermaid diagrams use the `neutral` theme by default for professional grayscale output.
+
+**Troubleshooting diagram rendering**:
+- If diagrams don't render, ensure code blocks use the correct language tag (e.g., ```mermaid)
+- For transient API errors (like "Internal Error"), retry the command
+- Check that the Kroki server is accessible (default: https://kroki.io)
 
 **Markdown to Slides parsing**:
 - `# Heading` - New slide with title

@@ -2,6 +2,7 @@
 
 ## Contents
 - [Basic Operations](#basic-operations)
+- [Finding Text](#finding-text)
 - [Markdown Insertion](#markdown-insertion)
 - [Page Format (Pageless Mode)](#page-format-pageless-mode)
 - [Document Tabs](#document-tabs)
@@ -45,6 +46,47 @@ uv run gws docs page-break <document_id> 100
 # Insert image from URL
 uv run gws docs insert-image <document_id> "https://example.com/image.png" --width 300
 ```
+
+## Finding Text
+
+Find text positions for precise insertions and insert images at specific text locations.
+
+```bash
+# Find text and get its character index
+uv run gws docs find-text <document_id> "Section Title"
+# Returns: {"index": 3067, "end_index": 3080, "length": 13, ...}
+
+# Find a specific occurrence (if text appears multiple times)
+uv run gws docs find-text <document_id> "Summary" --occurrence 2
+
+# Find text in a specific tab
+uv run gws docs find-text <document_id> "Introduction" --tab <tab_id>
+
+# Insert image directly after specific text (avoids index calculation)
+uv run gws docs insert-image-at-text <document_id> "https://example.com/diagram.png" "Flowchart:"
+
+# With sizing
+uv run gws docs insert-image-at-text <document_id> "https://example.com/chart.png" "Figure 1:" \
+    --width 400 --height 300
+
+# After a specific occurrence
+uv run gws docs insert-image-at-text <document_id> "https://..." "Data Analysis" --occurrence 2
+```
+
+**Response structure for find-text:**
+```json
+{
+  "status": "success",
+  "operation": "docs.find_text",
+  "index": 3067,
+  "end_index": 3080,
+  "length": 13,
+  "occurrence": 1,
+  "total_occurrences": 3
+}
+```
+
+**Tip**: Use `insert-image-at-text` instead of `insert-image` with manual indices to avoid "insertion index must be inside the bounds of an existing paragraph" errors.
 
 ## Markdown Insertion
 

@@ -1217,3 +1217,74 @@ def reject_all_suggestions(
     """Reject all pending suggestions in the document."""
     service = DocsService()
     service.reject_all_suggestions(document_id=document_id)
+
+
+@app.command("find-text")
+def find_text(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    search_text: Annotated[str, typer.Argument(help="Text to search for.")],
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID to search in."),
+    ] = None,
+    occurrence: Annotated[
+        int,
+        typer.Option("--occurrence", "-n", help="Which occurrence (1-based)."),
+    ] = 1,
+) -> None:
+    """Find text in document and return its position.
+
+    Returns the character index where the text starts, useful for
+    precise insertions. Use --occurrence to target specific matches.
+
+    Example: uv run gws docs find-text DOC_ID "Section Title"
+    """
+    service = DocsService()
+    service.find_text(
+        document_id=document_id,
+        search_text=search_text,
+        tab_id=tab_id,
+        occurrence=occurrence,
+    )
+
+
+@app.command("insert-image-at-text")
+def insert_image_at_text(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    image_url: Annotated[str, typer.Argument(help="URL of image to insert.")],
+    after_text: Annotated[str, typer.Argument(help="Insert image after this text.")],
+    width: Annotated[
+        Optional[float],
+        typer.Option("--width", "-w", help="Image width in points."),
+    ] = None,
+    height: Annotated[
+        Optional[float],
+        typer.Option("--height", "-h", help="Image height in points."),
+    ] = None,
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID."),
+    ] = None,
+    occurrence: Annotated[
+        int,
+        typer.Option("--occurrence", "-n", help="After which occurrence (1-based)."),
+    ] = 1,
+) -> None:
+    """Insert an image after specified text.
+
+    This finds the specified text and inserts the image immediately
+    after it, avoiding manual index calculation and paragraph
+    boundary issues.
+
+    Example: uv run gws docs insert-image-at-text DOC_ID "https://..." "Section Title"
+    """
+    service = DocsService()
+    service.insert_image_at_text(
+        document_id=document_id,
+        image_url=image_url,
+        after_text=after_text,
+        width=width,
+        height=height,
+        tab_id=tab_id,
+        occurrence=occurrence,
+    )
