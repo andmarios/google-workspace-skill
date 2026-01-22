@@ -23,34 +23,94 @@ class ConvertService(BaseService):
     SERVICE_NAME = "drive"
     VERSION = "v3"
 
+    def _create_temp_folder(self) -> str:
+        """Create a temporary folder in Drive for diagram images.
+
+        Returns:
+            The folder ID
+        """
+        import uuid
+        folder_name = f"_gws_temp_{uuid.uuid4().hex[:8]}"
+        file_metadata = {
+            "name": folder_name,
+            "mimeType": "application/vnd.google-apps.folder",
+        }
+        folder = self.drive_service.files().create(
+            body=file_metadata, fields="id"
+        ).execute()
+        return folder["id"]
+
+    def _delete_temp_folder(self, folder_id: str) -> None:
+        """Delete a temporary folder and all its contents.
+
+        Args:
+            folder_id: The folder ID to delete
+        """
+        try:
+            self.drive_service.files().delete(fileId=folder_id).execute()
+        except Exception:
+            pass  # Ignore cleanup errors
+
+    def _set_pageless_mode(self, document_id: str) -> None:
+        """Set a document to pageless mode.
+
+        Args:
+            document_id: The Google Doc ID
+        """
+        from googleapiclient.discovery import build
+        from gws.auth.oauth import AuthManager
+
+        auth_manager = AuthManager()
+        credentials = auth_manager.get_credentials()
+        docs_service = build("docs", "v1", credentials=credentials)
+
+        requests = [{
+            "updateDocumentStyle": {
+                "documentStyle": {
+                    "documentFormat": {
+                        "documentMode": "PAGELESS",
+                    }
+                },
+                "fields": "documentFormat",
+            }
+        }]
+
+        docs_service.documents().batchUpdate(
+            documentId=document_id, body={"requests": requests}
+        ).execute()
+
     def _process_diagrams(
         self,
         markdown: str,
         temp_dir: Path,
-    ) -> tuple[str, list[str]]:
-        """Render diagrams and upload to Drive, returning modified markdown.
+        mermaid_theme: str = "default",
+    ) -> tuple[str, str | None]:
+        """Render diagrams and upload to Drive temp folder, returning modified markdown.
 
         Args:
             markdown: Original markdown content
             temp_dir: Temporary directory for rendered images
+            mermaid_theme: Theme for Mermaid diagrams (default, neutral, dark, forest)
 
         Returns:
-            Tuple of (modified markdown, list of uploaded file IDs for cleanup)
+            Tuple of (modified markdown, temp folder ID for cleanup or None)
         """
         blocks = find_diagram_blocks(markdown)
         if not blocks:
-            return markdown, []
+            return markdown, None
+
+        # Create temp folder in Drive
+        temp_folder_id = self._create_temp_folder()
 
         # Render diagrams locally
         modified_md, rendered_paths = render_diagrams_in_markdown(
-            markdown, temp_dir, output_format="png"
+            markdown, temp_dir, output_format="png", mermaid_theme=mermaid_theme
         )
 
-        # Upload each rendered diagram to Drive and get public URLs
-        uploaded_ids = []
+        # Upload each rendered diagram to Drive temp folder and get public URLs
         for path in rendered_paths:
-            # Upload to Drive
-            file_metadata = {"name": path.name}
+            # Upload to Drive temp folder
+            file_metadata = {"name": path.name, "parents": [temp_folder_id]}
             media = MediaFileUpload(str(path), mimetype="image/png")
             uploaded = (
                 self.drive_service.files()
@@ -58,7 +118,6 @@ class ConvertService(BaseService):
                 .execute()
             )
             file_id = uploaded["id"]
-            uploaded_ids.append(file_id)
 
             # Make publicly accessible
             self.drive_service.permissions().create(
@@ -73,7 +132,7 @@ class ConvertService(BaseService):
             # Replace local path with Drive URL in markdown
             modified_md = modified_md.replace(str(path.absolute()), image_url)
 
-        return modified_md, uploaded_ids
+        return modified_md, temp_folder_id
 
     def _resize_document_images(
         self,
@@ -215,6 +274,8 @@ class ConvertService(BaseService):
         title: str | None = None,
         folder_id: str | None = None,
         render_diagrams: bool = False,
+        mermaid_theme: str = "default",
+        pageless: bool = True,
     ) -> dict[str, Any]:
         """Convert Markdown file to Google Doc.
 
@@ -225,9 +286,11 @@ class ConvertService(BaseService):
             title: Document title (defaults to filename)
             folder_id: Optional folder to create document in
             render_diagrams: If True, render Mermaid/PlantUML diagrams via Kroki
+            mermaid_theme: Theme for Mermaid diagrams (default, neutral, dark, forest)
+            pageless: If True (default), create document in pageless mode
         """
         temp_dir = None
-        uploaded_diagram_ids = []
+        temp_folder_id = None
 
         try:
             path = Path(input_path)
@@ -253,8 +316,8 @@ class ConvertService(BaseService):
                 diagrams_rendered = len(blocks)
 
                 if blocks:
-                    markdown_content, uploaded_diagram_ids = self._process_diagrams(
-                        markdown_content, temp_dir
+                    markdown_content, temp_folder_id = self._process_diagrams(
+                        markdown_content, temp_dir, mermaid_theme=mermaid_theme
                     )
                     # Write modified markdown to temp file
                     temp_md = temp_dir / "converted.md"
@@ -285,11 +348,16 @@ class ConvertService(BaseService):
             # Resize any oversized images to fit the page
             images_resized = self._resize_document_images(file["id"])
 
+            # Set pageless mode if requested
+            if pageless:
+                self._set_pageless_mode(file["id"])
+
             result = {
                 "document_id": file["id"],
                 "title": file["name"],
                 "web_view_link": file["webViewLink"],
                 "source_file": str(path),
+                "pageless": pageless,
             }
 
             if render_diagrams and diagrams_rendered > 0:
@@ -308,9 +376,12 @@ class ConvertService(BaseService):
             )
             raise SystemExit(ExitCode.API_ERROR)
         finally:
-            # Cleanup temp directory
+            # Cleanup local temp directory
             if temp_dir and temp_dir.exists():
                 shutil.rmtree(temp_dir, ignore_errors=True)
+            # Cleanup Drive temp folder (deletes folder and all diagram images)
+            if temp_folder_id:
+                self._delete_temp_folder(temp_folder_id)
 
     def md_to_pdf(
         self,
@@ -318,15 +389,23 @@ class ConvertService(BaseService):
         output_path: str,
         title: str | None = None,
         render_diagrams: bool = False,
+        mermaid_theme: str = "default",
     ) -> dict[str, Any]:
         """Convert Markdown to PDF via Google Docs.
 
         1. Upload Markdown as Google Doc (optionally rendering diagrams)
         2. Export as PDF
         3. Delete the temporary Doc and diagram images
+
+        Args:
+            input_path: Path to markdown file
+            output_path: Path for output PDF file
+            title: Temporary doc title
+            render_diagrams: If True, render Mermaid/PlantUML diagrams via Kroki
+            mermaid_theme: Theme for Mermaid diagrams (default, neutral, dark, forest)
         """
         temp_dir = None
-        uploaded_diagram_ids = []
+        temp_folder_id = None
 
         try:
             path = Path(input_path)
@@ -352,8 +431,8 @@ class ConvertService(BaseService):
                 diagrams_rendered = len(blocks)
 
                 if blocks:
-                    markdown_content, uploaded_diagram_ids = self._process_diagrams(
-                        markdown_content, temp_dir
+                    markdown_content, temp_folder_id = self._process_diagrams(
+                        markdown_content, temp_dir, mermaid_theme=mermaid_theme
                     )
                     # Write modified markdown to temp file
                     temp_md = temp_dir / "converted.md"
@@ -412,12 +491,9 @@ class ConvertService(BaseService):
             finally:
                 # Delete the temporary doc
                 self.drive_service.files().delete(fileId=doc_id).execute()
-                # Delete uploaded diagram images
-                for diagram_id in uploaded_diagram_ids:
-                    try:
-                        self.drive_service.files().delete(fileId=diagram_id).execute()
-                    except Exception:
-                        pass  # Ignore cleanup errors
+                # Delete Drive temp folder (deletes folder and all diagram images)
+                if temp_folder_id:
+                    self._delete_temp_folder(temp_folder_id)
 
             return {"output_path": str(output_file)}
         except HttpError as e:
@@ -428,7 +504,7 @@ class ConvertService(BaseService):
             )
             raise SystemExit(ExitCode.API_ERROR)
         finally:
-            # Cleanup temp directory
+            # Cleanup local temp directory
             if temp_dir and temp_dir.exists():
                 shutil.rmtree(temp_dir, ignore_errors=True)
 

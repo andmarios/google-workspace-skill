@@ -65,7 +65,7 @@ def render_diagram(
     source: str,
     output_format: str = "png",
     timeout: float = 30.0,
-    mermaid_theme: str = "neutral",
+    mermaid_theme: str = "default",
 ) -> bytes:
     """Render a diagram using Kroki API.
 
@@ -74,7 +74,7 @@ def render_diagram(
         source: The diagram source code
         output_format: Output format (png, svg, pdf)
         timeout: Request timeout in seconds
-        mermaid_theme: Theme for Mermaid diagrams (neutral, default, dark, forest)
+        mermaid_theme: Theme for Mermaid diagrams (default, neutral, dark, forest)
 
     Returns:
         Rendered diagram as bytes
@@ -111,6 +111,7 @@ def render_diagram_to_file(
     source: str,
     output_path: str | Path,
     output_format: str = "png",
+    mermaid_theme: str = "default",
 ) -> Path:
     """Render a diagram and save to file.
 
@@ -119,11 +120,12 @@ def render_diagram_to_file(
         source: The diagram source code
         output_path: Path to save the rendered diagram
         output_format: Output format (png, svg, pdf)
+        mermaid_theme: Theme for Mermaid diagrams (default, neutral, dark, forest)
 
     Returns:
         Path to the saved file
     """
-    content = render_diagram(diagram_type, source, output_format)
+    content = render_diagram(diagram_type, source, output_format, mermaid_theme=mermaid_theme)
     path = Path(output_path)
     path.write_bytes(content)
     return path
@@ -158,6 +160,7 @@ def render_diagrams_in_markdown(
     markdown: str,
     output_dir: str | Path,
     output_format: str = "png",
+    mermaid_theme: str = "default",
 ) -> tuple[str, list[Path]]:
     """Render all diagrams in markdown and replace with image references.
 
@@ -165,6 +168,7 @@ def render_diagrams_in_markdown(
         markdown: Markdown content with diagram code blocks
         output_dir: Directory to save rendered diagrams
         output_format: Output format for diagrams (png, svg)
+        mermaid_theme: Theme for Mermaid diagrams (default, neutral, dark, forest)
 
     Returns:
         Tuple of (modified markdown, list of rendered image paths)
@@ -190,6 +194,7 @@ def render_diagrams_in_markdown(
                 block["source"],
                 output_path,
                 output_format,
+                mermaid_theme=mermaid_theme,
             )
             rendered_paths.insert(0, output_path)
 

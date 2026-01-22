@@ -131,7 +131,7 @@ Stored in `~/.claude/.google-workspace/`:
 - **Exit codes**: Use `ExitCode` enum (0=success, 1=auth, 2=API, 3=args, 4=not found)
 - **Shell escaping**: Claude Code sandbox escapes `!` as `\!`. Use `_unescape_text()` for user content.
 - **HTML email default**: Gmail sends HTML by default (`--plain` for plain text)
-- **Diagram rendering**: Uses Kroki API. Mermaid gets `neutral` theme injected automatically.
+- **Diagram rendering**: Uses Kroki API. Mermaid gets `default` theme injected automatically (configurable via `--mermaid-theme`).
 - **Image sizing**: Docs converter limits images to 450pt width, 600pt height
 
 ## Dependencies

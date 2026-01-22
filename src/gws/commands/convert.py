@@ -27,6 +27,14 @@ def md_to_doc(
         bool,
         typer.Option("--render-diagrams", "-d", help="Render Mermaid/PlantUML diagrams via Kroki API."),
     ] = False,
+    mermaid_theme: Annotated[
+        str,
+        typer.Option("--mermaid-theme", "-m", help="Mermaid diagram theme: default, neutral, dark, forest."),
+    ] = "default",
+    pageless: Annotated[
+        bool,
+        typer.Option("--pageless/--no-pageless", help="Create in pageless mode (default: pageless)."),
+    ] = True,
 ) -> None:
     """Convert Markdown file to Google Doc.
 
@@ -35,6 +43,9 @@ def md_to_doc(
 
     With --render-diagrams, Mermaid, PlantUML, GraphViz and other diagram
     types are rendered to images via Kroki API and embedded in the document.
+
+    Documents are created in pageless mode by default. Use --no-pageless
+    for traditional page-based documents.
     """
     service = ConvertService()
     service.md_to_doc(
@@ -42,6 +53,8 @@ def md_to_doc(
         title=title,
         folder_id=folder_id,
         render_diagrams=render_diagrams,
+        mermaid_theme=mermaid_theme,
+        pageless=pageless,
     )
 
 
@@ -57,6 +70,10 @@ def md_to_pdf(
         bool,
         typer.Option("--render-diagrams", "-d", help="Render Mermaid/PlantUML diagrams via Kroki API."),
     ] = False,
+    mermaid_theme: Annotated[
+        str,
+        typer.Option("--mermaid-theme", "-m", help="Mermaid diagram theme: default, neutral, dark, forest."),
+    ] = "default",
 ) -> None:
     """Convert Markdown file to PDF.
 
@@ -71,6 +88,7 @@ def md_to_pdf(
         output_path=output_path,
         title=title,
         render_diagrams=render_diagrams,
+        mermaid_theme=mermaid_theme,
     )
 
 

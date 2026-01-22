@@ -300,6 +300,12 @@ uv run gws convert md-to-pdf /path/to/document.md /path/to/output.pdf
 - Bullet lists MUST use asterisks (`*`) not dashes (`-`) for proper rendering
 - Tables, bold, italic, code blocks, and links are supported
 
+**Pageless mode** (default for `md-to-doc`):
+Documents are created in pageless (continuous) mode by default for better web viewing. Use `--no-pageless` for traditional page-based documents with page breaks:
+```bash
+uv run gws convert md-to-doc report.md --no-pageless
+```
+
 **Diagram rendering** (with `--render-diagrams` / `-d` flag):
 ```bash
 uv run gws convert md-to-doc report.md --render-diagrams
@@ -309,9 +315,11 @@ uv run gws convert md-to-pdf report.md output.pdf -d
 When using `--render-diagrams`, the conversion automatically:
 1. Finds all diagram code blocks (```mermaid, ```plantuml, etc.)
 2. Renders each diagram as a PNG via the Kroki API
-3. Uploads rendered images to Google Drive (made publicly accessible)
-4. Replaces code blocks with embedded images in the document
-5. Resizes images to fit the page width (max 450pt wide, 600pt tall)
+3. Creates a temporary folder in Google Drive
+4. Uploads rendered images to the temp folder (made publicly accessible)
+5. Replaces code blocks with embedded images in the document
+6. Resizes images to fit the page width (max 450pt wide, 600pt tall)
+7. **Cleans up**: Deletes the temporary Drive folder and all diagram images
 
 **Supported diagram types** (via Kroki API):
 - Mermaid (flowcharts, sequence, class, state, ER, Gantt)
@@ -319,7 +327,15 @@ When using `--render-diagrams`, the conversion automatically:
 - GraphViz/DOT
 - D2, Excalidraw, Ditaa, and 15+ more
 
-Mermaid diagrams use the `neutral` theme by default for professional grayscale output.
+**Mermaid theme** (`--mermaid-theme` / `-m`):
+- `default` - Classic blue/purple Mermaid colors (default)
+- `neutral` - Gray/muted tones for professional grayscale output
+- `dark` - Dark background with light elements
+- `forest` - Green/nature-inspired palette
+
+```bash
+uv run gws convert md-to-doc report.md -d --mermaid-theme neutral
+```
 
 **Troubleshooting diagram rendering**:
 - If diagrams don't render, ensure code blocks use the correct language tag (e.g., ```mermaid)
