@@ -153,6 +153,99 @@ EOF
 - No markdown-to-HTML conversion - provide HTML directly
 - Use `--plain` for text-only emails (code samples, simple messages)
 
+### Search and filter emails
+```bash
+# Search with limit (--max or -n, default is 10)
+uv run gws gmail search "from:user@example.com" --max 5
+uv run gws gmail search "subject:invoice after:2025/01/01" -n 20
+
+# Common search operators
+uv run gws gmail search "is:unread"                    # Unread messages
+uv run gws gmail search "has:attachment"               # Messages with attachments
+uv run gws gmail search "from:boss@company.com"        # From specific sender
+uv run gws gmail search "subject:urgent"               # Subject contains word
+uv run gws gmail search "after:2025/01/01"             # After date
+uv run gws gmail search "before:2025/02/01"            # Before date
+uv run gws gmail search "is:starred is:important"      # Combine operators
+```
+
+**Key options:**
+- `--max` / `-n`: Limit results (default: 10)
+- Search operators: `from:`, `to:`, `subject:`, `is:`, `has:`, `after:`, `before:`
+
+### Manage Drive files
+```bash
+# Upload a file
+uv run gws drive upload /path/to/file.pdf --name "Report Q1"
+
+# Share with specific user
+uv run gws drive share <file_id> --email "colleague@company.com" --role writer
+
+# Share with anyone who has link
+uv run gws drive share <file_id> --anyone --role reader
+
+# Search for files
+uv run gws drive search "name contains 'Report'" --max 10
+
+# Download a file
+uv run gws drive download <file_id> /path/to/output.pdf
+```
+
+### Schedule calendar events
+```bash
+# Create a simple event
+uv run gws calendar create "Team Meeting" "2025-01-15T10:00:00" "2025-01-15T11:00:00"
+
+# Event with details and attendees
+uv run gws calendar create "Project Review" "2025-01-20T14:00:00" "2025-01-20T15:00:00" \
+    --description "Quarterly review of project milestones" \
+    --location "Conference Room A" \
+    --attendees "alice@company.com,bob@company.com"
+
+# All-day event
+uv run gws calendar create "Company Holiday" "2025-12-25" "2025-12-26" --all-day
+
+# Recurring weekly meeting
+uv run gws calendar create-recurring "Standup" "2025-01-06T09:00:00" "2025-01-06T09:15:00" \
+    "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR" --count 52
+```
+
+**Calendar tips:**
+- Times use ISO 8601 format: `YYYY-MM-DDTHH:MM:SS`
+- Use `--all-day` for date-only events (no time component)
+- Descriptions are single-line only (no stdin support)
+
+### Work with spreadsheet data
+```bash
+# Create a spreadsheet
+uv run gws sheets create "Sales Report"
+
+# Write data (simple)
+uv run gws sheets write <spreadsheet_id> "A1:C1" --values '[["Name","Amount","Date"]]'
+
+# Write complex data via stdin (avoids shell escaping)
+cat <<'EOF' | uv run gws sheets write <spreadsheet_id> "A1:C4" --stdin
+[
+  ["Product", "Revenue", "Units"],
+  ["Widget A", 15000, 500],
+  ["Widget B", 22000, 440],
+  ["Widget C", 8500, 170]
+]
+EOF
+
+# Read data back
+uv run gws sheets read <spreadsheet_id> "A1:C10"
+
+# Append new rows
+uv run gws sheets append <spreadsheet_id> "A:C" --values '[["Widget D", 12000, 300]]'
+```
+
+**Sheets tips:**
+- JSON arrays use double brackets: `[["row1col1","row1col2"],["row2col1","row2col2"]]`
+- Use `--stdin` for complex data to avoid shell escaping issues
+- Sheet names with spaces: `"Sheet Name!A1:B10"` (double quotes)
+- Use `--formulas` to read formulas instead of computed values
+
 ## Safety Guidelines
 
 **Destructive operations** - Always confirm with user before:

@@ -34,6 +34,14 @@ uv run gws docs insert <document_id> "Text to insert" --index 10
 # Append text to end
 uv run gws docs append <document_id> "Text to append"
 
+# Append multi-line content via stdin
+cat <<'EOF' | uv run gws docs append <document_id> --stdin
+This is a multi-paragraph addition.
+
+It preserves line breaks and formatting.
+Useful for templates or boilerplate content.
+EOF
+
 # Replace all occurrences
 uv run gws docs replace <document_id> "old text" "new text"
 
@@ -102,8 +110,21 @@ uv run gws docs insert-markdown <document_id> "## Subheading" --index 50
 # Insert from a markdown file
 uv run gws docs insert-markdown <document_id> --file notes.md
 
-# Insert from stdin (piping)
+# Insert from stdin (piping from file)
 cat notes.md | uv run gws docs insert-markdown <document_id> --stdin
+
+# Insert markdown via heredoc
+cat <<'EOF' | uv run gws docs insert-markdown <document_id> --stdin
+## New Section
+
+This content will be **formatted** with:
+* Bullet points
+* Links: [example](https://example.com)
+* And other markdown features
+EOF
+
+# Insert at specific position from stdin
+cat notes.md | uv run gws docs insert-markdown <document_id> --stdin --index 50
 
 # Insert into a specific tab
 uv run gws docs insert-markdown <document_id> --file content.md --tab <tab_id>

@@ -32,10 +32,19 @@ def read_values(
         Optional[str],
         typer.Argument(help="A1 notation range (e.g., 'Sheet1!A1:C10')."),
     ] = None,
+    formulas: Annotated[
+        bool,
+        typer.Option("--formulas", help="Return formulas instead of computed values."),
+    ] = False,
 ) -> None:
     """Read values from a spreadsheet range."""
     service = SheetsService()
-    service.read(spreadsheet_id=spreadsheet_id, range_notation=range_notation)
+    value_render_option = "FORMULA" if formulas else "FORMATTED_VALUE"
+    service.read(
+        spreadsheet_id=spreadsheet_id,
+        range_notation=range_notation,
+        value_render_option=value_render_option,
+    )
 
 
 @app.command("create")

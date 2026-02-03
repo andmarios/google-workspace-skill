@@ -25,15 +25,32 @@
 # Get spreadsheet metadata
 uv run gws sheets metadata <spreadsheet_id>
 
-# Read cell range
+# Read cell range (returns displayed values)
 uv run gws sheets read <spreadsheet_id> "A1:C10"
 uv run gws sheets read <spreadsheet_id> "Sheet2!A1:B5"
+
+# Read formulas instead of computed values
+uv run gws sheets read <spreadsheet_id> "A1:C10" --formulas
 
 # Create new spreadsheet
 uv run gws sheets create "Spreadsheet Title" --sheets "Data,Summary"
 
 # Write to cells
 uv run gws sheets write <spreadsheet_id> "A1:C2" --values '[["A","B","C"],["1","2","3"]]'
+
+# Write complex data via stdin (avoids shell escaping issues)
+cat <<'EOF' | uv run gws sheets write <spreadsheet_id> "A1:C4" --stdin
+[
+  ["Product", "Revenue", "Units"],
+  ["Widget A", 15000, 500],
+  ["Widget B", 22000, 440],
+  ["Widget C", 8500, 170]
+]
+EOF
+
+# Pipe JSON from another command
+jq -n '[["Name","Score"],["Alice",95],["Bob",87]]' | \
+    uv run gws sheets write <spreadsheet_id> "A1:B3" --stdin
 
 # Append rows
 uv run gws sheets append <spreadsheet_id> "A1:C1" --values '[["New","Row","Data"]]'
@@ -325,3 +342,47 @@ uv run gws sheets list-named-ranges <spreadsheet_id>
 # Delete named range
 uv run gws sheets delete-named-range <spreadsheet_id> <named_range_id>
 ```
+
+## Working with Sheet Names and Formulas
+
+### Reading Formulas
+
+By default, `sheets read` returns computed/displayed values. Use `--formulas` to see the actual formulas:
+
+```bash
+# See computed value (e.g., "$18,463.64")
+uv run gws sheets read <spreadsheet_id> "A1"
+
+# See actual formula (e.g., "=SUM(B1:B10)")
+uv run gws sheets read <spreadsheet_id> "A1" --formulas
+```
+
+### Sheet Names and Special Characters
+
+Sheet names with spaces and formulas with `!` or `$` work correctly with double quotes:
+
+```bash
+# Ranges with sheet names containing spaces
+uv run gws sheets read <spreadsheet_id> "My Sheet!A1:B10"
+uv run gws sheets write <spreadsheet_id> "Costs FY26!A1:C10" --values '[["Q1","Q2","Q3"]]'
+
+# Formulas with absolute references ($)
+uv run gws sheets write <spreadsheet_id> "A1" --values '[["=SUM($B$1:$B$10)"]]'
+
+# Formulas referencing other sheets (!)
+uv run gws sheets write <spreadsheet_id> "A1" --values '[["=OtherSheet!B2"]]'
+
+# Complex formulas - use --stdin to avoid JSON escaping
+cat <<'EOF' | uv run gws sheets write <spreadsheet_id> "A1:A3" --stdin
+[
+  ["=SUM($B$1:$B$10)"],
+  ["=IF(A1>100, \"Yes\", \"No\")"],
+  ["='Data Sheet'!A1"]
+]
+EOF
+```
+
+**Tips:**
+- Use double quotes (`"..."`) for ranges with spaces or `!`
+- Use single quotes for `--values` JSON to preserve `$` in formulas
+- Use `--stdin` for complex multi-cell formula writes

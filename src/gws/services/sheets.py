@@ -16,6 +16,14 @@ class SheetsService(BaseService):
     SERVICE_NAME = "sheets"
     VERSION = "v4"
 
+    def _unescape_text(self, text: str) -> str:
+        """Remove unnecessary escape sequences from text.
+
+        This handles cases where shell environments escape special characters
+        like exclamation marks (\\! -> !).
+        """
+        return text.replace("\\!", "!")
+
     def metadata(self, spreadsheet_id: str) -> dict[str, Any]:
         """Get spreadsheet metadata."""
         try:
@@ -56,14 +64,31 @@ class SheetsService(BaseService):
         self,
         spreadsheet_id: str,
         range_notation: str | None = None,
+        value_render_option: str = "FORMATTED_VALUE",
     ) -> dict[str, Any]:
-        """Read values from a spreadsheet."""
+        """Read values from a spreadsheet.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID.
+            range_notation: A1 notation range (e.g., 'Sheet1!A1:C10').
+            value_render_option: How values should be rendered:
+                - FORMATTED_VALUE (default): Values as displayed in the UI
+                - UNFORMATTED_VALUE: Raw values without formatting
+                - FORMULA: The formulas in cells (not computed values)
+        """
         try:
+            # Unescape shell-escaped characters in range
+            if range_notation:
+                range_notation = self._unescape_text(range_notation)
             if range_notation:
                 result = (
                     self.service.spreadsheets()
                     .values()
-                    .get(spreadsheetId=spreadsheet_id, range=range_notation)
+                    .get(
+                        spreadsheetId=spreadsheet_id,
+                        range=range_notation,
+                        valueRenderOption=value_render_option,
+                    )
                     .execute()
                 )
             else:
@@ -77,7 +102,11 @@ class SheetsService(BaseService):
                 result = (
                     self.service.spreadsheets()
                     .values()
-                    .get(spreadsheetId=spreadsheet_id, range=first_sheet)
+                    .get(
+                        spreadsheetId=spreadsheet_id,
+                        range=first_sheet,
+                        valueRenderOption=value_render_option,
+                    )
                     .execute()
                 )
 
@@ -162,6 +191,8 @@ class SheetsService(BaseService):
     ) -> dict[str, Any]:
         """Write values to a spreadsheet."""
         try:
+            # Unescape shell-escaped characters in range
+            range_notation = self._unescape_text(range_notation)
             body = {"values": values}
             result = (
                 self.service.spreadsheets()
@@ -201,6 +232,8 @@ class SheetsService(BaseService):
     ) -> dict[str, Any]:
         """Append values to a spreadsheet."""
         try:
+            # Unescape shell-escaped characters in range
+            range_notation = self._unescape_text(range_notation)
             body = {"values": values}
             result = (
                 self.service.spreadsheets()
@@ -239,6 +272,8 @@ class SheetsService(BaseService):
     ) -> dict[str, Any]:
         """Clear values from a range."""
         try:
+            # Unescape shell-escaped characters in range
+            range_notation = self._unescape_text(range_notation)
             result = (
                 self.service.spreadsheets()
                 .values()
@@ -470,6 +505,8 @@ class SheetsService(BaseService):
     ) -> dict[str, Any]:
         """Read multiple ranges at once."""
         try:
+            # Unescape shell-escaped characters in all ranges
+            ranges = [self._unescape_text(r) for r in ranges]
             result = (
                 self.service.spreadsheets()
                 .values()
