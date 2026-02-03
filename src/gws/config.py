@@ -27,6 +27,7 @@ class Config:
 
     enabled_services: list[str] = field(default_factory=lambda: Config.ALL_SERVICES.copy())
     kroki_url: str = field(default_factory=lambda: Config.DEFAULT_KROKI_URL)
+    security_enabled: bool = True  # Prompt injection protection enabled by default
 
     @classmethod
     def load(cls) -> "Config":

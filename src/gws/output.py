@@ -5,12 +5,20 @@ import sys
 from typing import Any
 
 from prompt_security import output_external_content as _output_external_content
-from prompt_security import load_config
+from prompt_security import load_config as load_security_config
+
+from gws.config import Config
 
 
 def output_json(data: dict[str, Any]) -> None:
     """Output JSON to stdout."""
     print(json.dumps(data, indent=2, default=str))
+
+
+def is_security_enabled() -> bool:
+    """Check if security wrapping is enabled in gws config."""
+    gws_config = Config.load()
+    return gws_config.security_enabled
 
 
 def output_success(operation: str, **kwargs: Any) -> None:
@@ -47,6 +55,8 @@ def output_external_content(
     """
     Output response with wrapped external content.
 
+    If security is disabled in gws config, outputs without wrapping.
+
     Args:
         operation: Operation name (e.g., "gmail.read")
         source_type: Type of source ("email", "document", "spreadsheet", "slide")
@@ -54,7 +64,21 @@ def output_external_content(
         content_fields: Dict mapping field names to content to wrap
         **kwargs: Additional fields to include in response
     """
-    config = load_config()
+    # Check if security is enabled in gws config
+    if not is_security_enabled():
+        # Output without security wrapping
+        response = {
+            "status": "success",
+            "operation": operation,
+            "source_id": source_id,
+            **content_fields,
+            **kwargs,
+        }
+        output_json(response)
+        return
+
+    # Security enabled - wrap content with markers
+    config = load_security_config()
     response = _output_external_content(
         operation=operation,
         source_type=source_type,
