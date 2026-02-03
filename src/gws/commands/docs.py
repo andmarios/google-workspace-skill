@@ -575,6 +575,43 @@ def set_column_width(
     )
 
 
+@app.command("set-table-column-widths")
+def set_table_column_widths(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    table_index: Annotated[int, typer.Argument(help="Table index (0-based).")],
+    column_widths: Annotated[
+        str,
+        typer.Argument(
+            help='JSON mapping column index to width in points. Example: \'{"0":70,"1":90,"2":170}\''
+        ),
+    ],
+) -> None:
+    """Set widths for multiple table columns in a single API call."""
+    import json
+
+    from gws.exceptions import ExitCode
+    from gws.output import output_error
+
+    try:
+        widths_dict = json.loads(column_widths)
+        # Convert string keys to int (JSON keys are always strings)
+        widths_dict = {int(k): float(v) for k, v in widths_dict.items()}
+    except (json.JSONDecodeError, ValueError) as e:
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="docs.set_table_column_widths",
+            message=f"Invalid JSON for column_widths: {e}",
+        )
+        raise SystemExit(ExitCode.INVALID_ARGS)
+
+    service = DocsService()
+    service.set_table_column_widths(
+        document_id=document_id,
+        table_index=table_index,
+        column_widths=widths_dict,
+    )
+
+
 @app.command("pin-table-header")
 def pin_table_header(
     document_id: Annotated[str, typer.Argument(help="Document ID.")],

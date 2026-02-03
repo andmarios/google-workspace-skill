@@ -262,6 +262,9 @@ uv run gws docs style-table-cell <document_id> 0 0 0 \
 # Set column width (points)
 uv run gws docs set-column-width <document_id> 0 1 150
 
+# Set multiple column widths in one API call (more efficient)
+uv run gws docs set-table-column-widths <document_id> 0 '{"0":70,"1":90,"2":170,"3":50}'
+
 # Pin header rows
 uv run gws docs pin-table-header <document_id> 0 --rows 2
 ```

@@ -1445,6 +1445,75 @@ class DocsService(BaseService):
             )
             raise SystemExit(ExitCode.API_ERROR)
 
+    def set_table_column_widths(
+        self,
+        document_id: str,
+        table_index: int,
+        column_widths: dict[int, float],
+    ) -> dict[str, Any]:
+        """Set widths for multiple columns in a table with a single API call.
+
+        Args:
+            document_id: The document ID.
+            table_index: The table index (0-based).
+            column_widths: Dict mapping column index to width in points.
+                           Example: {0: 70, 1: 90, 2: 170}
+        """
+        try:
+            tables = self._get_tables(document_id)
+            if table_index >= len(tables):
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="docs.set_table_column_widths",
+                    message=f"Table index {table_index} not found",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            if not column_widths:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="docs.set_table_column_widths",
+                    message="No column widths provided",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            table = tables[table_index]
+
+            # Build one request per column, all in single batch
+            requests = []
+            for col_index, width in column_widths.items():
+                requests.append({
+                    "updateTableColumnProperties": {
+                        "tableStartLocation": {"index": table["startIndex"]},
+                        "columnIndices": [col_index],
+                        "tableColumnProperties": {
+                            "width": {"magnitude": width, "unit": "PT"},
+                            "widthType": "FIXED_WIDTH",
+                        },
+                        "fields": "width,widthType",
+                    }
+                })
+
+            result = self.service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            ).execute()
+
+            output_success(
+                operation="docs.set_table_column_widths",
+                document_id=document_id,
+                table_index=table_index,
+                columns_updated=len(column_widths),
+                column_widths=column_widths,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.set_table_column_widths",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
     def pin_table_header(
         self,
         document_id: str,

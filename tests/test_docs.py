@@ -426,6 +426,65 @@ class TestTableOperations:
         assert output["status"] == "success"
         assert output["width"] == 150.0
 
+    def test_set_table_column_widths(self, docs_service, capsys):
+        """Test setting multiple column widths in one call."""
+        setup_doc_response(docs_service, {
+            "body": {
+                "content": [
+                    {"endIndex": 1},
+                    {
+                        "table": {"rows": 2, "columns": 4, "tableRows": [{}, {}]},
+                        "startIndex": 10,
+                    },
+                ]
+            }
+        })
+        setup_batch_response(docs_service)
+
+        docs_service.set_table_column_widths(
+            document_id="doc-123",
+            table_index=0,
+            column_widths={0: 70, 1: 90, 2: 170, 3: 50},
+        )
+
+        output = json.loads(capsys.readouterr().out)
+        assert output["status"] == "success"
+        assert output["columns_updated"] == 4
+        # JSON keys are always strings
+        assert output["column_widths"] == {"0": 70, "1": 90, "2": 170, "3": 50}
+
+    def test_set_table_column_widths_empty(self, docs_service, capsys):
+        """Test error when no column widths provided."""
+        from gws.exceptions import ExitCode
+
+        with pytest.raises(SystemExit) as exc_info:
+            docs_service.set_table_column_widths(
+                document_id="doc-123",
+                table_index=0,
+                column_widths={},
+            )
+
+        assert exc_info.value.code == ExitCode.INVALID_ARGS
+        output = json.loads(capsys.readouterr().out)
+        assert output["status"] == "error"
+
+    def test_set_table_column_widths_invalid_table(self, docs_service, capsys):
+        """Test error when table index is invalid."""
+        from gws.exceptions import ExitCode
+
+        setup_doc_response(docs_service, {
+            "body": {"content": [{"endIndex": 1}]}
+        })
+
+        with pytest.raises(SystemExit) as exc_info:
+            docs_service.set_table_column_widths(
+                document_id="doc-123",
+                table_index=5,
+                column_widths={0: 100},
+            )
+
+        assert exc_info.value.code == ExitCode.INVALID_ARGS
+
     def test_pin_table_header(self, docs_service, capsys):
         """Test pinning table header rows."""
         setup_doc_response(docs_service, {

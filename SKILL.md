@@ -202,7 +202,7 @@ uv run gws auth logout
 | Service | Ops | Reference | Description |
 |---------|-----|-----------|-------------|
 | `drive` | 28 | [reference/drive.md](reference/drive.md) | File upload, download, share, organize, comments, revisions, trash, permissions |
-| `docs` | 48 | [reference/docs.md](reference/docs.md) | Full document editing, tables, formatting, headers/footers, lists, named ranges, footnotes, suggestions |
+| `docs` | 49 | [reference/docs.md](reference/docs.md) | Full document editing, tables, formatting, headers/footers, lists, named ranges, footnotes, suggestions |
 | `sheets` | 49 | [reference/sheets.md](reference/sheets.md) | Read, write, format, borders, merge, conditional formatting, charts, data validation, sorting, filters, pivot tables |
 | `slides` | 36 | [reference/slides.md](reference/slides.md) | Create, edit, shapes, tables, backgrounds, bullets, lines, cell merging, speaker notes, videos |
 | `gmail` | 35 | [reference/gmail.md](reference/gmail.md) | List, read, send, search, labels, drafts, attachments, threads, vacation, signatures, filters |
