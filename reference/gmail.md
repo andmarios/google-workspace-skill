@@ -27,6 +27,19 @@ uv run gws gmail send "recipient@example.com" "Subject" "Email body"
 # Send plain text email
 uv run gws gmail send "recipient@example.com" "Subject" "Plain text" --plain
 
+# Multi-line body via stdin (required when piping content)
+cat <<'EOF' | uv run gws gmail send "recipient@example.com" "Meeting Notes" --stdin
+Hi Team,
+
+Here are the key points from today's meeting:
+
+1. Project deadline moved to Friday
+2. Review the updated spec document
+3. Schedule follow-up for next week
+
+Best regards
+EOF
+
 # Send with display name and signature
 uv run gws gmail send "recipient@example.com" "Subject" "Body" \
     --from-name "John Doe" --signature "Best regards,\nJohn"
@@ -77,6 +90,14 @@ uv run gws gmail create-draft "recipient@example.com" "Subject" "Draft body"
 
 # Create plain text draft
 uv run gws gmail create-draft "recipient@example.com" "Subject" "Body" --plain
+
+# Create draft with multi-line body via stdin
+cat <<'EOF' | uv run gws gmail create-draft "recipient@example.com" "Draft Subject" --stdin
+Draft content here
+spanning multiple lines.
+
+Add formatting as needed.
+EOF
 
 # Update a draft
 uv run gws gmail update-draft <draft_id> --subject "New Subject" --body "Updated body"

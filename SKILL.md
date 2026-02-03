@@ -103,6 +103,56 @@ uv run gws slides insert-image $PRES_ID $SLIDE_ID "https://example.com/image.png
     --x 100 --y 100 --width 400 --height 300
 ```
 
+### Send professional emails
+```bash
+# Simple email (short body as argument)
+uv run gws gmail send "recipient@example.com" "Subject" "Short message body"
+
+# Multi-line email with heredoc (--stdin reads from pipe)
+cat <<'EOF' | uv run gws gmail send "recipient@example.com" "Meeting Follow-up" --stdin
+Hi Team,
+
+Following up on today's meeting. Key action items:
+
+1. Review the proposal by Friday
+2. Submit feedback via the shared doc
+3. Schedule follow-up for next week
+
+Best regards
+EOF
+
+# Plain text email (use --plain)
+cat <<'EOF' | uv run gws gmail send "recipient@example.com" "Status Update" --plain --stdin
+Plain text only - no HTML rendering.
+Good for code snippets or when simplicity matters.
+EOF
+```
+
+**Key patterns:**
+- Arguments are **positional**: `TO SUBJECT [BODY]` (not `--to`, `--subject`, `--body`)
+- `--stdin` required when piping content (heredoc, cat, echo)
+- Default is HTML - for formatted emails, provide HTML directly
+- Use `--plain` for plain text emails
+
+**HTML formatted email** (default mode):
+```bash
+cat <<'EOF' | uv run gws gmail send "recipient@example.com" "Project Update" --stdin
+<h2>Project Status</h2>
+<p>Here's the latest update on our progress:</p>
+<ul>
+  <li><strong>Phase 1</strong>: Complete ✓</li>
+  <li><strong>Phase 2</strong>: In progress (80%)</li>
+  <li><strong>Phase 3</strong>: Scheduled for next week</li>
+</ul>
+<p>Please review the <a href="https://docs.example.com/project">full report</a>.</p>
+EOF
+```
+
+**Email formatting tips:**
+- Default is HTML - use `<p>`, `<ul>`, `<strong>`, `<a href>` tags
+- No markdown-to-HTML conversion - provide HTML directly
+- Use `--plain` for text-only emails (code samples, simple messages)
+
 ## Safety Guidelines
 
 **Destructive operations** - Always confirm with user before:
