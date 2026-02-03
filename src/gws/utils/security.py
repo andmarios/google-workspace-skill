@@ -1,6 +1,6 @@
-"""Security utilities for GWS - thin wrapper around mcp-security-utils."""
+"""Security utilities for GWS - thin wrapper around prompt-security-utils."""
 
-from mcp_security import (
+from prompt_security import (
     wrap_untrusted_content,
     wrap_field,
     wrap_fields,

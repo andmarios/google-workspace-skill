@@ -4,8 +4,8 @@ import json
 import sys
 from typing import Any
 
-from mcp_security import output_external_content as _output_external_content
-from mcp_security import load_config
+from prompt_security import output_external_content as _output_external_content
+from prompt_security import load_config
 
 
 def output_json(data: dict[str, Any]) -> None:
