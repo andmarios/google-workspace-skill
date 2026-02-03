@@ -151,6 +151,11 @@ def config_default(ctx: typer.Context) -> None:
             "enabled_services": config.enabled_services,
             "all_services": Config.ALL_SERVICES,
             "kroki_url": config.kroki_url,
+            "security_enabled": config.security_enabled,
+            "allowlisted_documents": config.allowlisted_documents,
+            "allowlisted_emails": config.allowlisted_emails,
+            "disabled_security_services": config.disabled_security_services,
+            "disabled_security_operations": config.disabled_security_operations,
         })
 
 
@@ -266,6 +271,132 @@ def config_set_kroki(
         operation="config.set-kroki",
         message=f"Kroki URL set to: {config.kroki_url}",
         kroki_url=config.kroki_url,
+    )
+
+
+@config_app.command("allowlist-add")
+def config_allowlist_add(
+    type_: Annotated[str, typer.Argument(help="Type: 'docs' or 'email'.", metavar="TYPE")],
+    id_: Annotated[str, typer.Argument(help="Document ID or email message ID.", metavar="ID")],
+) -> None:
+    """Add an ID to the security allowlist.
+
+    Allowlisted documents and emails skip security wrapping.
+
+    Examples:
+        gws config allowlist-add docs 1abc2def3ghi
+        gws config allowlist-add email 18fd9a8b2c3d4e5f
+    """
+    config = Config.load()
+
+    if type_ == "docs":
+        if id_ not in config.allowlisted_documents:
+            config.allowlisted_documents.append(id_)
+            config.save()
+            output_success(
+                operation="config.allowlist-add",
+                type="docs",
+                id=id_,
+                message=f"Document {id_} added to allowlist.",
+                allowlisted_documents=config.allowlisted_documents,
+            )
+        else:
+            output_json({
+                "status": "success",
+                "operation": "config.allowlist-add",
+                "message": f"Document {id_} already in allowlist.",
+            })
+    elif type_ == "email":
+        if id_ not in config.allowlisted_emails:
+            config.allowlisted_emails.append(id_)
+            config.save()
+            output_success(
+                operation="config.allowlist-add",
+                type="email",
+                id=id_,
+                message=f"Email {id_} added to allowlist.",
+                allowlisted_emails=config.allowlisted_emails,
+            )
+        else:
+            output_json({
+                "status": "success",
+                "operation": "config.allowlist-add",
+                "message": f"Email {id_} already in allowlist.",
+            })
+    else:
+        output_error(
+            error_code="INVALID_TYPE",
+            operation="config.allowlist-add",
+            message=f"Unknown type: {type_}. Use 'docs' or 'email'.",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+
+@config_app.command("allowlist-remove")
+def config_allowlist_remove(
+    type_: Annotated[str, typer.Argument(help="Type: 'docs' or 'email'.", metavar="TYPE")],
+    id_: Annotated[str, typer.Argument(help="Document ID or email message ID.", metavar="ID")],
+) -> None:
+    """Remove an ID from the security allowlist.
+
+    Examples:
+        gws config allowlist-remove docs 1abc2def3ghi
+        gws config allowlist-remove email 18fd9a8b2c3d4e5f
+    """
+    config = Config.load()
+
+    if type_ == "docs":
+        if id_ in config.allowlisted_documents:
+            config.allowlisted_documents.remove(id_)
+            config.save()
+            output_success(
+                operation="config.allowlist-remove",
+                type="docs",
+                id=id_,
+                message=f"Document {id_} removed from allowlist.",
+                allowlisted_documents=config.allowlisted_documents,
+            )
+        else:
+            output_json({
+                "status": "success",
+                "operation": "config.allowlist-remove",
+                "message": f"Document {id_} was not in allowlist.",
+            })
+    elif type_ == "email":
+        if id_ in config.allowlisted_emails:
+            config.allowlisted_emails.remove(id_)
+            config.save()
+            output_success(
+                operation="config.allowlist-remove",
+                type="email",
+                id=id_,
+                message=f"Email {id_} removed from allowlist.",
+                allowlisted_emails=config.allowlisted_emails,
+            )
+        else:
+            output_json({
+                "status": "success",
+                "operation": "config.allowlist-remove",
+                "message": f"Email {id_} was not in allowlist.",
+            })
+    else:
+        output_error(
+            error_code="INVALID_TYPE",
+            operation="config.allowlist-remove",
+            message=f"Unknown type: {type_}. Use 'docs' or 'email'.",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+
+@config_app.command("allowlist-list")
+def config_allowlist_list() -> None:
+    """List all IDs in the security allowlist."""
+    config = Config.load()
+    output_success(
+        operation="config.allowlist-list",
+        allowlisted_documents=config.allowlisted_documents,
+        allowlisted_emails=config.allowlisted_emails,
+        total_count=len(config.allowlisted_documents) + len(config.allowlisted_emails),
     )
 
 

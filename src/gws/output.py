@@ -15,12 +15,6 @@ def output_json(data: dict[str, Any]) -> None:
     print(json.dumps(data, indent=2, default=str))
 
 
-def is_security_enabled() -> bool:
-    """Check if security wrapping is enabled in gws config."""
-    gws_config = Config.load()
-    return gws_config.security_enabled
-
-
 def output_success(operation: str, **kwargs: Any) -> None:
     """Output success response."""
     response = {"status": "success", "operation": operation, **kwargs}
@@ -55,7 +49,10 @@ def output_external_content(
     """
     Output response with wrapped external content.
 
-    If security is disabled in gws config, outputs without wrapping.
+    Security is skipped if:
+    - security_enabled=False in GWS config
+    - The operation is in disabled_security_operations
+    - The source is in the allowlist
 
     Args:
         operation: Operation name (e.g., "gmail.read")
@@ -64,8 +61,16 @@ def output_external_content(
         content_fields: Dict mapping field names to content to wrap
         **kwargs: Additional fields to include in response
     """
-    # Check if security is enabled in gws config
-    if not is_security_enabled():
+    gws_config = Config.load()
+
+    # Determine if we should skip wrapping
+    skip_wrapping = (
+        not gws_config.security_enabled
+        or not gws_config.is_security_enabled_for_operation(operation)
+        or gws_config.is_allowlisted(source_type, source_id)
+    )
+
+    if skip_wrapping:
         # Output without security wrapping
         response = {
             "status": "success",
@@ -78,13 +83,13 @@ def output_external_content(
         return
 
     # Security enabled - wrap content with markers
-    config = load_security_config()
+    security_config = load_security_config()
     response = _output_external_content(
         operation=operation,
         source_type=source_type,
         source_id=source_id,
         content_fields=content_fields,
-        config=config,
+        config=security_config,
         **kwargs,
     )
     output_json(response)
