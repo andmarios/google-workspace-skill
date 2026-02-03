@@ -5,7 +5,7 @@ from typing import Any
 from googleapiclient.errors import HttpError
 
 from gws.services.base import BaseService
-from gws.output import output_json, output_success, output_error, output_external_content
+from gws.output import output_success, output_error, output_external_content
 from gws.exceptions import ExitCode
 
 

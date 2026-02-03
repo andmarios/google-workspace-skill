@@ -5,7 +5,6 @@ import typer
 from typing import Annotated, Optional
 
 from gws.services.docs import DocsService
-from gws.output import read_json_stdin
 
 app = typer.Typer(
     name="docs",

@@ -9,8 +9,8 @@ from googleapiclient.errors import HttpError
 import io
 
 from gws.services.base import BaseService
-from gws.output import output_json, output_success, output_error
-from gws.exceptions import ExitCode, APIError
+from gws.output import output_success, output_error
+from gws.exceptions import ExitCode
 
 
 class DriveService(BaseService):

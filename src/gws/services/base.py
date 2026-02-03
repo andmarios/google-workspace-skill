@@ -1,7 +1,6 @@
 """Base service class for Google API services."""
 
 from abc import ABC
-from typing import Any
 
 from googleapiclient.discovery import build, Resource
 

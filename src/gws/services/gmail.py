@@ -1,12 +1,7 @@
 """Google Gmail service operations."""
 
 import base64
-import mimetypes
-import os
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
 from typing import Any
 
 from googleapiclient.errors import HttpError
