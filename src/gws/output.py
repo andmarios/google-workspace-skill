@@ -4,6 +4,9 @@ import json
 import sys
 from typing import Any
 
+from mcp_security import output_external_content as _output_external_content
+from mcp_security import load_config
+
 
 def output_json(data: dict[str, Any]) -> None:
     """Output JSON to stdout."""
@@ -31,6 +34,35 @@ def output_error(
     }
     if details:
         response["details"] = details
+    output_json(response)
+
+
+def output_external_content(
+    operation: str,
+    source_type: str,
+    source_id: str,
+    content_fields: dict[str, str],
+    **kwargs: Any,
+) -> None:
+    """
+    Output response with wrapped external content.
+
+    Args:
+        operation: Operation name (e.g., "gmail.read")
+        source_type: Type of source ("email", "document", "spreadsheet", "slide")
+        source_id: Unique identifier (document ID, message ID, etc.)
+        content_fields: Dict mapping field names to content to wrap
+        **kwargs: Additional fields to include in response
+    """
+    config = load_config()
+    response = _output_external_content(
+        operation=operation,
+        source_type=source_type,
+        source_id=source_id,
+        content_fields=content_fields,
+        config=config,
+        **kwargs,
+    )
     output_json(response)
 
 

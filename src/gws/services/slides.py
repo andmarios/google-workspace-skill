@@ -6,7 +6,8 @@ from typing import Any
 from googleapiclient.errors import HttpError
 
 from gws.services.base import BaseService
-from gws.output import output_success, output_error
+import json
+from gws.output import output_success, output_error, output_external_content
 from gws.exceptions import ExitCode
 
 
@@ -91,12 +92,16 @@ class SlidesService(BaseService):
                         elem_info["text"] = self._extract_text(elem["shape"]["text"])
                     elements.append(elem_info)
 
-                output_success(
+                output_external_content(
                     operation="slides.read",
+                    source_type="slide",
+                    source_id=presentation_id,
+                    content_fields={
+                        "elements": json.dumps(elements),
+                    },
                     presentation_id=presentation_id,
                     page_object_id=page_object_id,
                     element_count=len(elements),
-                    elements=elements,
                 )
                 return page
             else:
@@ -123,12 +128,16 @@ class SlidesService(BaseService):
                         slide_info["elements"].append(elem_info)
                     slides_info.append(slide_info)
 
-                output_success(
+                output_external_content(
                     operation="slides.read",
+                    source_type="slide",
+                    source_id=presentation_id,
+                    content_fields={
+                        "slides": json.dumps(slides_info),
+                    },
                     presentation_id=presentation_id,
                     title=presentation.get("title", ""),
                     slide_count=len(slides_info),
-                    slides=slides_info,
                 )
                 return presentation
         except HttpError as e:

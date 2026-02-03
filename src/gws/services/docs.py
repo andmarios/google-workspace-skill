@@ -5,7 +5,7 @@ from typing import Any
 from googleapiclient.errors import HttpError
 
 from gws.services.base import BaseService
-from gws.output import output_json, output_success, output_error
+from gws.output import output_json, output_success, output_error, output_external_content
 from gws.exceptions import ExitCode
 
 
@@ -340,12 +340,16 @@ class DocsService(BaseService):
 
             text = self._extract_text(content)
 
-            output_success(
+            output_external_content(
                 operation="docs.read",
+                source_type="document",
+                source_id=document_id,
+                content_fields={
+                    "content": text,
+                },
                 document_id=document_id,
                 title=doc.get("title", ""),
                 tab_id=tab_id,
-                content=text,
                 revision_id=doc.get("revisionId"),
             )
             return doc

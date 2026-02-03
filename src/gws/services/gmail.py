@@ -12,7 +12,7 @@ from typing import Any
 from googleapiclient.errors import HttpError
 
 from gws.services.base import BaseService
-from gws.output import output_success, output_error
+from gws.output import output_success, output_error, output_external_content
 from gws.exceptions import ExitCode
 
 
@@ -112,17 +112,21 @@ class GmailService(BaseService):
             # Extract attachments info
             attachments = self._extract_attachments(msg.get("payload", {}))
 
-            output_success(
+            output_external_content(
                 operation="gmail.read",
+                source_type="email",
+                source_id=message_id,
+                content_fields={
+                    "subject": headers.get("Subject", "(no subject)"),
+                    "body": body,
+                },
                 message_id=message_id,
                 thread_id=msg["threadId"],
-                subject=headers.get("Subject", "(no subject)"),
                 from_address=headers.get("From", ""),
                 to_address=headers.get("To", ""),
                 cc=headers.get("Cc", ""),
                 date=headers.get("Date", ""),
                 labels=msg.get("labelIds", []),
-                body=body,
                 attachments=attachments,
             )
             return msg
@@ -683,14 +687,18 @@ class GmailService(BaseService):
 
             body = self._extract_body(msg.get("payload", {}))
 
-            output_success(
+            output_external_content(
                 operation="gmail.get_draft",
+                source_type="email",
+                source_id=draft["id"],
+                content_fields={
+                    "subject": headers.get("Subject", "(no subject)"),
+                    "body": body,
+                },
                 draft_id=draft["id"],
                 message_id=msg.get("id"),
-                subject=headers.get("Subject", "(no subject)"),
                 to=headers.get("To", ""),
                 cc=headers.get("Cc", ""),
-                body=body,
             )
             return draft
         except HttpError as e:

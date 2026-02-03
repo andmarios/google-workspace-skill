@@ -94,7 +94,9 @@ class TestBasicOperations:
         output = json.loads(capsys.readouterr().out)
         assert output["status"] == "success"
         assert output["operation"] == "docs.read"
-        assert "Hello World" in output["content"]
+        # Content is now wrapped with security markers
+        assert output["content"]["trust_level"] == "external"
+        assert "Hello World" in output["content"]["data"]
 
     def test_structure_document(self, docs_service, capsys):
         """Test getting document heading structure."""
@@ -1034,8 +1036,10 @@ class TestHelperMethods:
 
         output = json.loads(capsys.readouterr().out)
         assert output["status"] == "success"
-        assert "First paragraph" in output["content"]
-        assert "Second paragraph" in output["content"]
+        # Content is now wrapped with security markers
+        assert output["content"]["trust_level"] == "external"
+        assert "First paragraph" in output["content"]["data"]
+        assert "Second paragraph" in output["content"]["data"]
 
     def test_extract_structure(self, docs_service, capsys):
         """Test structure extraction via structure operation."""

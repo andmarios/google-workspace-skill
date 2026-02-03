@@ -32,7 +32,11 @@ dependencies = [
     "google-auth>=2.23.0",
     "google-auth-oauthlib>=1.1.0",
     "httpx>=0.25.0",
+    "mcp-security-utils",
 ]
+
+[tool.uv.sources]
+mcp-security-utils = { path = "../mcp-security-utils", editable = true }
 
 [project.optional-dependencies]
 dev = [

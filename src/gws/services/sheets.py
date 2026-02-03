@@ -5,7 +5,8 @@ from typing import Any
 from googleapiclient.errors import HttpError
 
 from gws.services.base import BaseService
-from gws.output import output_success, output_error
+import json
+from gws.output import output_success, output_error, output_external_content
 from gws.exceptions import ExitCode
 
 
@@ -81,12 +82,17 @@ class SheetsService(BaseService):
                 )
 
             values = result.get("values", [])
-            output_success(
+            # Wrap cell values as JSON string for security scanning
+            output_external_content(
                 operation="sheets.read",
+                source_type="spreadsheet",
+                source_id=spreadsheet_id,
+                content_fields={
+                    "values": json.dumps(values),
+                },
                 spreadsheet_id=spreadsheet_id,
                 range=result.get("range", range_notation),
                 row_count=len(values),
-                values=values,
             )
             return result
         except HttpError as e:
