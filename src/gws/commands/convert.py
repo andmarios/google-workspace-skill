@@ -3,12 +3,14 @@
 import typer
 from typing import Annotated, Optional
 
+from gws.commands._account import account_callback
 from gws.services.convert import ConvertService
 
 app = typer.Typer(
     name="convert",
     help="Document conversion (Markdown to Google formats).",
     no_args_is_help=True,
+    callback=account_callback,
 )
 
 

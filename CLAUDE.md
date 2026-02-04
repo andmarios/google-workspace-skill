@@ -16,15 +16,16 @@ This is a **Claude Code skill** that provides Google Workspace integration. The 
 
 ```
 src/gws/
-├── cli.py              # Main Typer app, auth and config commands
-├── config.py           # Service enable/disable + Kroki URL config
+├── cli.py              # Main Typer app, auth/config/account commands
+├── config.py           # Service config + multi-account registry
+├── context.py          # Runtime active account state
 ├── output.py           # JSON output formatting (output_success, output_error)
 ├── exceptions.py       # Exit codes (0-4)
 ├── auth/
-│   ├── oauth.py        # OAuth loopback flow (ports 8080-8099)
+│   ├── oauth.py        # OAuth loopback flow (ports 8080-8099), account-aware token paths
 │   └── scopes.py       # Per-service Google API scopes
 ├── services/
-│   ├── base.py         # BaseService class (handles auth, builds API client)
+│   ├── base.py         # BaseService class (handles auth, builds API client, account context)
 │   ├── drive.py        # Google Drive operations
 │   ├── docs.py         # Google Docs operations
 │   ├── sheets.py       # Google Sheets operations
@@ -33,7 +34,10 @@ src/gws/
 │   ├── calendar.py     # Google Calendar operations
 │   ├── contacts.py     # People API operations
 │   └── convert.py      # Markdown → Docs/Slides/PDF converter
-├── commands/           # Typer CLI command definitions (mirror services/)
+├── commands/
+│   ├── _account.py     # Shared --account/-a Typer callback for all service commands
+│   ├── docs.py         # Typer CLI commands (mirror services/)
+│   └── ...
 └── utils/
     ├── colors.py       # Hex color → RGB conversion for Sheets/Slides
     ├── diagrams.py     # Kroki API diagram rendering
@@ -104,9 +108,63 @@ uv run ruff check .
 ## Credentials
 
 Stored in `~/.claude/.google-workspace/`:
-- `client_secret.json` - OAuth client credentials (user provides)
-- `token.json` - Access token (auto-generated)
-- `gws_config.json` - Configuration (enabled services, Kroki URL)
+- `client_secret.json` - OAuth client credentials (user provides, shared across accounts)
+- `token.json` - Access token (auto-generated, legacy single-account mode)
+- `gws_config.json` - Configuration (enabled services, Kroki URL, accounts registry)
+
+### Multi-Account Storage
+
+When multi-account mode is active, per-account data is stored under `accounts/`:
+
+```
+~/.claude/.google-workspace/
+├── client_secret.json              # Shared OAuth client (unchanged)
+├── token.json                      # Legacy token (kept, used when no accounts)
+├── gws_config.json                 # Global config + accounts registry
+└── accounts/
+    ├── work/
+    │   ├── token.json              # Account-specific token
+    │   └── config.json             # Per-account overrides (optional)
+    └── personal/
+        └── token.json
+```
+
+## Multi-Account Architecture
+
+Multi-account is opt-in. When no accounts are configured, the CLI behaves exactly as before (legacy mode).
+
+### Key concepts
+
+- **Accounts registry**: Stored in `gws_config.json` under the `accounts` key. When `None`/absent, legacy mode is active.
+- **Account resolution priority**: `--account` flag > `GWS_ACCOUNT` env var > default account > None (legacy)
+- **Per-account config**: Optional `config.json` in account directory. Fields override global config (e.g., `enabled_services`).
+- **Context module** (`context.py`): Module-level `_active_account` state. The `account_callback` in `_account.py` resolves the active account at command invocation and stores it. Both `BaseService` and `output_external_content` read it.
+- **Account name validation**: Names must match `^[a-zA-Z0-9_-]+$` to prevent path traversal.
+
+### CLI commands
+
+```bash
+# Account management
+gws account add <name> [--force]     # Register + authenticate
+gws account remove <name>            # Delete account + credentials
+gws account list                     # Show all accounts with default marker
+gws account default <name>           # Change default account
+
+# Per-account config overrides
+gws account config <name>            # Show effective config
+gws account config-enable <name> <service>   # Enable service for account
+gws account config-disable <name> <service>  # Disable service for account
+gws account config-reset <name>      # Remove all overrides (inherit global)
+
+# Using accounts with any command
+gws docs read <id> --account personal
+GWS_ACCOUNT=personal gws docs read <id>
+
+# Auth commands support --account
+gws auth --account work
+gws auth status --account work
+gws auth logout --account work
+```
 
 ## Common Tasks
 

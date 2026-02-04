@@ -4,12 +4,14 @@ import sys
 import typer
 from typing import Annotated, Optional
 
+from gws.commands._account import account_callback
 from gws.services.docs import DocsService
 
 app = typer.Typer(
     name="docs",
     help="Google Docs document operations.",
     no_args_is_help=True,
+    callback=account_callback,
 )
 
 

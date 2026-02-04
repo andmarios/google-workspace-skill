@@ -5,6 +5,7 @@ import sys
 import typer
 from typing import Annotated, Optional
 
+from gws.commands._account import account_callback
 from gws.services.sheets import SheetsService
 from gws.output import output_error
 from gws.exceptions import ExitCode
@@ -13,6 +14,7 @@ app = typer.Typer(
     name="sheets",
     help="Google Sheets spreadsheet operations.",
     no_args_is_help=True,
+    callback=account_callback,
 )
 
 

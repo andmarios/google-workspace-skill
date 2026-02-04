@@ -3,12 +3,14 @@
 import typer
 from typing import Annotated, Optional
 
+from gws.commands._account import account_callback
 from gws.services.drive import DriveService
 
 app = typer.Typer(
     name="drive",
     help="Google Drive file operations.",
     no_args_is_help=True,
+    callback=account_callback,
 )
 
 

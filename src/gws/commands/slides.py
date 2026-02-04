@@ -3,12 +3,14 @@
 import typer
 from typing import Annotated, Optional
 
+from gws.commands._account import account_callback
 from gws.services.slides import SlidesService
 
 app = typer.Typer(
     name="slides",
     help="Google Slides presentation operations.",
     no_args_is_help=True,
+    callback=account_callback,
 )
 
 

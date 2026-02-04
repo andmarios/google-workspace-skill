@@ -5,6 +5,7 @@ from abc import ABC
 from googleapiclient.discovery import build, Resource
 
 from gws.auth.oauth import AuthManager
+from gws.context import get_active_account
 
 
 class BaseService(ABC):
@@ -13,8 +14,9 @@ class BaseService(ABC):
     SERVICE_NAME: str = ""
     VERSION: str = ""
 
-    def __init__(self, auth_manager: AuthManager | None = None):
-        self.auth_manager = auth_manager or AuthManager()
+    def __init__(self, auth_manager: AuthManager | None = None, account: str | None = None):
+        resolved_account = account or get_active_account()
+        self.auth_manager = auth_manager or AuthManager(account=resolved_account)
         self._service: Resource | None = None
         self._drive_service: Resource | None = None
 

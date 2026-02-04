@@ -3,12 +3,14 @@
 import typer
 from typing import Annotated, Optional
 
+from gws.commands._account import account_callback
 from gws.services.calendar import CalendarService
 
 app = typer.Typer(
     name="calendar",
     help="Google Calendar event operations.",
     no_args_is_help=True,
+    callback=account_callback,
 )
 
 

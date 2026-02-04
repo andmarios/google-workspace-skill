@@ -175,15 +175,61 @@ With security enabled (default), external content fields are wrapped:
 
 With security disabled, content fields are plain strings.
 
+## Multi-Account Support
+
+Configure named accounts to use different Google accounts. Multi-account is opt-in — existing single-account usage continues unchanged.
+
+```bash
+# Add accounts (opens browser for OAuth)
+uv run gws account add work
+uv run gws account add personal
+
+# Set display names (used in email From field)
+uv run gws account update work --name "Jane Doe" --email "jane@company.com"
+
+# Use a specific account with any command
+uv run gws gmail --account personal search "is:inbox"
+
+# Or via environment variable
+GWS_ACCOUNT=personal uv run gws docs read <id>
+
+# Manage accounts
+uv run gws account list          # Show all accounts
+uv run gws account default work  # Change default
+uv run gws account remove work   # Remove account
+```
+
+### Per-Account Configuration
+
+Override global settings per account:
+
+```bash
+uv run gws account config work             # Show effective config
+uv run gws account config-disable work gmail  # Disable a service
+uv run gws account config-enable work gmail   # Re-enable
+uv run gws account config-reset work          # Reset to global defaults
+```
+
+### Read-Only Accounts
+
+Restrict an account to read-only operations (blocks send, create, delete, format, etc.):
+
+```bash
+uv run gws account set-readonly personal
+uv run gws account unset-readonly personal
+```
+
 ## Credential Storage
 
 All credentials and configuration are stored in `~/.claude/.google-workspace/`:
 
 | File | Purpose |
 |------|---------|
-| `client_secret.json` | OAuth client credentials (you provide) |
-| `token.json` | Access token (auto-generated on first auth) |
-| `gws_config.json` | Service, Kroki, and security settings |
+| `client_secret.json` | OAuth client credentials (you provide, shared across accounts) |
+| `token.json` | Access token (legacy single-account mode) |
+| `gws_config.json` | Service, Kroki, security settings, and accounts registry |
+| `accounts/<name>/token.json` | Per-account access token |
+| `accounts/<name>/config.json` | Per-account config overrides (optional) |
 
 ## Documentation
 

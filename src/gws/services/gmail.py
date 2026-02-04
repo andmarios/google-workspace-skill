@@ -216,12 +216,15 @@ class GmailService(BaseService):
             message["to"] = to
             message["subject"] = subject
 
-            # Set From with display name if provided
-            if from_name:
+            # Set From with display name (explicit > account config)
+            effective_name = from_name or self.auth_manager.config.get_account_display_name(
+                self.auth_manager.account_name
+            )
+            if effective_name:
                 profile = self.get_profile()
                 email_address = profile.get("emailAddress", "")
                 if email_address:
-                    message["from"] = f'"{from_name}" <{email_address}>'
+                    message["from"] = f'"{effective_name}" <{email_address}>'
 
             if cc:
                 message["cc"] = cc
@@ -935,11 +938,15 @@ class GmailService(BaseService):
             message["to"] = to
             message["subject"] = subject
 
-            if from_name:
+            # Set From with display name (explicit > account config)
+            effective_name = from_name or self.auth_manager.config.get_account_display_name(
+                self.auth_manager.account_name
+            )
+            if effective_name:
                 profile = self.get_profile()
                 email_address = profile.get("emailAddress", "")
                 if email_address:
-                    message["from"] = f'"{from_name}" <{email_address}>'
+                    message["from"] = f'"{effective_name}" <{email_address}>'
 
             if cc:
                 message["cc"] = cc

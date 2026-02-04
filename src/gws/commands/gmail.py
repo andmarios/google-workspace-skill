@@ -4,12 +4,14 @@ import sys
 import typer
 from typing import Annotated, Optional
 
+from gws.commands._account import account_callback
 from gws.services.gmail import GmailService
 
 app = typer.Typer(
     name="gmail",
     help="Gmail email operations.",
     no_args_is_help=True,
+    callback=account_callback,
 )
 
 

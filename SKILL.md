@@ -321,24 +321,105 @@ All commands use `uv run gws <service> <command>`. Authentication is automatic o
 
 ## Authentication
 
+> **Important**: `gws auth` and `gws auth --force` open a browser for Google OAuth. These commands must be run by the user directly in their terminal — they cannot be run from within Claude Code.
+
 ```bash
-# Authenticate (opens browser automatically)
+# Authenticate (opens browser — run in user's terminal)
 uv run gws auth
 
 # Check auth status
 uv run gws auth status
 
-# Force re-authentication
+# Force re-authentication (opens browser — run in user's terminal)
 uv run gws auth --force
 
 # Logout
 uv run gws auth logout
+
+# Auth commands support --account for multi-account
+uv run gws auth --account work
+uv run gws auth status --account personal
+uv run gws auth logout --account work
 ```
 
 **Credential files** are stored in `~/.claude/.google-workspace/`:
-- `client_secret.json` - OAuth client credentials (required)
-- `token.json` - User access token (auto-generated)
-- `gws_config.json` - Service enable/disable config
+- `client_secret.json` - OAuth client credentials (required, shared across accounts)
+- `token.json` - User access token (auto-generated, legacy single-account mode)
+- `gws_config.json` - Service enable/disable config + accounts registry
+
+## Multi-Account Support
+
+Configure named accounts (e.g., "work", "personal") to use different Google accounts. Multi-account is opt-in — existing single-account usage continues unchanged.
+
+### Account Management
+
+> **Important**: `gws account add` opens a browser for Google OAuth authentication. This command must be run by the user directly in their terminal — it cannot be run from within Claude Code because the OAuth flow requires browser interaction.
+
+```bash
+# Add and authenticate a new account (run in user's terminal)
+uv run gws account add work
+
+# Add a second account (run in user's terminal)
+uv run gws account add personal
+
+# Set display name and email (used in email From field)
+uv run gws account update work --name "Jane Doe" --email "jane@company.com"
+uv run gws account update personal --name "Jane Doe" --email "jane@gmail.com"
+
+# List all accounts (shows default)
+uv run gws account list
+
+# Change default account
+uv run gws account default personal
+
+# Remove an account
+uv run gws account remove work
+```
+
+> **Tip**: After adding an account, always set the display name with `gws account update <name> --name "Full Name"`. This ensures emails sent from this account show the proper sender name in the From field instead of just the email address.
+
+### Using Accounts with Commands
+
+All service commands support `--account` / `-a` and the `GWS_ACCOUNT` env var.
+
+> **Note**: The `--account` flag must come **before** the subcommand (Typer group-level option).
+
+```bash
+# Use a specific account (--account BEFORE the subcommand)
+uv run gws docs --account personal read <id>
+uv run gws gmail -a work list
+
+# Via environment variable (no flag placement concern)
+GWS_ACCOUNT=personal uv run gws docs read <id>
+```
+
+**Resolution priority:** `--account` flag > `GWS_ACCOUNT` env var > default account > legacy mode
+
+### Per-Account Configuration
+
+Override global service config per account:
+
+```bash
+# Show effective config for an account
+uv run gws account config work
+
+# Disable a service for one account
+uv run gws account config-disable work gmail
+
+# Enable a service for one account
+uv run gws account config-enable work gmail
+
+# Reset to global defaults
+uv run gws account config-reset work
+
+# Restrict account to read-only operations
+uv run gws account set-readonly work
+
+# Remove read-only restriction
+uv run gws account unset-readonly work
+```
+
+Read-only mode blocks all write operations (send, create, delete, format, etc.) while allowing reads, searches, and downloads across all services.
 
 ## Services Reference
 

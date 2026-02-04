@@ -61,7 +61,12 @@ def output_external_content(
         content_fields: Dict mapping field names to content to wrap
         **kwargs: Additional fields to include in response
     """
+    from gws.context import get_active_account
+
     gws_config = Config.load()
+    account = get_active_account()
+    if account:
+        gws_config = gws_config.load_effective_config(account)
 
     # Determine if we should skip wrapping
     skip_wrapping = (

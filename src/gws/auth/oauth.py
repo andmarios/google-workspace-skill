@@ -17,13 +17,44 @@ class AuthManager:
     """Manages OAuth authentication for all Google services."""
 
     CREDENTIALS_PATH = Path.home() / ".claude" / ".google-workspace" / "client_secret.json"
-    TOKEN_PATH = Path.home() / ".claude" / ".google-workspace" / "token.json"
+    _LEGACY_TOKEN_PATH = Path.home() / ".claude" / ".google-workspace" / "token.json"
     LOOPBACK_IP = "127.0.0.1"
     PORT_RANGE = range(8080, 8100)
 
-    def __init__(self, config: Config | None = None):
+    def __init__(self, config: Config | None = None, account: str | None = None):
         self.config = config or Config.load()
+        self._account_name = self.config.resolve_account(account)
+
+        # Validate resolved account name exists in registry
+        if self._account_name and self.config.accounts:
+            if self._account_name not in self.config.accounts.entries:
+                raise AuthError(
+                    f"Account '{self._account_name}' not found",
+                    f"Available accounts: {', '.join(self.config.accounts.entries.keys())}",
+                )
+        elif self._account_name and not self.config.accounts:
+            raise AuthError(
+                f"Account '{self._account_name}' specified but no accounts are configured",
+                "Use 'gws account add <name>' to set up multi-account mode.",
+            )
+
+        # Load effective config for this account
+        if self._account_name:
+            self.config = self.config.load_effective_config(self._account_name)
+
         self._credentials: Credentials | None = None
+
+    @property
+    def account_name(self) -> str | None:
+        """The resolved account name, or None for legacy mode."""
+        return self._account_name
+
+    @property
+    def TOKEN_PATH(self) -> Path:  # noqa: N802 — kept uppercase for backward compatibility
+        """Return account-specific or legacy token path."""
+        if self._account_name:
+            return self.config.get_account_dir(self._account_name) / "token.json"
+        return self._LEGACY_TOKEN_PATH
 
     def get_credentials(self, force_refresh: bool = False) -> Credentials:
         """Get valid credentials, triggering auth flow if needed."""
@@ -98,7 +129,8 @@ class AuthManager:
 
         # Print header
         print("\n" + "=" * 60, file=sys.stderr)
-        print("Google OAuth Authorization Required", file=sys.stderr)
+        account_label = f" (account: {self._account_name})" if self._account_name else ""
+        print(f"Google OAuth Authorization Required{account_label}", file=sys.stderr)
         print("=" * 60, file=sys.stderr)
 
         # Let run_local_server handle everything including URL generation
