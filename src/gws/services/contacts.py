@@ -23,18 +23,17 @@ class ContactsService(BaseService):
         """List contacts."""
         try:
             if query:
-                result = (
+                result = self.execute(
                     self.service.people()
                     .searchContacts(
                         query=query,
                         readMask="names,emailAddresses,phoneNumbers,organizations",
                         pageSize=max_results,
                     )
-                    .execute()
                 )
                 people = [r.get("person", {}) for r in result.get("results", [])]
             else:
-                result = (
+                result = self.execute(
                     self.service.people()
                     .connections()
                     .list(
@@ -42,7 +41,6 @@ class ContactsService(BaseService):
                         pageSize=max_results,
                         personFields="names,emailAddresses,phoneNumbers,organizations",
                     )
-                    .execute()
                 )
                 people = result.get("connections", [])
 
@@ -100,13 +98,12 @@ class ContactsService(BaseService):
     ) -> dict[str, Any]:
         """Get a specific contact by resource name."""
         try:
-            person = (
+            person = self.execute(
                 self.service.people()
                 .get(
                     resourceName=resource_name,
                     personFields="names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies",
                 )
-                .execute()
             )
 
             output_success(
@@ -165,7 +162,7 @@ class ContactsService(BaseService):
                     org["title"] = title
                 person["organizations"] = [org]
 
-            result = self.service.people().createContact(body=person).execute()
+            result = self.execute(self.service.people().createContact(body=person))
 
             output_success(
                 operation="contacts.create",
@@ -193,13 +190,12 @@ class ContactsService(BaseService):
         """Update an existing contact."""
         try:
             # Get existing contact with etag
-            existing = (
+            existing = self.execute(
                 self.service.people()
                 .get(
                     resourceName=resource_name,
                     personFields="names,emailAddresses,phoneNumbers,metadata",
                 )
-                .execute()
             )
 
             # Build update
@@ -232,14 +228,13 @@ class ContactsService(BaseService):
                 )
                 raise SystemExit(ExitCode.INVALID_ARGS)
 
-            result = (
+            result = self.execute(
                 self.service.people()
                 .updateContact(
                     resourceName=resource_name,
                     updatePersonFields=",".join(update_fields),
                     body=existing,
                 )
-                .execute()
             )
 
             output_success(
@@ -263,7 +258,7 @@ class ContactsService(BaseService):
     ) -> dict[str, Any]:
         """Delete a contact."""
         try:
-            self.service.people().deleteContact(resourceName=resource_name).execute()
+            self.execute(self.service.people().deleteContact(resourceName=resource_name))
 
             output_success(
                 operation="contacts.delete",
@@ -288,10 +283,9 @@ class ContactsService(BaseService):
         Returns user-created groups and system groups (like 'My Contacts').
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.contactGroups()
                 .list(pageSize=max_results)
-                .execute()
             )
 
             groups = []
@@ -331,13 +325,12 @@ class ContactsService(BaseService):
         """
         try:
             max_members = 1000 if include_members else 0
-            result = (
+            result = self.execute(
                 self.service.contactGroups()
                 .get(
                     resourceName=resource_name,
                     maxMembers=max_members,
                 )
-                .execute()
             )
 
             members = result.get("memberResourceNames", [])
@@ -367,10 +360,9 @@ class ContactsService(BaseService):
             name: The name for the new group.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.contactGroups()
                 .create(body={"contactGroup": {"name": name}})
-                .execute()
             )
 
             output_success(
@@ -399,7 +391,7 @@ class ContactsService(BaseService):
             name: The new name for the group.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.contactGroups()
                 .update(
                     resourceName=resource_name,
@@ -408,7 +400,6 @@ class ContactsService(BaseService):
                         "updateGroupFields": "name",
                     },
                 )
-                .execute()
             )
 
             output_success(
@@ -437,10 +428,10 @@ class ContactsService(BaseService):
             delete_contacts: If True, also deletes contacts in the group.
         """
         try:
-            self.service.contactGroups().delete(
+            self.execute(self.service.contactGroups().delete(
                 resourceName=resource_name,
                 deleteContacts=delete_contacts,
-            ).execute()
+            ))
 
             output_success(
                 operation="contacts.delete_group",
@@ -468,14 +459,13 @@ class ContactsService(BaseService):
             contact_resource_names: List of contact resource names to add.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.contactGroups()
                 .members()
                 .modify(
                     resourceName=group_resource_name,
                     body={"resourceNamesToAdd": contact_resource_names},
                 )
-                .execute()
             )
 
             output_success(
@@ -505,14 +495,13 @@ class ContactsService(BaseService):
             contact_resource_names: List of contact resource names to remove.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.contactGroups()
                 .members()
                 .modify(
                     resourceName=group_resource_name,
                     body={"resourceNamesToRemove": contact_resource_names},
                 )
-                .execute()
             )
 
             output_success(
@@ -543,13 +532,12 @@ class ContactsService(BaseService):
             resource_name: The contact resource name.
         """
         try:
-            person = (
+            person = self.execute(
                 self.service.people()
                 .get(
                     resourceName=resource_name,
                     personFields="photos,names",
                 )
-                .execute()
             )
 
             photos = person.get("photos", [])
@@ -611,13 +599,12 @@ class ContactsService(BaseService):
 
             photo_bytes = base64.urlsafe_b64encode(photo_data).decode("utf-8")
 
-            result = (
+            result = self.execute(
                 self.service.people()
                 .updateContactPhoto(
                     resourceName=resource_name,
                     body={"photoBytes": photo_bytes},
                 )
-                .execute()
             )
 
             output_success(
@@ -644,10 +631,9 @@ class ContactsService(BaseService):
             resource_name: The contact resource name.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.people()
                 .deleteContactPhoto(resourceName=resource_name)
-                .execute()
             )
 
             output_success(

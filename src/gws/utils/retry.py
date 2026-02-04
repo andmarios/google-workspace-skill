@@ -1,5 +1,6 @@
 """Retry utilities for handling transient API errors."""
 
+import random
 import time
 from functools import wraps
 from typing import Any, Callable, TypeVar
@@ -55,7 +56,7 @@ def retry_on_transient_error(
                     if not is_retryable_error(e) or attempt >= max_retries:
                         raise
                     last_error = e
-                    time.sleep(delay)
+                    time.sleep(delay + random.uniform(0, 0.5 * delay))
                     delay *= backoff_factor
 
             # This shouldn't be reached, but just in case
@@ -102,7 +103,7 @@ def execute_with_retry(
             if not is_retryable_error(e) or attempt >= max_retries:
                 raise
             last_error = e
-            time.sleep(delay)
+            time.sleep(delay + random.uniform(0, 0.5 * delay))
             delay *= backoff_factor
 
     if last_error:

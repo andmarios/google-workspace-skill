@@ -35,12 +35,12 @@ class GmailService(BaseService):
             if label_ids:
                 params["labelIds"] = label_ids
 
-            result = self.service.users().messages().list(**params).execute()
+            result = self.execute(self.service.users().messages().list(**params))
 
             messages = []
             for msg_ref in result.get("messages", []):
                 # Get minimal message info
-                msg = (
+                msg = self.execute(
                     self.service.users()
                     .messages()
                     .get(
@@ -49,7 +49,6 @@ class GmailService(BaseService):
                         format="metadata",
                         metadataHeaders=["From", "To", "Subject", "Date"],
                     )
-                    .execute()
                 )
 
                 headers = {
@@ -89,11 +88,10 @@ class GmailService(BaseService):
     ) -> dict[str, Any]:
         """Read a message by ID."""
         try:
-            msg = (
+            msg = self.execute(
                 self.service.users()
                 .messages()
                 .get(userId="me", id=message_id, format=format_type)
-                .execute()
             )
 
             headers = {
@@ -171,7 +169,7 @@ class GmailService(BaseService):
     def get_profile(self) -> dict[str, Any]:
         """Get the current user's Gmail profile."""
         try:
-            profile = self.service.users().getProfile(userId="me").execute()
+            profile = self.execute(self.service.users().getProfile(userId="me"))
             return profile
         except HttpError:
             return {}
@@ -233,11 +231,10 @@ class GmailService(BaseService):
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .messages()
                 .send(userId="me", body={"raw": raw})
-                .execute()
             )
 
             output_success(
@@ -272,11 +269,10 @@ class GmailService(BaseService):
                 signature = self._unescape_text(signature)
 
             # Get the original message
-            original = (
+            original = self.execute(
                 self.service.users()
                 .messages()
                 .get(userId="me", id=message_id, format="metadata")
-                .execute()
             )
 
             thread_id = original["threadId"]
@@ -314,11 +310,10 @@ class GmailService(BaseService):
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .messages()
                 .send(userId="me", body={"raw": raw, "threadId": thread_id})
-                .execute()
             )
 
             output_success(
@@ -353,20 +348,19 @@ class GmailService(BaseService):
         """Delete a message (move to trash or permanent delete)."""
         try:
             if permanent:
-                self.service.users().messages().delete(
+                self.execute(self.service.users().messages().delete(
                     userId="me", id=message_id
-                ).execute()
+                ))
                 output_success(
                     operation="gmail.delete",
                     message_id=message_id,
                     permanent=True,
                 )
             else:
-                result = (
+                result = self.execute(
                     self.service.users()
                     .messages()
                     .trash(userId="me", id=message_id)
-                    .execute()
                 )
                 output_success(
                     operation="gmail.delete",
@@ -388,7 +382,7 @@ class GmailService(BaseService):
     def mark_as_read(self, message_id: str) -> dict[str, Any]:
         """Mark a message as read by removing the UNREAD label."""
         try:
-            result = (
+            result = self.execute(
                 self.service.users()
                 .messages()
                 .modify(
@@ -396,7 +390,6 @@ class GmailService(BaseService):
                     id=message_id,
                     body={"removeLabelIds": ["UNREAD"]},
                 )
-                .execute()
             )
             output_success(
                 operation="gmail.mark-read",
@@ -415,7 +408,7 @@ class GmailService(BaseService):
     def mark_as_unread(self, message_id: str) -> dict[str, Any]:
         """Mark a message as unread by adding the UNREAD label."""
         try:
-            result = (
+            result = self.execute(
                 self.service.users()
                 .messages()
                 .modify(
@@ -423,7 +416,6 @@ class GmailService(BaseService):
                     id=message_id,
                     body={"addLabelIds": ["UNREAD"]},
                 )
-                .execute()
             )
             output_success(
                 operation="gmail.mark-unread",
@@ -444,7 +436,7 @@ class GmailService(BaseService):
     def list_labels(self) -> dict[str, Any]:
         """List all labels in the mailbox."""
         try:
-            result = self.service.users().labels().list(userId="me").execute()
+            result = self.execute(self.service.users().labels().list(userId="me"))
 
             labels = []
             for label in result.get("labels", []):
@@ -490,11 +482,10 @@ class GmailService(BaseService):
                 "labelListVisibility": label_list_visibility,
             }
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .labels()
                 .create(userId="me", body=label_body)
-                .execute()
             )
 
             output_success(
@@ -518,7 +509,7 @@ class GmailService(BaseService):
             label_id: The label ID to delete.
         """
         try:
-            self.service.users().labels().delete(userId="me", id=label_id).execute()
+            self.execute(self.service.users().labels().delete(userId="me", id=label_id))
 
             output_success(
                 operation="gmail.delete_label",
@@ -545,7 +536,7 @@ class GmailService(BaseService):
             label_ids: List of label IDs to add.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.users()
                 .messages()
                 .modify(
@@ -553,7 +544,6 @@ class GmailService(BaseService):
                     id=message_id,
                     body={"addLabelIds": label_ids},
                 )
-                .execute()
             )
 
             output_success(
@@ -583,7 +573,7 @@ class GmailService(BaseService):
             label_ids: List of label IDs to remove.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.users()
                 .messages()
                 .modify(
@@ -591,7 +581,6 @@ class GmailService(BaseService):
                     id=message_id,
                     body={"removeLabelIds": label_ids},
                 )
-                .execute()
             )
 
             output_success(
@@ -618,21 +607,19 @@ class GmailService(BaseService):
             max_results: Maximum number of drafts to return.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.users()
                 .drafts()
                 .list(userId="me", maxResults=max_results)
-                .execute()
             )
 
             drafts = []
             for draft_ref in result.get("drafts", []):
                 # Get draft details
-                draft = (
+                draft = self.execute(
                     self.service.users()
                     .drafts()
                     .get(userId="me", id=draft_ref["id"], format="metadata")
-                    .execute()
                 )
 
                 msg = draft.get("message", {})
@@ -670,11 +657,10 @@ class GmailService(BaseService):
             draft_id: The draft ID.
         """
         try:
-            draft = (
+            draft = self.execute(
                 self.service.users()
                 .drafts()
                 .get(userId="me", id=draft_id, format="full")
-                .execute()
             )
 
             msg = draft.get("message", {})
@@ -744,11 +730,10 @@ class GmailService(BaseService):
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .drafts()
                 .create(userId="me", body={"message": {"raw": raw}})
-                .execute()
             )
 
             output_success(
@@ -789,11 +774,10 @@ class GmailService(BaseService):
         """
         try:
             # Get current draft to preserve values
-            current_draft = (
+            current_draft = self.execute(
                 self.service.users()
                 .drafts()
                 .get(userId="me", id=draft_id, format="full")
-                .execute()
             )
 
             current_msg = current_draft.get("message", {})
@@ -827,7 +811,7 @@ class GmailService(BaseService):
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .drafts()
                 .update(
@@ -835,7 +819,6 @@ class GmailService(BaseService):
                     id=draft_id,
                     body={"message": {"raw": raw}},
                 )
-                .execute()
             )
 
             output_success(
@@ -860,11 +843,10 @@ class GmailService(BaseService):
             draft_id: The draft ID to send.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.users()
                 .drafts()
                 .send(userId="me", body={"id": draft_id})
-                .execute()
             )
 
             output_success(
@@ -888,7 +870,7 @@ class GmailService(BaseService):
             draft_id: The draft ID to delete.
         """
         try:
-            self.service.users().drafts().delete(userId="me", id=draft_id).execute()
+            self.execute(self.service.users().drafts().delete(userId="me", id=draft_id))
 
             output_success(
                 operation="gmail.delete_draft",
@@ -991,11 +973,10 @@ class GmailService(BaseService):
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .messages()
                 .send(userId="me", body={"raw": raw})
-                .execute()
             )
 
             output_success(
@@ -1022,11 +1003,10 @@ class GmailService(BaseService):
             message_id: The message ID.
         """
         try:
-            msg = (
+            msg = self.execute(
                 self.service.users()
                 .messages()
                 .get(userId="me", id=message_id, format="full")
-                .execute()
             )
 
             attachments = self._extract_attachments(msg.get("payload", {}))
@@ -1060,12 +1040,11 @@ class GmailService(BaseService):
             output_path: Path to save the downloaded file.
         """
         try:
-            attachment = (
+            attachment = self.execute(
                 self.service.users()
                 .messages()
                 .attachments()
                 .get(userId="me", messageId=message_id, id=attachment_id)
-                .execute()
             )
 
             # Decode base64 data
@@ -1119,7 +1098,7 @@ class GmailService(BaseService):
             if label_ids:
                 params["labelIds"] = label_ids
 
-            result = self.service.users().threads().list(**params).execute()
+            result = self.execute(self.service.users().threads().list(**params))
 
             threads = []
             for thread in result.get("threads", []):
@@ -1156,11 +1135,10 @@ class GmailService(BaseService):
             format_type: Message format (full, metadata, minimal).
         """
         try:
-            thread = (
+            thread = self.execute(
                 self.service.users()
                 .threads()
                 .get(userId="me", id=thread_id, format=format_type)
-                .execute()
             )
 
             messages = []
@@ -1201,7 +1179,7 @@ class GmailService(BaseService):
             thread_id: The thread ID.
         """
         try:
-            self.service.users().threads().trash(userId="me", id=thread_id).execute()
+            self.execute(self.service.users().threads().trash(userId="me", id=thread_id))
 
             output_success(
                 operation="gmail.trash_thread",
@@ -1223,7 +1201,7 @@ class GmailService(BaseService):
             thread_id: The thread ID.
         """
         try:
-            self.service.users().threads().untrash(userId="me", id=thread_id).execute()
+            self.execute(self.service.users().threads().untrash(userId="me", id=thread_id))
 
             output_success(
                 operation="gmail.untrash_thread",
@@ -1266,9 +1244,9 @@ class GmailService(BaseService):
                 )
                 raise SystemExit(ExitCode.INVALID_ARGS)
 
-            self.service.users().threads().modify(
+            self.execute(self.service.users().threads().modify(
                 userId="me", id=thread_id, body=body
-            ).execute()
+            ))
 
             output_success(
                 operation="gmail.modify_thread_labels",
@@ -1292,11 +1270,10 @@ class GmailService(BaseService):
     def get_vacation_settings(self) -> dict[str, Any]:
         """Get vacation responder settings."""
         try:
-            settings = (
+            settings = self.execute(
                 self.service.users()
                 .settings()
                 .getVacation(userId="me")
-                .execute()
             )
 
             output_success(
@@ -1359,11 +1336,10 @@ class GmailService(BaseService):
             if end_time:
                 body["endTime"] = end_time
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .settings()
                 .updateVacation(userId="me", body=body)
-                .execute()
             )
 
             output_success(
@@ -1389,15 +1365,14 @@ class GmailService(BaseService):
         try:
             # Get primary email if not specified
             if not send_as_email:
-                profile = self.service.users().getProfile(userId="me").execute()
+                profile = self.execute(self.service.users().getProfile(userId="me"))
                 send_as_email = profile.get("emailAddress", "")
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .settings()
                 .sendAs()
                 .get(userId="me", sendAsEmail=send_as_email)
-                .execute()
             )
 
             output_success(
@@ -1430,10 +1405,10 @@ class GmailService(BaseService):
         try:
             # Get primary email if not specified
             if not send_as_email:
-                profile = self.service.users().getProfile(userId="me").execute()
+                profile = self.execute(self.service.users().getProfile(userId="me"))
                 send_as_email = profile.get("emailAddress", "")
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .settings()
                 .sendAs()
@@ -1442,7 +1417,6 @@ class GmailService(BaseService):
                     sendAsEmail=send_as_email,
                     body={"signature": signature}
                 )
-                .execute()
             )
 
             output_success(
@@ -1464,12 +1438,11 @@ class GmailService(BaseService):
     def list_filters(self) -> dict[str, Any]:
         """List all mail filters."""
         try:
-            result = (
+            result = self.execute(
                 self.service.users()
                 .settings()
                 .filters()
                 .list(userId="me")
-                .execute()
             )
 
             filters = []
@@ -1517,12 +1490,11 @@ class GmailService(BaseService):
     def get_filter(self, filter_id: str) -> dict[str, Any]:
         """Get a specific mail filter."""
         try:
-            result = (
+            result = self.execute(
                 self.service.users()
                 .settings()
                 .filters()
                 .get(userId="me", id=filter_id)
-                .execute()
             )
 
             criteria = result.get("criteria", {})
@@ -1650,12 +1622,11 @@ class GmailService(BaseService):
 
             body = {"criteria": criteria, "action": action}
 
-            result = (
+            result = self.execute(
                 self.service.users()
                 .settings()
                 .filters()
                 .create(userId="me", body=body)
-                .execute()
             )
 
             output_success(
@@ -1676,9 +1647,9 @@ class GmailService(BaseService):
     def delete_filter(self, filter_id: str) -> dict[str, Any]:
         """Delete a mail filter."""
         try:
-            self.service.users().settings().filters().delete(
+            self.execute(self.service.users().settings().filters().delete(
                 userId="me", id=filter_id
-            ).execute()
+            ))
 
             output_success(
                 operation="gmail.delete_filter",

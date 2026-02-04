@@ -27,10 +27,9 @@ class SheetsService(BaseService):
     def metadata(self, spreadsheet_id: str) -> dict[str, Any]:
         """Get spreadsheet metadata."""
         try:
-            spreadsheet = (
+            spreadsheet = self.execute(
                 self.service.spreadsheets()
                 .get(spreadsheetId=spreadsheet_id)
-                .execute()
             )
 
             sheets = [
@@ -81,7 +80,7 @@ class SheetsService(BaseService):
             if range_notation:
                 range_notation = self._unescape_text(range_notation)
             if range_notation:
-                result = (
+                result = self.execute(
                     self.service.spreadsheets()
                     .values()
                     .get(
@@ -89,17 +88,15 @@ class SheetsService(BaseService):
                         range=range_notation,
                         valueRenderOption=value_render_option,
                     )
-                    .execute()
                 )
             else:
                 # Get all data from first sheet
-                spreadsheet = (
+                spreadsheet = self.execute(
                     self.service.spreadsheets()
                     .get(spreadsheetId=spreadsheet_id)
-                    .execute()
                 )
                 first_sheet = spreadsheet["sheets"][0]["properties"]["title"]
-                result = (
+                result = self.execute(
                     self.service.spreadsheets()
                     .values()
                     .get(
@@ -107,7 +104,6 @@ class SheetsService(BaseService):
                         range=first_sheet,
                         valueRenderOption=value_render_option,
                     )
-                    .execute()
                 )
 
             values = result.get("values", [])
@@ -148,8 +144,8 @@ class SheetsService(BaseService):
                     for sheet_title in sheet_titles
                 ]
 
-            spreadsheet = (
-                self.service.spreadsheets().create(body=body).execute()
+            spreadsheet = self.execute(
+                self.service.spreadsheets().create(body=body)
             )
             spreadsheet_id = spreadsheet["spreadsheetId"]
 
@@ -194,7 +190,7 @@ class SheetsService(BaseService):
             # Unescape shell-escaped characters in range
             range_notation = self._unescape_text(range_notation)
             body = {"values": values}
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .values()
                 .update(
@@ -203,7 +199,6 @@ class SheetsService(BaseService):
                     valueInputOption=input_option,
                     body=body,
                 )
-                .execute()
             )
 
             output_success(
@@ -235,7 +230,7 @@ class SheetsService(BaseService):
             # Unescape shell-escaped characters in range
             range_notation = self._unescape_text(range_notation)
             body = {"values": values}
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .values()
                 .append(
@@ -245,7 +240,6 @@ class SheetsService(BaseService):
                     insertDataOption="INSERT_ROWS",
                     body=body,
                 )
-                .execute()
             )
 
             updates = result.get("updates", {})
@@ -274,11 +268,10 @@ class SheetsService(BaseService):
         try:
             # Unescape shell-escaped characters in range
             range_notation = self._unescape_text(range_notation)
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .values()
                 .clear(spreadsheetId=spreadsheet_id, range=range_notation, body={})
-                .execute()
             )
 
             output_success(
@@ -312,10 +305,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             reply = result.get("replies", [{}])[0]
@@ -345,10 +337,9 @@ class SheetsService(BaseService):
         try:
             requests = [{"deleteSheet": {"sheetId": sheet_id}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -385,10 +376,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -476,10 +466,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -507,11 +496,10 @@ class SheetsService(BaseService):
         try:
             # Unescape shell-escaped characters in all ranges
             ranges = [self._unescape_text(r) for r in ranges]
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .values()
                 .batchGet(spreadsheetId=spreadsheet_id, ranges=ranges)
-                .execute()
             )
 
             value_ranges = result.get("valueRanges", [])
@@ -691,10 +679,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -809,10 +796,9 @@ class SheetsService(BaseService):
 
             requests = [{"updateBorders": update_borders}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -876,10 +862,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -932,10 +917,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -986,10 +970,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1041,10 +1024,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1092,10 +1074,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1139,10 +1120,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1186,10 +1166,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1319,10 +1298,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1406,10 +1384,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1441,10 +1418,9 @@ class SheetsService(BaseService):
         """
         try:
             # First, get the spreadsheet to find all conditional format rules
-            spreadsheet = (
+            spreadsheet = self.execute(
                 self.service.spreadsheets()
                 .get(spreadsheetId=spreadsheet_id)
-                .execute()
             )
 
             # Find the sheet
@@ -1484,10 +1460,9 @@ class SheetsService(BaseService):
                     }
                 )
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1537,10 +1512,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1591,10 +1565,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1642,10 +1615,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1694,10 +1666,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1761,10 +1732,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -1825,10 +1795,9 @@ class SheetsService(BaseService):
 
             requests = [{"findReplace": find_replace_request}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             # Extract replacement count from response
@@ -1883,10 +1852,9 @@ class SheetsService(BaseService):
 
             requests = [{"duplicateSheet": duplicate_request}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             # Extract new sheet info from response
@@ -2011,10 +1979,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2068,10 +2035,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2170,10 +2136,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             # Extract chart ID from response
@@ -2210,10 +2175,9 @@ class SheetsService(BaseService):
         try:
             requests = [{"deleteEmbeddedObject": {"objectId": chart_id}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2290,10 +2254,9 @@ class SheetsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             # Extract banded range ID from response
@@ -2332,10 +2295,9 @@ class SheetsService(BaseService):
         try:
             requests = [{"deleteBanding": {"bandedRangeId": banded_range_id}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2390,10 +2352,9 @@ class SheetsService(BaseService):
                 }
             }]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2425,10 +2386,9 @@ class SheetsService(BaseService):
         try:
             requests = [{"clearBasicFilter": {"sheetId": sheet_id}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2482,10 +2442,9 @@ class SheetsService(BaseService):
                 }
             }]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             filter_view_id = (
@@ -2521,10 +2480,9 @@ class SheetsService(BaseService):
             spreadsheet_id: The spreadsheet ID.
         """
         try:
-            spreadsheet = (
+            spreadsheet = self.execute(
                 self.service.spreadsheets()
                 .get(spreadsheetId=spreadsheet_id)
-                .execute()
             )
 
             filter_views = []
@@ -2569,10 +2527,9 @@ class SheetsService(BaseService):
         try:
             requests = [{"deleteFilterView": {"filterId": filter_view_id}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2688,10 +2645,9 @@ class SheetsService(BaseService):
                 }
             }]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2722,10 +2678,9 @@ class SheetsService(BaseService):
             spreadsheet_id: The spreadsheet ID.
         """
         try:
-            spreadsheet = (
+            spreadsheet = self.execute(
                 self.service.spreadsheets()
                 .get(spreadsheetId=spreadsheet_id, includeGridData=False)
-                .execute()
             )
 
             pivot_tables = []
@@ -2819,10 +2774,9 @@ class SheetsService(BaseService):
 
             requests = [{"addProtectedRange": {"protectedRange": protected_range}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             protected_range_id = (
@@ -2880,10 +2834,9 @@ class SheetsService(BaseService):
 
             requests = [{"addProtectedRange": {"protectedRange": protected_range}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             protected_range_id = (
@@ -2919,10 +2872,9 @@ class SheetsService(BaseService):
             spreadsheet_id: The spreadsheet ID.
         """
         try:
-            spreadsheet = (
+            spreadsheet = self.execute(
                 self.service.spreadsheets()
                 .get(spreadsheetId=spreadsheet_id)
-                .execute()
             )
 
             protected_ranges = []
@@ -2969,10 +2921,9 @@ class SheetsService(BaseService):
         try:
             requests = [{"deleteProtectedRange": {"protectedRangeId": protected_range_id}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -3030,10 +2981,9 @@ class SheetsService(BaseService):
                 }
             }]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             named_range_id = (
@@ -3069,10 +3019,9 @@ class SheetsService(BaseService):
             spreadsheet_id: The spreadsheet ID.
         """
         try:
-            spreadsheet = (
+            spreadsheet = self.execute(
                 self.service.spreadsheets()
                 .get(spreadsheetId=spreadsheet_id)
-                .execute()
             )
 
             named_ranges = []
@@ -3117,10 +3066,9 @@ class SheetsService(BaseService):
         try:
             requests = [{"deleteNamedRange": {"namedRangeId": named_range_id}}]
 
-            result = (
+            result = self.execute(
                 self.service.spreadsheets()
                 .batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(

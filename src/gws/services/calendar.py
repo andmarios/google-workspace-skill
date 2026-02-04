@@ -19,7 +19,7 @@ class CalendarService(BaseService):
     def list_calendars(self) -> dict[str, Any]:
         """List all accessible calendars."""
         try:
-            result = self.service.calendarList().list().execute()
+            result = self.execute(self.service.calendarList().list())
 
             calendars = [
                 {
@@ -75,7 +75,7 @@ class CalendarService(BaseService):
             if query:
                 params["q"] = query
 
-            result = self.service.events().list(**params).execute()
+            result = self.execute(self.service.events().list(**params))
 
             events = []
             for event in result.get("items", []):
@@ -115,10 +115,9 @@ class CalendarService(BaseService):
     ) -> dict[str, Any]:
         """Get a specific event by ID."""
         try:
-            event = (
+            event = self.execute(
                 self.service.events()
                 .get(calendarId=calendar_id, eventId=event_id)
-                .execute()
             )
 
             start = event.get("start", {})
@@ -181,10 +180,9 @@ class CalendarService(BaseService):
             if attendees:
                 event_body["attendees"] = [{"email": email} for email in attendees]
 
-            event = (
+            event = self.execute(
                 self.service.events()
                 .insert(calendarId=calendar_id, body=event_body)
-                .execute()
             )
 
             output_success(
@@ -217,10 +215,9 @@ class CalendarService(BaseService):
         """Update an existing event."""
         try:
             # Get existing event
-            event = (
+            event = self.execute(
                 self.service.events()
                 .get(calendarId=calendar_id, eventId=event_id)
-                .execute()
             )
 
             # Update fields if provided
@@ -241,10 +238,9 @@ class CalendarService(BaseService):
                 else:
                     event["end"] = {"dateTime": end}
 
-            updated_event = (
+            updated_event = self.execute(
                 self.service.events()
                 .update(calendarId=calendar_id, eventId=event_id, body=event)
-                .execute()
             )
 
             output_success(
@@ -269,9 +265,9 @@ class CalendarService(BaseService):
     ) -> dict[str, Any]:
         """Delete an event."""
         try:
-            self.service.events().delete(
+            self.execute(self.service.events().delete(
                 calendarId=calendar_id, eventId=event_id
-            ).execute()
+            ))
 
             output_success(
                 operation="calendar.delete",
@@ -329,10 +325,9 @@ class CalendarService(BaseService):
             if attendees:
                 event_body["attendees"] = [{"email": email} for email in attendees]
 
-            event = (
+            event = self.execute(
                 self.service.events()
                 .insert(calendarId=calendar_id, body=event_body)
-                .execute()
             )
 
             output_success(
@@ -385,7 +380,7 @@ class CalendarService(BaseService):
             if time_max:
                 params["timeMax"] = time_max
 
-            result = self.service.events().instances(**params).execute()
+            result = self.execute(self.service.events().instances(**params))
 
             instances = []
             for event in result.get("items", []):
@@ -434,10 +429,9 @@ class CalendarService(BaseService):
         """
         try:
             # Get existing event
-            event = (
+            event = self.execute(
                 self.service.events()
                 .get(calendarId=calendar_id, eventId=event_id)
-                .execute()
             )
 
             # Add new attendees
@@ -452,7 +446,7 @@ class CalendarService(BaseService):
 
             # Update event
             send_updates = "all" if send_notifications else "none"
-            updated_event = (
+            updated_event = self.execute(
                 self.service.events()
                 .update(
                     calendarId=calendar_id,
@@ -460,7 +454,6 @@ class CalendarService(BaseService):
                     body=event,
                     sendUpdates=send_updates,
                 )
-                .execute()
             )
 
             output_success(
@@ -495,10 +488,9 @@ class CalendarService(BaseService):
         """
         try:
             # Get existing event
-            event = (
+            event = self.execute(
                 self.service.events()
                 .get(calendarId=calendar_id, eventId=event_id)
-                .execute()
             )
 
             # Filter out specified attendees
@@ -510,7 +502,7 @@ class CalendarService(BaseService):
 
             # Update event
             send_updates = "all" if send_notifications else "none"
-            updated_event = (
+            updated_event = self.execute(
                 self.service.events()
                 .update(
                     calendarId=calendar_id,
@@ -518,7 +510,6 @@ class CalendarService(BaseService):
                     body=event,
                     sendUpdates=send_updates,
                 )
-                .execute()
             )
 
             output_success(
@@ -548,10 +539,9 @@ class CalendarService(BaseService):
             calendar_id: Calendar ID.
         """
         try:
-            event = (
+            event = self.execute(
                 self.service.events()
                 .get(calendarId=calendar_id, eventId=event_id)
-                .execute()
             )
 
             attendees = [
@@ -605,10 +595,9 @@ class CalendarService(BaseService):
                 raise SystemExit(ExitCode.INVALID_ARGS)
 
             # Get event and find self in attendees
-            event = (
+            event = self.execute(
                 self.service.events()
                 .get(calendarId=calendar_id, eventId=event_id)
-                .execute()
             )
 
             # Update self's response status
@@ -617,14 +606,13 @@ class CalendarService(BaseService):
                     attendee["responseStatus"] = response.lower()
                     break
 
-            updated_event = (
+            updated_event = self.execute(
                 self.service.events()
                 .update(
                     calendarId=calendar_id,
                     eventId=event_id,
                     body=event,
                 )
-                .execute()
             )
 
             output_success(
@@ -654,10 +642,9 @@ class CalendarService(BaseService):
             calendar_id: Calendar ID.
         """
         try:
-            event = (
+            event = self.execute(
                 self.service.events()
                 .quickAdd(calendarId=calendar_id, text=text)
-                .execute()
             )
 
             start = event.get("start", {})
@@ -712,7 +699,7 @@ class CalendarService(BaseService):
                 "items": items,
             }
 
-            result = self.service.freebusy().query(body=body).execute()
+            result = self.execute(self.service.freebusy().query(body=body))
 
             calendars = {}
             for cal_id, cal_data in result.get("calendars", {}).items():
@@ -756,7 +743,7 @@ class CalendarService(BaseService):
             calendar_id: Calendar ID.
         """
         try:
-            result = self.service.acl().list(calendarId=calendar_id).execute()
+            result = self.execute(self.service.acl().list(calendarId=calendar_id))
 
             rules = []
             for rule in result.get("items", []):
@@ -824,7 +811,7 @@ class CalendarService(BaseService):
                 "role": role,
             }
 
-            result = self.service.acl().insert(calendarId=calendar_id, body=body).execute()
+            result = self.execute(self.service.acl().insert(calendarId=calendar_id, body=body))
 
             output_success(
                 operation="calendar.add_acl",
@@ -855,7 +842,7 @@ class CalendarService(BaseService):
             calendar_id: Calendar ID.
         """
         try:
-            self.service.acl().delete(calendarId=calendar_id, ruleId=rule_id).execute()
+            self.execute(self.service.acl().delete(calendarId=calendar_id, ruleId=rule_id))
 
             output_success(
                 operation="calendar.remove_acl",
@@ -895,16 +882,16 @@ class CalendarService(BaseService):
                 raise SystemExit(ExitCode.INVALID_ARGS)
 
             # First get the existing rule to preserve scope
-            existing = self.service.acl().get(calendarId=calendar_id, ruleId=rule_id).execute()
+            existing = self.execute(self.service.acl().get(calendarId=calendar_id, ruleId=rule_id))
 
             body = {
                 "scope": existing.get("scope"),
                 "role": role,
             }
 
-            result = self.service.acl().update(
+            result = self.execute(self.service.acl().update(
                 calendarId=calendar_id, ruleId=rule_id, body=body
-            ).execute()
+            ))
 
             output_success(
                 operation="calendar.update_acl",
@@ -937,9 +924,9 @@ class CalendarService(BaseService):
             calendar_id: Calendar ID.
         """
         try:
-            event = self.service.events().get(
+            event = self.execute(self.service.events().get(
                 calendarId=calendar_id, eventId=event_id
-            ).execute()
+            ))
 
             reminders = event.get("reminders", {})
 
@@ -992,11 +979,11 @@ class CalendarService(BaseService):
             if not use_default and reminders:
                 body["reminders"]["overrides"] = reminders
 
-            result = self.service.events().patch(
+            result = self.execute(self.service.events().patch(
                 calendarId=calendar_id,
                 eventId=event_id,
                 body=body,
-            ).execute()
+            ))
 
             output_success(
                 operation="calendar.set_event_reminders",
@@ -1031,9 +1018,9 @@ class CalendarService(BaseService):
             calendar_id: Calendar ID.
         """
         try:
-            calendar = self.service.calendarList().get(
+            calendar = self.execute(self.service.calendarList().get(
                 calendarId=calendar_id
-            ).execute()
+            ))
 
             reminders = calendar.get("defaultReminders", [])
 
@@ -1071,10 +1058,10 @@ class CalendarService(BaseService):
             calendar_id: Calendar ID.
         """
         try:
-            result = self.service.calendarList().patch(
+            result = self.execute(self.service.calendarList().patch(
                 calendarId=calendar_id,
                 body={"defaultReminders": reminders},
-            ).execute()
+            ))
 
             output_success(
                 operation="calendar.set_default_reminders",
@@ -1116,11 +1103,11 @@ class CalendarService(BaseService):
                 }
             }
 
-            result = self.service.events().patch(
+            result = self.execute(self.service.events().patch(
                 calendarId=calendar_id,
                 eventId=event_id,
                 body=body,
-            ).execute()
+            ))
 
             output_success(
                 operation="calendar.clear_event_reminders",

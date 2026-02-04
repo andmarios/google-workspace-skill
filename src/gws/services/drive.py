@@ -109,10 +109,9 @@ class DriveService(BaseService):
         media = MediaFileUpload(file_path, mimetype=content_type, resumable=True)
 
         try:
-            result = (
+            result = self.execute(
                 self.service.files()
                 .create(body=file_metadata, media_body=media, fields=self.FILE_FIELDS)
-                .execute()
             )
 
             output_success(
@@ -132,7 +131,7 @@ class DriveService(BaseService):
         """Download a file from Google Drive."""
         try:
             # Get file metadata first
-            file = self.service.files().get(fileId=file_id, fields="id, name, mimeType").execute()
+            file = self.execute(self.service.files().get(fileId=file_id, fields="id, name, mimeType"))
 
             # Handle Google native formats (need export)
             if file.get("mimeType", "").startswith("application/vnd.google-apps."):
@@ -217,7 +216,7 @@ class DriveService(BaseService):
             if folder_id:
                 query_parts.append(f"'{folder_id}' in parents")
 
-            result = (
+            result = self.execute(
                 self.service.files()
                 .list(
                     q=" and ".join(query_parts),
@@ -225,7 +224,6 @@ class DriveService(BaseService):
                     pageToken=page_token,
                     fields=self.LIST_FIELDS,
                 )
-                .execute()
             )
 
             files = [self._file_to_dict(f) for f in result.get("files", [])]
@@ -257,7 +255,7 @@ class DriveService(BaseService):
             # Add trashed filter if not already in query
             full_query = query if "trashed" in query else f"{query} and trashed = false"
 
-            result = (
+            result = self.execute(
                 self.service.files()
                 .list(
                     q=full_query,
@@ -265,7 +263,6 @@ class DriveService(BaseService):
                     pageToken=page_token,
                     fields=self.LIST_FIELDS,
                 )
-                .execute()
             )
 
             files = [self._file_to_dict(f) for f in result.get("files", [])]
@@ -294,7 +291,7 @@ class DriveService(BaseService):
                 "createdTime, modifiedTime, size, description, starred, trashed, "
                 "owners, permissions"
             )
-            file = self.service.files().get(fileId=file_id, fields=fields).execute()
+            file = self.execute(self.service.files().get(fileId=file_id, fields=fields))
 
             # Format owners and permissions
             owners = [
@@ -340,13 +337,12 @@ class DriveService(BaseService):
             if parent_id:
                 file_metadata["parents"] = [parent_id]
 
-            result = (
+            result = self.execute(
                 self.service.files()
                 .create(
                     body=file_metadata,
                     fields="id, name, mimeType, webViewLink, parents, createdTime",
                 )
-                .execute()
             )
 
             output_success(
@@ -372,10 +368,10 @@ class DriveService(BaseService):
         """Move a file to a different folder."""
         try:
             # Get current parents
-            file = self.service.files().get(fileId=file_id, fields="parents").execute()
+            file = self.execute(self.service.files().get(fileId=file_id, fields="parents"))
             previous_parents = ",".join(file.get("parents", []))
 
-            result = (
+            result = self.execute(
                 self.service.files()
                 .update(
                     fileId=file_id,
@@ -383,7 +379,6 @@ class DriveService(BaseService):
                     removeParents=previous_parents,
                     fields="id, name, parents, webViewLink",
                 )
-                .execute()
             )
 
             output_success(
@@ -452,21 +447,19 @@ class DriveService(BaseService):
             if domain and perm_type == "domain":
                 permission["domain"] = domain
 
-            result = (
+            result = self.execute(
                 self.service.permissions()
                 .create(
                     fileId=file_id,
                     body=permission,
                     fields="id, type, role, emailAddress, domain",
                 )
-                .execute()
             )
 
             # Get updated file info with sharing link
-            file = (
+            file = self.execute(
                 self.service.files()
                 .get(fileId=file_id, fields="webViewLink, webContentLink")
-                .execute()
             )
 
             output_success(
@@ -504,14 +497,13 @@ class DriveService(BaseService):
             if folder_id:
                 file_metadata["parents"] = [folder_id]
 
-            result = (
+            result = self.execute(
                 self.service.files()
                 .copy(
                     fileId=file_id,
                     body=file_metadata,
                     fields="id, name, mimeType, webViewLink, parents, createdTime",
                 )
-                .execute()
             )
 
             output_success(
@@ -551,7 +543,7 @@ class DriveService(BaseService):
             mime_type = self._detect_mime_type(file_path)
             media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
 
-            result = (
+            result = self.execute(
                 self.service.files()
                 .update(
                     fileId=file_id,
@@ -559,7 +551,6 @@ class DriveService(BaseService):
                     media_body=media,
                     fields="id, name, mimeType, webViewLink, modifiedTime, size",
                 )
-                .execute()
             )
 
             output_success(
@@ -579,11 +570,11 @@ class DriveService(BaseService):
         """Delete a file (trash or permanent)."""
         try:
             if permanent:
-                self.service.files().delete(fileId=file_id).execute()
+                self.execute(self.service.files().delete(fileId=file_id))
             else:
-                self.service.files().update(
+                self.execute(self.service.files().update(
                     fileId=file_id, body={"trashed": True}
-                ).execute()
+                ))
 
             output_success(
                 operation="drive.delete",
@@ -617,7 +608,7 @@ class DriveService(BaseService):
             max_results: Maximum comments to return.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.comments()
                 .list(
                     fileId=file_id,
@@ -625,7 +616,6 @@ class DriveService(BaseService):
                     pageSize=max_results,
                     fields="comments(id,content,author,createdTime,modifiedTime,resolved,replies)",
                 )
-                .execute()
             )
 
             comments = []
@@ -666,14 +656,13 @@ class DriveService(BaseService):
             content: The comment text.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.comments()
                 .create(
                     fileId=file_id,
                     body={"content": content},
                     fields="id,content,author,createdTime",
                 )
-                .execute()
             )
 
             output_success(
@@ -703,7 +692,7 @@ class DriveService(BaseService):
             comment_id: The comment ID.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.comments()
                 .update(
                     fileId=file_id,
@@ -711,7 +700,6 @@ class DriveService(BaseService):
                     body={"resolved": True},
                     fields="id,content,resolved",
                 )
-                .execute()
             )
 
             output_success(
@@ -740,9 +728,9 @@ class DriveService(BaseService):
             comment_id: The comment ID.
         """
         try:
-            self.service.comments().delete(
+            self.execute(self.service.comments().delete(
                 fileId=file_id, commentId=comment_id
-            ).execute()
+            ))
 
             output_success(
                 operation="drive.delete_comment",
@@ -772,7 +760,7 @@ class DriveService(BaseService):
             content: The reply text.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.replies()
                 .create(
                     fileId=file_id,
@@ -780,7 +768,6 @@ class DriveService(BaseService):
                     body={"content": content},
                     fields="id,content,author,createdTime",
                 )
-                .execute()
             )
 
             output_success(
@@ -814,14 +801,13 @@ class DriveService(BaseService):
             max_results: Maximum revisions to return.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.revisions()
                 .list(
                     fileId=file_id,
                     pageSize=max_results,
                     fields="revisions(id,mimeType,modifiedTime,lastModifyingUser,originalFilename,size)",
                 )
-                .execute()
             )
 
             revisions = []
@@ -861,14 +847,13 @@ class DriveService(BaseService):
             revision_id: The revision ID.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.revisions()
                 .get(
                     fileId=file_id,
                     revisionId=revision_id,
                     fields="id,mimeType,modifiedTime,lastModifyingUser,originalFilename,size,keepForever,publishAuto,published",
                 )
-                .execute()
             )
 
             output_success(
@@ -900,9 +885,9 @@ class DriveService(BaseService):
             revision_id: The revision ID to delete.
         """
         try:
-            self.service.revisions().delete(
+            self.execute(self.service.revisions().delete(
                 fileId=file_id, revisionId=revision_id
-            ).execute()
+            ))
 
             output_success(
                 operation="drive.delete_revision",
@@ -932,14 +917,13 @@ class DriveService(BaseService):
             max_results: Maximum files to return.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.files()
                 .list(
                     q="trashed=true",
                     pageSize=max_results,
                     fields="files(id,name,mimeType,trashedTime,trashingUser)",
                 )
-                .execute()
             )
 
             files = []
@@ -976,14 +960,13 @@ class DriveService(BaseService):
             file_id: The file ID to restore.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.files()
                 .update(
                     fileId=file_id,
                     body={"trashed": False},
                     fields="id,name,mimeType,webViewLink",
                 )
-                .execute()
             )
 
             output_success(
@@ -1003,7 +986,7 @@ class DriveService(BaseService):
     def empty_trash(self) -> dict[str, Any]:
         """Permanently delete all files in trash."""
         try:
-            self.service.files().emptyTrash().execute()
+            self.execute(self.service.files().emptyTrash())
 
             output_success(
                 operation="drive.empty_trash",
@@ -1032,13 +1015,12 @@ class DriveService(BaseService):
             file_id: The file ID.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.permissions()
                 .list(
                     fileId=file_id,
                     fields="permissions(id,type,role,emailAddress,displayName,domain,expirationTime,deleted)",
                 )
-                .execute()
             )
 
             permissions = []
@@ -1081,14 +1063,13 @@ class DriveService(BaseService):
             permission_id: The permission ID.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.permissions()
                 .get(
                     fileId=file_id,
                     permissionId=permission_id,
                     fields="id,type,role,emailAddress,displayName,domain,expirationTime,deleted,pendingOwner",
                 )
-                .execute()
             )
 
             output_success(
@@ -1138,7 +1119,7 @@ class DriveService(BaseService):
             if expiration_time:
                 body["expirationTime"] = expiration_time
 
-            result = (
+            result = self.execute(
                 self.service.permissions()
                 .update(
                     fileId=file_id,
@@ -1146,7 +1127,6 @@ class DriveService(BaseService):
                     body=body,
                     fields="id,type,role,emailAddress,expirationTime",
                 )
-                .execute()
             )
 
             output_success(
@@ -1184,10 +1164,10 @@ class DriveService(BaseService):
             permission_id: The permission ID to remove.
         """
         try:
-            self.service.permissions().delete(
+            self.execute(self.service.permissions().delete(
                 fileId=file_id,
                 permissionId=permission_id,
-            ).execute()
+            ))
 
             output_success(
                 operation="drive.delete_permission",
@@ -1223,7 +1203,7 @@ class DriveService(BaseService):
             new_owner_email: Email address of the new owner.
         """
         try:
-            result = (
+            result = self.execute(
                 self.service.permissions()
                 .create(
                     fileId=file_id,
@@ -1235,7 +1215,6 @@ class DriveService(BaseService):
                     transferOwnership=True,
                     fields="id,emailAddress,role",
                 )
-                .execute()
             )
 
             output_success(

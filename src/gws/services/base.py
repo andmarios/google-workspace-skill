@@ -1,11 +1,13 @@
 """Base service class for Google API services."""
 
 from abc import ABC
+from typing import Any
 
 from googleapiclient.discovery import build, Resource
 
 from gws.auth.oauth import AuthManager
 from gws.context import get_active_account
+from gws.utils.retry import execute_with_retry
 
 
 class BaseService(ABC):
@@ -31,6 +33,10 @@ class BaseService(ABC):
                 credentials=credentials,
             )
         return self._service
+
+    def execute(self, request: Any) -> Any:
+        """Execute a Google API request with automatic retry on transient errors."""
+        return execute_with_retry(request)
 
     @property
     def drive_service(self) -> Resource:

@@ -127,10 +127,10 @@ class DocsService(BaseService):
         """
         try:
             # Include tabs content to get full tab structure
-            doc = self.service.documents().get(
+            doc = self.execute(self.service.documents().get(
                 documentId=document_id,
                 includeTabsContent=True,
-            ).execute()
+            ))
 
             tabs = doc.get("tabs", [])
             tabs_info = self._extract_tabs_info(tabs)
@@ -171,10 +171,9 @@ class DocsService(BaseService):
 
             requests = [{"addDocumentTab": {"tabProperties": tab_properties}}]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             # Extract the created tab ID from response
@@ -210,9 +209,9 @@ class DocsService(BaseService):
         try:
             requests = [{"deleteTab": {"tabId": tab_id}}]
 
-            self.service.documents().batchUpdate(
+            self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.delete_tab",
@@ -252,9 +251,9 @@ class DocsService(BaseService):
                 }
             ]
 
-            self.service.documents().batchUpdate(
+            self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.rename_tab",
@@ -295,9 +294,9 @@ class DocsService(BaseService):
                 }
             ]
 
-            self.service.documents().batchUpdate(
+            self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.reorder_tab",
@@ -323,10 +322,10 @@ class DocsService(BaseService):
         """
         try:
             # Include tabs content when tab_id specified or to use new API structure
-            doc = self.service.documents().get(
+            doc = self.execute(self.service.documents().get(
                 documentId=document_id,
                 includeTabsContent=True,
-            ).execute()
+            ))
 
             try:
                 content = self._get_tab_content(doc, tab_id)
@@ -369,10 +368,10 @@ class DocsService(BaseService):
             tab_id: Optional tab ID to get structure from. If None, uses the first tab.
         """
         try:
-            doc = self.service.documents().get(
+            doc = self.execute(self.service.documents().get(
                 documentId=document_id,
                 includeTabsContent=True,
-            ).execute()
+            ))
 
             try:
                 content = self._get_tab_content(doc, tab_id)
@@ -412,7 +411,7 @@ class DocsService(BaseService):
         """Create a new document."""
         try:
             # Create the document
-            doc = self.service.documents().create(body={"title": title}).execute()
+            doc = self.execute(self.service.documents().create(body={"title": title}))
             document_id = doc["documentId"]
 
             # Add initial content if provided
@@ -425,24 +424,24 @@ class DocsService(BaseService):
                         }
                     }
                 ]
-                self.service.documents().batchUpdate(
+                self.execute(self.service.documents().batchUpdate(
                     documentId=document_id, body={"requests": requests}
-                ).execute()
+                ))
 
             # Move to folder if specified
             if folder_id:
                 # Get current parents
-                file = self.drive_service.files().get(
+                file = self.execute(self.drive_service.files().get(
                     fileId=document_id, fields="parents"
-                ).execute()
+                ))
                 previous_parents = ",".join(file.get("parents", []))
 
-                self.drive_service.files().update(
+                self.execute(self.drive_service.files().update(
                     fileId=document_id,
                     addParents=folder_id,
                     removeParents=previous_parents,
                     fields="id, parents",
-                ).execute()
+                ))
 
             output_success(
                 operation="docs.create",
@@ -488,10 +487,9 @@ class DocsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -525,10 +523,10 @@ class DocsService(BaseService):
         """
         try:
             # Get document to find end index
-            doc = self.service.documents().get(
+            doc = self.execute(self.service.documents().get(
                 documentId=document_id,
                 includeTabsContent=True,
-            ).execute()
+            ))
 
             try:
                 content = self._get_tab_content(doc, tab_id)
@@ -559,10 +557,9 @@ class DocsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -613,10 +610,9 @@ class DocsService(BaseService):
 
             requests = [{"replaceAllText": replace_request}]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             # Get replacement count from response
@@ -715,10 +711,9 @@ class DocsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -763,10 +758,9 @@ class DocsService(BaseService):
 
             requests = [{"deleteContentRange": {"range": range_obj}}]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -806,10 +800,9 @@ class DocsService(BaseService):
 
             requests = [{"insertPageBreak": {"location": location}}]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -849,10 +842,10 @@ class DocsService(BaseService):
         try:
             # If no index specified, append at end
             if index is None:
-                doc = self.service.documents().get(
+                doc = self.execute(self.service.documents().get(
                     documentId=document_id,
                     includeTabsContent=True,
-                ).execute()
+                ))
                 try:
                     content = self._get_tab_content(doc, tab_id)
                 except ValueError as e:
@@ -887,10 +880,9 @@ class DocsService(BaseService):
 
             requests = [{"insertInlineImage": insert_inline_image}]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -915,7 +907,7 @@ class DocsService(BaseService):
 
     def _get_tables(self, document_id: str) -> list[dict]:
         """Get all tables from document with their start indices."""
-        doc = self.service.documents().get(documentId=document_id).execute()
+        doc = self.execute(self.service.documents().get(documentId=document_id))
         content = doc.get("body", {}).get("content", [])
         tables = []
         for element in content:
@@ -935,7 +927,7 @@ class DocsService(BaseService):
 
     def _get_end_index(self, document_id: str) -> int:
         """Get the end index of the document body."""
-        doc = self.service.documents().get(documentId=document_id).execute()
+        doc = self.execute(self.service.documents().get(documentId=document_id))
         content = doc.get("body", {}).get("content", [])
         if content:
             return content[-1].get("endIndex", 1) - 1
@@ -961,9 +953,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.insert_table",
@@ -1011,9 +1003,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.insert_table_row",
@@ -1061,9 +1053,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.insert_table_column",
@@ -1109,9 +1101,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.delete_table_row",
@@ -1156,9 +1148,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.delete_table_column",
@@ -1210,9 +1202,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.merge_table_cells",
@@ -1264,9 +1256,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.unmerge_table_cells",
@@ -1374,9 +1366,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.style_table_cell",
@@ -1425,9 +1417,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.set_column_width",
@@ -1494,9 +1486,9 @@ class DocsService(BaseService):
                     }
                 })
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.set_table_column_widths",
@@ -1539,9 +1531,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.pin_table_header",
@@ -1688,9 +1680,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.format_paragraph",
@@ -1770,9 +1762,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.set_paragraph_border",
@@ -1890,9 +1882,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.format_text_extended",
@@ -1930,9 +1922,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.insert_link",
@@ -1972,9 +1964,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             header_id = result.get("replies", [{}])[0].get("createHeader", {}).get("headerId")
 
@@ -2011,9 +2003,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             footer_id = result.get("replies", [{}])[0].get("createFooter", {}).get("footerId")
 
@@ -2037,9 +2029,9 @@ class DocsService(BaseService):
         try:
             requests = [{"deleteHeader": {"headerId": header_id}}]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.delete_header",
@@ -2060,9 +2052,9 @@ class DocsService(BaseService):
         try:
             requests = [{"deleteFooter": {"footerId": footer_id}}]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.delete_footer",
@@ -2081,7 +2073,7 @@ class DocsService(BaseService):
     def get_headers_footers(self, document_id: str) -> dict[str, Any]:
         """Get all headers and footers in the document."""
         try:
-            doc = self.service.documents().get(documentId=document_id).execute()
+            doc = self.execute(self.service.documents().get(documentId=document_id))
             headers = doc.get("headers", {})
             footers = doc.get("footers", {})
 
@@ -2135,9 +2127,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.insert_text_in_segment",
@@ -2184,9 +2176,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.create_bullets",
@@ -2229,9 +2221,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.create_numbered_list",
@@ -2266,9 +2258,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.remove_bullets",
@@ -2308,9 +2300,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.insert_section_break",
@@ -2388,9 +2380,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.update_document_style",
@@ -2416,7 +2408,7 @@ class DocsService(BaseService):
             Dict with page_format and related info.
         """
         try:
-            doc = self.service.documents().get(documentId=document_id).execute()
+            doc = self.execute(self.service.documents().get(documentId=document_id))
             doc_style = doc.get("documentStyle", {})
             doc_format = doc_style.get("documentFormat", {})
             mode = doc_format.get("documentMode", "PAGES")
@@ -2474,9 +2466,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            self.service.documents().batchUpdate(
+            self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             result = {
                 "document_id": document_id,
@@ -2524,9 +2516,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             named_range_id = (
                 result.get("replies", [{}])[0]
@@ -2579,9 +2571,9 @@ class DocsService(BaseService):
             else:
                 request["deleteNamedRange"]["namedRangeId"] = named_range_id
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": [request]}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.delete_named_range",
@@ -2601,7 +2593,7 @@ class DocsService(BaseService):
     def list_named_ranges(self, document_id: str) -> dict[str, Any]:
         """List all named ranges in the document."""
         try:
-            doc = self.service.documents().get(documentId=document_id).execute()
+            doc = self.execute(self.service.documents().get(documentId=document_id))
             named_ranges = doc.get("namedRanges", {})
 
             range_info = []
@@ -2653,9 +2645,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             footnote_id = (
                 result.get("replies", [{}])[0]
@@ -2681,7 +2673,7 @@ class DocsService(BaseService):
     def list_footnotes(self, document_id: str) -> dict[str, Any]:
         """List all footnotes in the document."""
         try:
-            doc = self.service.documents().get(documentId=document_id).execute()
+            doc = self.execute(self.service.documents().get(documentId=document_id))
             footnotes = doc.get("footnotes", {})
 
             footnote_info = []
@@ -2729,9 +2721,9 @@ class DocsService(BaseService):
                 }
             }]
 
-            result = self.service.documents().batchUpdate(
+            result = self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             output_success(
                 operation="docs.delete_footnote_content",
@@ -2812,16 +2804,16 @@ class DocsService(BaseService):
         made while in "Suggesting" mode.
         """
         try:
-            doc = self.service.documents().get(
+            doc = self.execute(self.service.documents().get(
                 documentId=document_id,
                 suggestionsViewMode="PREVIEW_SUGGESTIONS_ACCEPTED"
-            ).execute()
+            ))
 
             # Also get with suggestions visible to see what's pending
-            doc_with_suggestions = self.service.documents().get(
+            doc_with_suggestions = self.execute(self.service.documents().get(
                 documentId=document_id,
                 suggestionsViewMode="SUGGESTIONS_INLINE"
-            ).execute()
+            ))
 
             content = doc_with_suggestions.get("body", {}).get("content", [])
             suggestions: list[dict] = []
@@ -2868,7 +2860,7 @@ class DocsService(BaseService):
         and metadata about the document state.
         """
         try:
-            doc = self.service.documents().get(documentId=document_id).execute()
+            doc = self.execute(self.service.documents().get(documentId=document_id))
 
             # Check for any suggestions in the document
             content = doc.get("body", {}).get("content", [])
@@ -2919,10 +2911,9 @@ class DocsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -2967,10 +2958,9 @@ class DocsService(BaseService):
                 }
             ]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -3024,10 +3014,9 @@ class DocsService(BaseService):
                 for s in suggestions
             ]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -3073,10 +3062,9 @@ class DocsService(BaseService):
                 for s in suggestions
             ]
 
-            result = (
+            result = self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
-                .execute()
             )
 
             output_success(
@@ -3135,7 +3123,7 @@ class DocsService(BaseService):
                 resumable=True,
             )
 
-            temp_file = (
+            temp_file = self.execute(
                 self.drive_service.files()
                 .create(
                     body={
@@ -3145,15 +3133,13 @@ class DocsService(BaseService):
                     media_body=media,
                     fields="id",
                 )
-                .execute()
             )
             temp_doc_id = temp_file["id"]
 
             # Step 2: Read the structured content from the temp doc
-            temp_doc = (
+            temp_doc = self.execute(
                 self.service.documents()
                 .get(documentId=temp_doc_id, includeTabsContent=True)
-                .execute()
             )
 
             # Get the body content from the temp doc
@@ -3173,9 +3159,9 @@ class DocsService(BaseService):
                 raise SystemExit(ExitCode.INVALID_ARGS)
 
             # Step 4: Execute the insert requests on the target document
-            self.service.documents().batchUpdate(
+            self.execute(self.service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
-            ).execute()
+            ))
 
             # Calculate inserted length for reporting
             inserted_text = self._extract_text_from_content(temp_content)
@@ -3203,7 +3189,7 @@ class DocsService(BaseService):
             # Step 5: Clean up - delete the temporary document
             if temp_doc_id:
                 try:
-                    self.drive_service.files().delete(fileId=temp_doc_id).execute()
+                    self.execute(self.drive_service.files().delete(fileId=temp_doc_id))
                 except Exception:
                     pass  # Ignore cleanup errors
 
@@ -3375,10 +3361,10 @@ class DocsService(BaseService):
             Dict with index, end_index, length, and total_occurrences.
         """
         try:
-            doc = self.service.documents().get(
+            doc = self.execute(self.service.documents().get(
                 documentId=document_id,
                 includeTabsContent=True,
-            ).execute()
+            ))
 
             try:
                 content = self._get_tab_content(doc, tab_id)

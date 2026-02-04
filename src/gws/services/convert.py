@@ -14,7 +14,6 @@ from gws.services.base import BaseService
 from gws.output import output_success, output_error
 from gws.exceptions import ExitCode
 from gws.utils.diagrams import render_diagrams_in_markdown, find_diagram_blocks
-from gws.utils.retry import execute_with_retry
 
 
 class ConvertService(BaseService):
@@ -35,9 +34,9 @@ class ConvertService(BaseService):
             "name": folder_name,
             "mimeType": "application/vnd.google-apps.folder",
         }
-        folder = self.drive_service.files().create(
-            body=file_metadata, fields="id"
-        ).execute()
+        folder = self.execute(
+            self.drive_service.files().create(body=file_metadata, fields="id")
+        )
         return folder["id"]
 
     def _delete_temp_folder(self, folder_id: str) -> None:
@@ -47,7 +46,7 @@ class ConvertService(BaseService):
             folder_id: The folder ID to delete
         """
         try:
-            self.drive_service.files().delete(fileId=folder_id).execute()
+            self.execute(self.drive_service.files().delete(fileId=folder_id))
         except Exception:
             pass  # Ignore cleanup errors
 
@@ -75,9 +74,11 @@ class ConvertService(BaseService):
             }
         }]
 
-        docs_service.documents().batchUpdate(
-            documentId=document_id, body={"requests": requests}
-        ).execute()
+        self.execute(
+            docs_service.documents().batchUpdate(
+                documentId=document_id, body={"requests": requests}
+            )
+        )
 
     def _process_diagrams(
         self,
@@ -112,18 +113,19 @@ class ConvertService(BaseService):
             # Upload to Drive temp folder
             file_metadata = {"name": path.name, "parents": [temp_folder_id]}
             media = MediaFileUpload(str(path), mimetype="image/png")
-            uploaded = (
+            uploaded = self.execute(
                 self.drive_service.files()
                 .create(body=file_metadata, media_body=media, fields="id")
-                .execute()
             )
             file_id = uploaded["id"]
 
             # Make publicly accessible
-            self.drive_service.permissions().create(
-                fileId=file_id,
-                body={"type": "anyone", "role": "reader"},
-            ).execute()
+            self.execute(
+                self.drive_service.permissions().create(
+                    fileId=file_id,
+                    body={"type": "anyone", "role": "reader"},
+                )
+            )
 
             # Get the web content link for embedding
             # Use the direct image URL format
@@ -161,7 +163,7 @@ class ConvertService(BaseService):
         docs_service = build("docs", "v1", credentials=credentials)
 
         # Get document structure
-        doc = docs_service.documents().get(documentId=document_id).execute()
+        doc = self.execute(docs_service.documents().get(documentId=document_id))
 
         # Find inline objects (images) that need resizing
         inline_objects = doc.get("inlineObjects", {})
@@ -261,10 +263,12 @@ class ConvertService(BaseService):
             })
 
         if requests:
-            docs_service.documents().batchUpdate(
-                documentId=document_id,
-                body={"requests": requests},
-            ).execute()
+            self.execute(
+                docs_service.documents().batchUpdate(
+                    documentId=document_id,
+                    body={"requests": requests},
+                )
+            )
 
         return len(images_to_resize)
 
@@ -343,7 +347,7 @@ class ConvertService(BaseService):
             request = self.drive_service.files().create(
                 body=file_metadata, media_body=media, fields="id,name,webViewLink"
             )
-            file = execute_with_retry(request)
+            file = self.execute(request)
 
             # Resize any oversized images to fit the page
             images_resized = self._resize_document_images(file["id"])
@@ -455,7 +459,7 @@ class ConvertService(BaseService):
             request = self.drive_service.files().create(
                 body=file_metadata, media_body=media, fields="id"
             )
-            file = execute_with_retry(request)
+            file = self.execute(request)
 
             doc_id = file["id"]
 
@@ -490,7 +494,7 @@ class ConvertService(BaseService):
                 output_success(operation="convert.md_to_pdf", **result)
             finally:
                 # Delete the temporary doc
-                self.drive_service.files().delete(fileId=doc_id).execute()
+                self.execute(self.drive_service.files().delete(fileId=doc_id))
                 # Delete Drive temp folder (deletes folder and all diagram images)
                 if temp_folder_id:
                     self._delete_temp_folder(temp_folder_id)
@@ -547,36 +551,41 @@ class ConvertService(BaseService):
             slides_service = build("slides", "v1", credentials=credentials)
 
             # Create empty presentation
-            presentation = (
+            presentation = self.execute(
                 slides_service.presentations()
                 .create(body={"title": pres_title})
-                .execute()
             )
             presentation_id = presentation["presentationId"]
 
             try:
                 # Move to folder if specified
                 if folder_id:
-                    file = self.drive_service.files().get(
-                        fileId=presentation_id, fields="parents"
-                    ).execute()
+                    file = self.execute(
+                        self.drive_service.files().get(
+                            fileId=presentation_id, fields="parents"
+                        )
+                    )
                     previous_parents = ",".join(file.get("parents", []))
 
-                    self.drive_service.files().update(
-                        fileId=presentation_id,
-                        addParents=folder_id,
-                        removeParents=previous_parents,
-                        fields="id",
-                    ).execute()
+                    self.execute(
+                        self.drive_service.files().update(
+                            fileId=presentation_id,
+                            addParents=folder_id,
+                            removeParents=previous_parents,
+                            fields="id",
+                        )
+                    )
 
                 # Build slides from parsed content
                 requests = self._build_slide_requests(slides_data)
 
                 if requests:
-                    slides_service.presentations().batchUpdate(
-                        presentationId=presentation_id,
-                        body={"requests": requests},
-                    ).execute()
+                    self.execute(
+                        slides_service.presentations().batchUpdate(
+                            presentationId=presentation_id,
+                            body={"requests": requests},
+                        )
+                    )
 
                 output_success(
                     operation="convert.md_to_slides",
@@ -589,7 +598,7 @@ class ConvertService(BaseService):
                 return {"presentation_id": presentation_id}
             except Exception as e:
                 # Clean up on error
-                self.drive_service.files().delete(fileId=presentation_id).execute()
+                self.execute(self.drive_service.files().delete(fileId=presentation_id))
                 raise e
 
         except HttpError as e:

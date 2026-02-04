@@ -36,10 +36,9 @@ class SlidesService(BaseService):
     def metadata(self, presentation_id: str) -> dict[str, Any]:
         """Get presentation metadata."""
         try:
-            presentation = (
+            presentation = self.execute(
                 self.service.presentations()
                 .get(presentationId=presentation_id)
-                .execute()
             )
 
             slides = [
@@ -75,11 +74,10 @@ class SlidesService(BaseService):
         """Read presentation or page content."""
         try:
             if page_object_id:
-                page = (
+                page = self.execute(
                     self.service.presentations()
                     .pages()
                     .get(presentationId=presentation_id, pageObjectId=page_object_id)
-                    .execute()
                 )
 
                 elements = []
@@ -105,10 +103,9 @@ class SlidesService(BaseService):
                 )
                 return page
             else:
-                presentation = (
+                presentation = self.execute(
                     self.service.presentations()
                     .get(presentationId=presentation_id)
-                    .execute()
                 )
 
                 slides_info = []
@@ -177,10 +174,9 @@ class SlidesService(BaseService):
     ) -> dict[str, Any]:
         """Create a new presentation."""
         try:
-            presentation = (
+            presentation = self.execute(
                 self.service.presentations()
                 .create(body={"title": title})
-                .execute()
             )
             presentation_id = presentation["presentationId"]
 
@@ -235,12 +231,11 @@ class SlidesService(BaseService):
             if insertion_index is not None:
                 request["createSlide"]["insertionIndex"] = insertion_index
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -267,12 +262,11 @@ class SlidesService(BaseService):
         try:
             request = {"deleteObject": {"objectId": slide_id}}
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -305,12 +299,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -345,12 +338,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -391,12 +383,11 @@ class SlidesService(BaseService):
             if page_object_ids:
                 request["replaceAllText"]["pageObjectIds"] = page_object_ids
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             replies = result.get("replies", [{}])
@@ -464,12 +455,11 @@ class SlidesService(BaseService):
                 },
             ]
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": requests}
                 )
-                .execute()
             )
 
             output_success(
@@ -527,12 +517,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -560,12 +549,11 @@ class SlidesService(BaseService):
         try:
             request = {"deleteObject": {"objectId": object_id}}
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -632,12 +620,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -783,12 +770,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -903,12 +889,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -972,12 +957,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1069,12 +1053,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1140,12 +1123,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1190,12 +1172,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1239,12 +1220,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1284,12 +1264,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1328,12 +1307,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1415,12 +1393,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1470,12 +1447,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1545,12 +1521,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1610,12 +1585,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1665,12 +1639,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1764,12 +1737,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1823,12 +1795,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -1883,12 +1854,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -2007,12 +1977,11 @@ class SlidesService(BaseService):
             }
             requests.append(update_request)
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": requests}
                 )
-                .execute()
             )
 
             output_success(
@@ -2052,12 +2021,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -2091,10 +2059,9 @@ class SlidesService(BaseService):
             slide_id: The slide object ID.
         """
         try:
-            presentation = (
+            presentation = self.execute(
                 self.service.presentations()
                 .get(presentationId=presentation_id)
-                .execute()
             )
 
             notes_text = ""
@@ -2148,10 +2115,9 @@ class SlidesService(BaseService):
         """
         try:
             # First, get the presentation to find the notes shape ID
-            presentation = (
+            presentation = self.execute(
                 self.service.presentations()
                 .get(presentationId=presentation_id)
-                .execute()
             )
 
             notes_shape_id = None
@@ -2194,12 +2160,11 @@ class SlidesService(BaseService):
                 },
             ]
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": requests}
                 )
-                .execute()
             )
 
             output_success(
@@ -2289,12 +2254,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
@@ -2369,12 +2333,11 @@ class SlidesService(BaseService):
                 }
             }
 
-            result = (
+            result = self.execute(
                 self.service.presentations()
                 .batchUpdate(
                     presentationId=presentation_id, body={"requests": [request]}
                 )
-                .execute()
             )
 
             output_success(
