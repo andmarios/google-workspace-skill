@@ -3,11 +3,13 @@
 ## Contents
 - [Basic Operations](#basic-operations)
 - [Labels](#labels)
+- [Batch Operations](#batch-operations)
 - [Drafts](#drafts)
 - [Attachments](#attachments)
 - [Threads](#threads)
 - [Settings](#settings)
 - [Filters](#filters)
+- [History/Sync](#historysync)
 
 ## Basic Operations
 
@@ -53,6 +55,9 @@ uv run gws gmail mark-unread <message_id>
 
 # Delete message (moves to trash)
 uv run gws gmail delete <message_id>
+
+# Restore message from trash
+uv run gws gmail untrash <message_id>
 ```
 
 **Gmail search operators**: `is:unread`, `from:`, `to:`, `subject:`, `has:attachment`, `after:`, `before:`
@@ -63,8 +68,28 @@ uv run gws gmail delete <message_id>
 # List all labels
 uv run gws gmail labels
 
+# Get details of a specific label
+uv run gws gmail get-label <label_id>
+
 # Create a new label
 uv run gws gmail create-label "Project X" --visibility labelShow
+
+# Update label name
+uv run gws gmail update-label <label_id> --name "New Name"
+
+# Update label visibility
+uv run gws gmail update-label <label_id> --label-visibility labelHide
+
+# Update label colors
+uv run gws gmail update-label <label_id> --text-color "#ffffff" --background-color "#4285f4"
+
+# Update multiple label properties at once
+uv run gws gmail update-label <label_id> \
+    --name "Important Projects" \
+    --message-visibility show \
+    --label-visibility labelShow \
+    --text-color "#000000" \
+    --background-color "#fad165"
 
 # Delete a label
 uv run gws gmail delete-label <label_id>
@@ -74,6 +99,31 @@ uv run gws gmail add-labels <message_id> "Label1_ID,Label2_ID"
 
 # Remove labels from a message
 uv run gws gmail remove-labels <message_id> "UNREAD,Label_ID"
+```
+
+**Label visibility options:**
+- `--message-visibility`: `show` or `hide` (controls visibility in message list)
+- `--label-visibility`: `labelShow`, `labelShowIfUnread`, or `labelHide` (controls visibility in label list)
+
+## Batch Operations
+
+```bash
+# Add a label to multiple messages at once
+uv run gws gmail batch-modify "msg_id1,msg_id2,msg_id3" --add-labels "Label_ID"
+
+# Remove labels from multiple messages
+uv run gws gmail batch-modify "msg_id1,msg_id2,msg_id3" --remove-labels "UNREAD,INBOX"
+
+# Add and remove labels in one operation
+uv run gws gmail batch-modify "msg_id1,msg_id2" \
+    --add-labels "Label_ID,STARRED" \
+    --remove-labels "UNREAD"
+
+# Archive multiple messages (remove INBOX label)
+uv run gws gmail batch-modify "msg_id1,msg_id2,msg_id3" --remove-labels "INBOX"
+
+# Mark multiple messages as read
+uv run gws gmail batch-modify "msg_id1,msg_id2" --remove-labels "UNREAD"
 ```
 
 ## Drafts
@@ -140,7 +190,12 @@ uv run gws gmail untrash-thread <thread_id>
 
 # Add/remove labels from entire thread
 uv run gws gmail modify-thread-labels <thread_id> --add "IMPORTANT" --remove "UNREAD"
+
+# Permanently delete a thread (cannot be undone)
+uv run gws gmail delete-thread <thread_id>
 ```
+
+**Warning:** `delete-thread` permanently deletes all messages in the thread. This action cannot be undone. Use `trash-thread` if you want to be able to recover the messages.
 
 ## Settings
 
@@ -199,3 +254,39 @@ uv run gws gmail create-filter --from "spam@example.com" --trash
 # Delete a filter
 uv run gws gmail delete-filter <filter_id>
 ```
+
+## History/Sync
+
+The history API enables incremental synchronization by tracking mailbox changes since a specific history ID. This is useful for keeping a local cache in sync without fetching all messages.
+
+```bash
+# Get changes since a history ID
+uv run gws gmail history <start_history_id>
+
+# Limit the number of history records returned
+uv run gws gmail history <start_history_id> --max 50
+
+# Filter by specific change types
+uv run gws gmail history <start_history_id> --types "messageAdded,messageDeleted"
+
+# Only get changes for messages with a specific label
+uv run gws gmail history <start_history_id> --label "INBOX"
+
+# Combine options for targeted sync
+uv run gws gmail history <start_history_id> \
+    --max 200 \
+    --types "labelAdded,labelRemoved" \
+    --label "Label_ID"
+```
+
+**History types:**
+- `messageAdded` - New messages added to the mailbox
+- `messageDeleted` - Messages permanently deleted
+- `labelAdded` - Labels added to messages
+- `labelRemoved` - Labels removed from messages
+
+**Sync workflow:**
+1. On initial sync, use `list` or `search` to get messages and note the `historyId` from the response
+2. On subsequent syncs, call `history` with the last known history ID
+3. Process the returned changes to update your local state
+4. Store the new `historyId` for the next sync

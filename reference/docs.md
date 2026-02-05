@@ -13,6 +13,8 @@
 - [Headers and Footers](#headers-and-footers)
 - [Sections and Document Style](#sections-and-document-style)
 - [Named Ranges (Bookmarks)](#named-ranges-bookmarks)
+- [Images](#images)
+- [Positioned Objects](#positioned-objects)
 - [Footnotes](#footnotes)
 - [Suggestions (Tracked Changes)](#suggestions-tracked-changes)
 
@@ -360,7 +362,47 @@ uv run gws docs delete-named-range <document_id> --name "Section1"
 
 # Delete named range by ID
 uv run gws docs delete-named-range <document_id> --id "kix.abc123"
+
+# Replace content within a named range (useful for templates)
+uv run gws docs replace-named-range <document_id> "New content" --name "Section1"
+
+# Replace by named range ID
+uv run gws docs replace-named-range <document_id> "Updated text" --id "kix.abc123"
 ```
+
+**Template workflow**: Create a document template with named ranges as placeholders (e.g., `{{NAME}}`, `{{DATE}}`), then use `replace-named-range` to fill in values programmatically.
+
+## Images
+
+```bash
+# Insert image from URL (see Basic Operations)
+uv run gws docs insert-image <document_id> "https://example.com/image.png" --width 300
+
+# Insert image after specific text (see Finding Text)
+uv run gws docs insert-image-at-text <document_id> "https://example.com/chart.png" "Figure 1:"
+
+# Replace an existing image with a new one
+uv run gws docs replace-image <document_id> <image_object_id> "https://example.com/new-image.png"
+
+# Replace image with specific method (CENTER_CROP is default)
+uv run gws docs replace-image <document_id> <image_object_id> "https://example.com/new-image.png" --method CENTER_CROP
+```
+
+**Note**: The `image_object_id` can be found in the document structure. Use `replace-image` to update charts, diagrams, or photos without changing their position or size in the document.
+
+## Positioned Objects
+
+Positioned objects are floating elements that can be placed anywhere on a page, including floating images, drawings, and other objects that are not inline with text.
+
+```bash
+# Delete a positioned object (floating image, drawing, etc.)
+uv run gws docs delete-positioned-object <document_id> <object_id>
+
+# Delete positioned object in a specific tab
+uv run gws docs delete-positioned-object <document_id> <object_id> --tab <tab_id>
+```
+
+**Note**: Object IDs for positioned objects can be found in the document structure. Inline images are deleted using the standard `delete` command with their index range.
 
 ## Footnotes
 

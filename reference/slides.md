@@ -13,6 +13,11 @@
 - [Slide Reordering](#slide-reordering)
 - [Speaker Notes](#speaker-notes)
 - [Videos](#videos)
+- [Element Transforms](#element-transforms)
+- [Image Operations](#image-operations)
+- [Grouping](#grouping)
+- [Accessibility](#accessibility)
+- [Embedding](#embedding)
 
 ## Basic Operations
 
@@ -269,3 +274,113 @@ uv run gws slides insert-video <presentation_id> <slide_id> "dQw4w9WgXcQ" \
 uv run gws slides update-video-properties <presentation_id> <video_id> \
     --autoplay --mute --start 10 --end 60
 ```
+
+## Element Transforms
+
+```bash
+# Scale an element (2x horizontal, 1.5x vertical)
+uv run gws slides transform-element <presentation_id> <element_id> \
+    --scale-x 2.0 --scale-y 1.5
+
+# Translate (move) an element
+uv run gws slides transform-element <presentation_id> <element_id> \
+    --translate-x 914400 --translate-y 457200
+
+# Rotate an element 45 degrees
+uv run gws slides transform-element <presentation_id> <element_id> \
+    --rotate 45
+
+# Combine transformations (scale, translate, and rotate)
+uv run gws slides transform-element <presentation_id> <element_id> \
+    --scale-x 1.5 --scale-y 1.5 --translate-x 100000 --rotate 30
+
+# Absolute transformation (replaces existing transform)
+uv run gws slides transform-element <presentation_id> <element_id> \
+    --scale-x 1.0 --scale-y 1.0 --mode ABSOLUTE
+```
+
+**Transform modes**: RELATIVE (applied on top of existing transform), ABSOLUTE (replaces existing transform)
+**Translation units**: EMU (English Metric Units). 914400 EMU = 1 inch = 72 points
+
+## Image Operations
+
+```bash
+# Update image transparency (0.0 = opaque, 1.0 = fully transparent)
+uv run gws slides update-image <presentation_id> <image_id> \
+    --transparency 0.5
+
+# Add outline to image
+uv run gws slides update-image <presentation_id> <image_id> \
+    --outline-color "#000000" --outline-weight 2
+
+# Combine transparency and outline
+uv run gws slides update-image <presentation_id> <image_id> \
+    --transparency 0.3 --outline-color "#1565C0" --outline-weight 1.5
+
+# Replace placeholder shapes with images
+uv run gws slides replace-shapes-with-image <presentation_id> "{{logo}}" \
+    "https://example.com/logo.png"
+
+# Replace with specific scaling method
+uv run gws slides replace-shapes-with-image <presentation_id> "{{photo}}" \
+    "https://example.com/photo.jpg" --method CENTER_CROP
+
+# Replace only on specific pages
+uv run gws slides replace-shapes-with-image <presentation_id> "{{chart}}" \
+    "https://example.com/chart.png" --pages "slide_id1,slide_id2"
+```
+
+**Replace methods**: CENTER_INSIDE (scales to fit, maintains aspect ratio), CENTER_CROP (fills shape, crops excess)
+
+## Grouping
+
+```bash
+# Group multiple elements together
+uv run gws slides group <presentation_id> "element_id1,element_id2,element_id3"
+
+# Group with a custom group ID
+uv run gws slides group <presentation_id> "element_id1,element_id2" \
+    --group-id "my_group_id"
+
+# Ungroup a group
+uv run gws slides ungroup <presentation_id> "group_id"
+
+# Ungroup multiple groups at once
+uv run gws slides ungroup <presentation_id> "group_id1,group_id2"
+```
+
+## Accessibility
+
+```bash
+# Set alt text title only
+uv run gws slides set-alt-text <presentation_id> <element_id> \
+    --title "Company Logo"
+
+# Set detailed description for screen readers
+uv run gws slides set-alt-text <presentation_id> <element_id> \
+    --description "A bar chart showing quarterly revenue growth from Q1 to Q4 2024"
+
+# Set both title and description
+uv run gws slides set-alt-text <presentation_id> <element_id> \
+    --title "Revenue Chart" \
+    --description "Bar chart displaying quarterly revenue: Q1 $1.2M, Q2 $1.5M, Q3 $1.8M, Q4 $2.1M"
+```
+
+## Embedding
+
+```bash
+# Insert a linked chart from Google Sheets
+uv run gws slides insert-sheets-chart <presentation_id> <slide_id> \
+    <spreadsheet_id> <chart_id>
+
+# Insert with custom position and size
+uv run gws slides insert-sheets-chart <presentation_id> <slide_id> \
+    <spreadsheet_id> <chart_id> \
+    --x 50 --y 100 --width 500 --height 350
+
+# Insert as a static image (not linked to spreadsheet)
+uv run gws slides insert-sheets-chart <presentation_id> <slide_id> \
+    <spreadsheet_id> <chart_id> --linking NOT_LINKED_IMAGE
+```
+
+**Linking modes**: LINKED (chart updates when spreadsheet changes), NOT_LINKED_IMAGE (static snapshot)

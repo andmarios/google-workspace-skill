@@ -2,11 +2,15 @@
 
 ## Contents
 - [Basic Operations](#basic-operations)
+- [Calendar Management](#calendar-management)
+- [Event Operations](#event-operations)
 - [Recurring Events](#recurring-events)
 - [Attendees](#attendees)
 - [Free/Busy](#freebusy)
 - [Calendar Sharing (ACL)](#calendar-sharing-acl)
+- [Subscriptions](#subscriptions)
 - [Reminders](#reminders)
+- [Colors](#colors)
 
 ## Basic Operations
 
@@ -36,6 +40,34 @@ uv run gws calendar update <event_id> --summary "Updated Meeting" --location "Ro
 
 # Delete event
 uv run gws calendar delete <event_id>
+```
+
+## Calendar Management
+
+```bash
+# Create a new secondary calendar
+uv run gws calendar create-calendar "Work Projects"
+
+# Create calendar with description and timezone
+uv run gws calendar create-calendar "Team Events" \
+    --description "Shared team calendar" --timezone "America/New_York"
+
+# Delete a secondary calendar (cannot delete primary)
+uv run gws calendar delete-calendar <calendar_id>
+
+# Clear all events from a calendar (works on primary)
+uv run gws calendar clear-calendar
+uv run gws calendar clear-calendar <calendar_id>
+```
+
+## Event Operations
+
+```bash
+# Move an event to a different calendar
+uv run gws calendar move-event <event_id> <destination_calendar_id>
+
+# Move from a specific source calendar (default is primary)
+uv run gws calendar move-event <event_id> <destination_calendar_id> --from <source_calendar_id>
 ```
 
 ## Recurring Events
@@ -121,6 +153,20 @@ uv run gws calendar remove-acl <rule_id>
 **Scope types**: user, group, domain, default
 **Roles**: reader, writer, owner, freeBusyReader
 
+## Subscriptions
+
+```bash
+# Subscribe to a public calendar (add to your calendar list)
+uv run gws calendar subscribe <calendar_id>
+
+# Common public calendars:
+# - en.usa#holiday@group.v.calendar.google.com (US Holidays)
+# - en.uk#holiday@group.v.calendar.google.com (UK Holidays)
+
+# Unsubscribe from a calendar (remove from your calendar list)
+uv run gws calendar unsubscribe <calendar_id>
+```
+
 ## Reminders
 
 ```bash
@@ -145,3 +191,12 @@ uv run gws calendar set-default-reminders "popup:10,email:30"
 
 **Reminder methods**: popup (browser notification), email
 **Minutes**: Time before event (e.g., 10 = 10 minutes before)
+
+## Colors
+
+```bash
+# Get color definitions for calendars and events
+uv run gws calendar colors
+```
+
+Returns color IDs with their hex values. Use these IDs when setting calendar or event colors via the API.

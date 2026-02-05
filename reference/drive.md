@@ -4,9 +4,13 @@
 - [Basic Operations](#basic-operations)
 - [Response Structure](#response-structure)
 - [Comments](#comments)
+- [Replies](#replies)
 - [Revisions](#revisions)
+- [Changes API](#changes-api)
+- [Shared Drives](#shared-drives)
 - [Trash Management](#trash-management)
 - [Permissions](#permissions)
+- [Utilities](#utilities)
 
 ## Basic Operations
 
@@ -101,6 +105,24 @@ uv run gws drive resolve-comment <file_id> <comment_id>
 uv run gws drive delete-comment <file_id> <comment_id>
 ```
 
+## Replies
+
+Replies are responses to comments on a file.
+
+```bash
+# List replies to a comment
+uv run gws drive list-replies <file_id> <comment_id> --max 20
+
+# Get a specific reply
+uv run gws drive get-reply <file_id> <comment_id> <reply_id>
+
+# Update a reply's content
+uv run gws drive update-reply <file_id> <comment_id> <reply_id> "Updated reply text"
+
+# Delete a reply
+uv run gws drive delete-reply <file_id> <comment_id> <reply_id>
+```
+
 ## Revisions
 
 ```bash
@@ -112,7 +134,53 @@ uv run gws drive get-revision <file_id> <revision_id>
 
 # Delete a revision (cannot delete the last remaining revision)
 uv run gws drive delete-revision <file_id> <revision_id>
+
+# Update revision metadata
+uv run gws drive update-revision <file_id> <revision_id> --keep-forever
+
+# Publish a revision (for web-published files)
+uv run gws drive update-revision <file_id> <revision_id> --published
+
+# Enable auto-publish for future revisions
+uv run gws drive update-revision <file_id> <revision_id> --publish-auto
 ```
+
+## Changes API
+
+Track changes to files over time. Useful for syncing or monitoring file activity.
+
+```bash
+# Get a start token for tracking future changes
+uv run gws drive changes-token
+
+# List changes since a token
+uv run gws drive list-changes <page_token> --max 100
+
+# Exclude removed files from results
+uv run gws drive list-changes <page_token> --no-removed
+```
+
+**Workflow**: First call `changes-token` to get a starting point. Store the returned token. Later, call `list-changes` with that token to get all changes since then. The response includes a new token for the next poll.
+
+## Shared Drives
+
+Shared drives (formerly Team Drives) are shared spaces where teams can store files.
+
+```bash
+# List shared drives you have access to
+uv run gws drive list-shared-drives --max 100
+
+# Get shared drive metadata
+uv run gws drive get-shared-drive <drive_id>
+
+# Create a new shared drive
+uv run gws drive create-shared-drive "Team Projects"
+
+# Delete a shared drive (must be empty)
+uv run gws drive delete-shared-drive <drive_id>
+```
+
+**Note**: To work with files in a shared drive, use the standard file commands (list, upload, etc.) with the shared drive ID as the folder.
 
 ## Trash Management
 
@@ -169,3 +237,15 @@ uv run gws drive share <file_id> --email group@example.com --type group --role r
 ```
 
 **Share types**: user, group, domain, anyone (auto-detected from options)
+
+## Utilities
+
+```bash
+# Pre-generate file IDs for use with create operations
+uv run gws drive generate-ids --count 10
+
+# Generate IDs for appDataFolder space
+uv run gws drive generate-ids --count 5 --space appDataFolder
+```
+
+**Use case**: Pre-generating IDs allows you to know a file's ID before creating it, useful for setting up references between files or for resumable uploads.

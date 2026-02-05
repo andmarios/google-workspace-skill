@@ -10,6 +10,7 @@
 - [Freeze Panes](#freeze-panes)
 - [Conditional Formatting](#conditional-formatting)
 - [Row and Column Manipulation](#row-and-column-manipulation)
+- [Data Manipulation](#data-manipulation)
 - [Sorting and Data Operations](#sorting-and-data-operations)
 - [Data Validation](#data-validation)
 - [Charts](#charts)
@@ -209,6 +210,69 @@ uv run gws sheets delete-rows <spreadsheet_id> <sheet_id> 5 8  # Delete rows 5-7
 uv run gws sheets delete-columns <spreadsheet_id> <sheet_id> 0 2  # Delete columns 0-1
 ```
 
+## Data Manipulation
+
+```bash
+# Move rows to a new position (0-indexed)
+uv run gws sheets move-rows <spreadsheet_id> <sheet_id> 5 8 15  # Move rows 5-7 to row 15
+
+# Move columns to a new position
+uv run gws sheets move-columns <spreadsheet_id> <sheet_id> 2 4 0  # Move columns 2-3 to column 0
+
+# Copy a range and paste to another location
+uv run gws sheets copy-paste <spreadsheet_id> \
+    --source-sheet 0 --source-start-row 0 --source-end-row 10 \
+    --source-start-col 0 --source-end-col 3 \
+    --dest-sheet 0 --dest-start-row 20 --dest-start-col 0
+
+# Paste values only (without formatting)
+uv run gws sheets copy-paste <spreadsheet_id> \
+    --source-sheet 0 --source-start-row 0 --source-end-row 10 \
+    --source-start-col 0 --source-end-col 3 \
+    --dest-sheet 1 --dest-start-row 0 --dest-start-col 0 \
+    --paste-type PASTE_VALUES
+
+# Paste formatting only
+uv run gws sheets copy-paste <spreadsheet_id> \
+    --source-sheet 0 --source-start-row 0 --source-end-row 5 \
+    --source-start-col 0 --source-end-col 3 \
+    --dest-sheet 0 --dest-start-row 10 --dest-start-col 0 \
+    --paste-type PASTE_FORMAT
+
+# Auto-fill a range based on source data patterns (like dragging fill handle)
+uv run gws sheets auto-fill <spreadsheet_id> <sheet_id> \
+    --source-start-row 0 --source-end-row 2 --source-start-col 0 --source-end-col 1 \
+    --fill-start-row 0 --fill-end-row 10 --fill-start-col 0 --fill-end-col 1
+
+# Auto-fill with alternate series (e.g., Jan/Feb pattern instead of incrementing)
+uv run gws sheets auto-fill <spreadsheet_id> <sheet_id> \
+    --source-start-row 0 --source-end-row 2 --source-start-col 0 --source-end-col 1 \
+    --fill-start-row 0 --fill-end-row 20 --fill-start-col 0 --fill-end-col 1 \
+    --alternate-series
+
+# Trim whitespace from cells (entire sheet)
+uv run gws sheets trim-whitespace <spreadsheet_id> <sheet_id>
+
+# Trim whitespace from specific range
+uv run gws sheets trim-whitespace <spreadsheet_id> <sheet_id> \
+    --start-row 0 --end-row 100 --start-col 0 --end-col 5
+
+# Split text into columns by delimiter (comma by default)
+uv run gws sheets text-to-columns <spreadsheet_id> <sheet_id> 1 100 0
+
+# Split by semicolon
+uv run gws sheets text-to-columns <spreadsheet_id> <sheet_id> 1 100 0 -d SEMICOLON
+
+# Split by custom delimiter
+uv run gws sheets text-to-columns <spreadsheet_id> <sheet_id> 1 100 0 -d CUSTOM --custom "|"
+
+# Auto-detect delimiter
+uv run gws sheets text-to-columns <spreadsheet_id> <sheet_id> 1 100 0 -d AUTODETECT
+```
+
+**Paste types**: PASTE_NORMAL (values and formatting), PASTE_VALUES (values only), PASTE_FORMAT (formatting only)
+**Delimiter types**: COMMA, SEMICOLON, PERIOD, SPACE, CUSTOM, AUTODETECT
+
 ## Sorting and Data Operations
 
 ```bash
@@ -265,9 +329,23 @@ uv run gws sheets add-chart <spreadsheet_id> <sheet_id> PIE "A1:B5" 5 0
 
 # Delete chart
 uv run gws sheets delete-chart <spreadsheet_id> <chart_id>
+
+# Update chart title
+uv run gws sheets update-chart <spreadsheet_id> <chart_id> --title "New Chart Title"
+
+# Change chart type
+uv run gws sheets update-chart <spreadsheet_id> <chart_id> --type BAR
+
+# Change legend position
+uv run gws sheets update-chart <spreadsheet_id> <chart_id> --legend BOTTOM
+
+# Update multiple properties at once
+uv run gws sheets update-chart <spreadsheet_id> <chart_id> \
+    --title "Monthly Sales" --type LINE --legend RIGHT
 ```
 
 **Chart types**: COLUMN, BAR, LINE, AREA, PIE, SCATTER
+**Legend positions**: TOP, BOTTOM, LEFT, RIGHT, NONE
 
 ## Banding (Alternating Row Colors)
 
@@ -275,6 +353,14 @@ uv run gws sheets delete-chart <spreadsheet_id> <chart_id>
 # Add alternating colors to a range
 uv run gws sheets add-banding <spreadsheet_id> <sheet_id> 0 20 0 5 \
     --header-color "#1565C0" --first-color "#E3F2FD" --second-color "#FFFFFF"
+
+# Update banding colors
+uv run gws sheets update-banding <spreadsheet_id> <banded_range_id> \
+    --header-color "#4285F4" --first-color "#E8F0FE" --second-color "#FFFFFF"
+
+# Update banding with footer color
+uv run gws sheets update-banding <spreadsheet_id> <banded_range_id> \
+    --first-color "#FFF3E0" --second-color "#FFFFFF" --footer-color "#FFE0B2"
 
 # Delete banding
 uv run gws sheets delete-banding <spreadsheet_id> <banding_id>
@@ -294,6 +380,17 @@ uv run gws sheets create-filter-view <spreadsheet_id> <sheet_id> 0 100 0 5 "My F
 
 # List filter views
 uv run gws sheets list-filter-views <spreadsheet_id> <sheet_id>
+
+# Update filter view title
+uv run gws sheets update-filter-view <spreadsheet_id> <filter_view_id> --title "Updated Filter"
+
+# Update filter view range
+uv run gws sheets update-filter-view <spreadsheet_id> <filter_view_id> \
+    --start-row 0 --end-row 200 --start-col 0 --end-col 10
+
+# Update filter view title and range together
+uv run gws sheets update-filter-view <spreadsheet_id> <filter_view_id> \
+    --title "Extended Data View" --start-row 0 --end-row 500
 
 # Delete filter view
 uv run gws sheets delete-filter-view <spreadsheet_id> <filter_view_id>
