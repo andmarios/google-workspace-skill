@@ -19,7 +19,11 @@ class CalendarService(BaseService):
     def list_calendars(self) -> dict[str, Any]:
         """List all accessible calendars."""
         try:
-            result = self.execute(self.service.calendarList().list())
+            result = self.execute(
+                self.service.calendarList().list(
+                    fields="items(id,summary,primary,accessRole,backgroundColor),nextPageToken"
+                )
+            )
 
             calendars = [
                 {
@@ -1127,6 +1131,243 @@ class CalendarService(BaseService):
             output_error(
                 error_code="API_ERROR",
                 operation="calendar.clear_event_reminders",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # CALENDAR MANAGEMENT
+    # =========================================================================
+
+    def create_calendar(
+        self,
+        summary: str,
+        description: str | None = None,
+        timezone: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a new calendar.
+
+        Args:
+            summary: Calendar name/title.
+            description: Calendar description.
+            timezone: Timezone (e.g., 'America/New_York'). Uses user default if not specified.
+        """
+        try:
+            body: dict[str, Any] = {"summary": summary}
+            if description:
+                body["description"] = description
+            if timezone:
+                body["timeZone"] = timezone
+
+            result = self.execute(
+                self.service.calendars().insert(body=body)
+            )
+
+            output_success(
+                operation="calendar.create_calendar",
+                calendar_id=result.get("id"),
+                summary=result.get("summary"),
+                timezone=result.get("timeZone"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.create_calendar",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_calendar(self, calendar_id: str) -> dict[str, Any]:
+        """Delete a secondary calendar.
+
+        Args:
+            calendar_id: The calendar ID to delete. Cannot delete primary calendar.
+        """
+        try:
+            self.execute(self.service.calendars().delete(calendarId=calendar_id))
+
+            output_success(
+                operation="calendar.delete_calendar",
+                calendar_id=calendar_id,
+                deleted=True,
+            )
+            return {"deleted": True, "calendar_id": calendar_id}
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.delete_calendar",
+                    message=f"Calendar not found: {calendar_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.delete_calendar",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def clear_calendar(self, calendar_id: str) -> dict[str, Any]:
+        """Clear all events from a calendar.
+
+        Args:
+            calendar_id: The calendar ID to clear. Only works on primary calendar.
+        """
+        try:
+            self.execute(self.service.calendars().clear(calendarId=calendar_id))
+
+            output_success(
+                operation="calendar.clear_calendar",
+                calendar_id=calendar_id,
+                cleared=True,
+            )
+            return {"cleared": True, "calendar_id": calendar_id}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.clear_calendar",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # EVENT OPERATIONS (extended)
+    # =========================================================================
+
+    def move_event(
+        self,
+        event_id: str,
+        source_calendar_id: str,
+        destination_calendar_id: str,
+    ) -> dict[str, Any]:
+        """Move an event to a different calendar.
+
+        Args:
+            event_id: The event ID to move.
+            source_calendar_id: The source calendar ID.
+            destination_calendar_id: The destination calendar ID.
+        """
+        try:
+            result = self.execute(
+                self.service.events().move(
+                    calendarId=source_calendar_id,
+                    eventId=event_id,
+                    destination=destination_calendar_id,
+                )
+            )
+
+            output_success(
+                operation="calendar.move_event",
+                event_id=event_id,
+                source_calendar_id=source_calendar_id,
+                destination_calendar_id=destination_calendar_id,
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.move_event",
+                    message=f"Event not found: {event_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.move_event",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # COLORS
+    # =========================================================================
+
+    def get_colors(self) -> dict[str, Any]:
+        """Get the color definitions for calendars and events."""
+        try:
+            result = self.execute(self.service.colors().get())
+
+            output_success(
+                operation="calendar.get_colors",
+                calendar_color_count=len(result.get("calendar", {})),
+                event_color_count=len(result.get("event", {})),
+                calendar_colors=result.get("calendar"),
+                event_colors=result.get("event"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.get_colors",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # CALENDAR LIST (subscriptions)
+    # =========================================================================
+
+    def subscribe_calendar(self, calendar_id: str) -> dict[str, Any]:
+        """Subscribe to (add) a public calendar to the user's calendar list.
+
+        Args:
+            calendar_id: The calendar ID to subscribe to.
+        """
+        try:
+            result = self.execute(
+                self.service.calendarList().insert(body={"id": calendar_id})
+            )
+
+            output_success(
+                operation="calendar.subscribe",
+                calendar_id=calendar_id,
+                summary=result.get("summary"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.subscribe",
+                    message=f"Calendar not found: {calendar_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.subscribe",
+                message=f"Calendar API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def unsubscribe_calendar(self, calendar_id: str) -> dict[str, Any]:
+        """Unsubscribe from (remove) a calendar from the user's calendar list.
+
+        Args:
+            calendar_id: The calendar ID to unsubscribe from.
+        """
+        try:
+            self.execute(
+                self.service.calendarList().delete(calendarId=calendar_id)
+            )
+
+            output_success(
+                operation="calendar.unsubscribe",
+                calendar_id=calendar_id,
+                unsubscribed=True,
+            )
+            return {"unsubscribed": True, "calendar_id": calendar_id}
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="calendar.unsubscribe",
+                    message=f"Calendar not found in list: {calendar_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="calendar.unsubscribe",
                 message=f"Calendar API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)

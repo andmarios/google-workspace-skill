@@ -561,3 +561,96 @@ def set_default_reminders(
 
     service = CalendarService()
     service.set_default_reminders(reminders=reminder_list, calendar_id=calendar_id)
+
+
+# ===== Calendar Management =====
+
+
+@app.command("create-calendar")
+def create_calendar(
+    summary: Annotated[str, typer.Argument(help="Calendar name/title.")],
+    description: Annotated[
+        Optional[str],
+        typer.Option("--description", "-d", help="Calendar description."),
+    ] = None,
+    timezone: Annotated[
+        Optional[str],
+        typer.Option("--timezone", "-t", help="Timezone (e.g., 'America/New_York')."),
+    ] = None,
+) -> None:
+    """Create a new calendar."""
+    service = CalendarService()
+    service.create_calendar(summary=summary, description=description, timezone=timezone)
+
+
+@app.command("delete-calendar")
+def delete_calendar(
+    calendar_id: Annotated[str, typer.Argument(help="Calendar ID to delete.")],
+) -> None:
+    """Delete a secondary calendar (cannot delete primary)."""
+    service = CalendarService()
+    service.delete_calendar(calendar_id=calendar_id)
+
+
+@app.command("clear-calendar")
+def clear_calendar(
+    calendar_id: Annotated[
+        str,
+        typer.Argument(help="Calendar ID to clear (works on primary calendar)."),
+    ] = "primary",
+) -> None:
+    """Clear all events from a calendar."""
+    service = CalendarService()
+    service.clear_calendar(calendar_id=calendar_id)
+
+
+# ===== Event Operations (extended) =====
+
+
+@app.command("move-event")
+def move_event(
+    event_id: Annotated[str, typer.Argument(help="Event ID to move.")],
+    destination_calendar_id: Annotated[str, typer.Argument(help="Destination calendar ID.")],
+    source_calendar_id: Annotated[
+        str,
+        typer.Option("--from", "-f", help="Source calendar ID."),
+    ] = "primary",
+) -> None:
+    """Move an event to a different calendar."""
+    service = CalendarService()
+    service.move_event(
+        event_id=event_id,
+        source_calendar_id=source_calendar_id,
+        destination_calendar_id=destination_calendar_id,
+    )
+
+
+# ===== Colors =====
+
+
+@app.command("colors")
+def get_colors() -> None:
+    """Get the color definitions for calendars and events."""
+    service = CalendarService()
+    service.get_colors()
+
+
+# ===== Calendar Subscriptions =====
+
+
+@app.command("subscribe")
+def subscribe_calendar(
+    calendar_id: Annotated[str, typer.Argument(help="Calendar ID to subscribe to.")],
+) -> None:
+    """Subscribe to (add) a public calendar to your calendar list."""
+    service = CalendarService()
+    service.subscribe_calendar(calendar_id=calendar_id)
+
+
+@app.command("unsubscribe")
+def unsubscribe_calendar(
+    calendar_id: Annotated[str, typer.Argument(help="Calendar ID to unsubscribe from.")],
+) -> None:
+    """Unsubscribe from (remove) a calendar from your calendar list."""
+    service = CalendarService()
+    service.unsubscribe_calendar(calendar_id=calendar_id)
