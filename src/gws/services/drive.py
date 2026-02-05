@@ -111,7 +111,12 @@ class DriveService(BaseService):
         try:
             result = self.execute(
                 self.service.files()
-                .create(body=file_metadata, media_body=media, fields=self.FILE_FIELDS)
+                .create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields=self.FILE_FIELDS,
+                    supportsAllDrives=True,
+                )
             )
 
             output_success(
@@ -131,7 +136,9 @@ class DriveService(BaseService):
         """Download a file from Google Drive."""
         try:
             # Get file metadata first
-            file = self.execute(self.service.files().get(fileId=file_id, fields="id, name, mimeType"))
+            file = self.execute(self.service.files().get(
+                fileId=file_id, fields="id, name, mimeType", supportsAllDrives=True
+            ))
 
             # Handle Google native formats (need export)
             if file.get("mimeType", "").startswith("application/vnd.google-apps."):
@@ -223,6 +230,8 @@ class DriveService(BaseService):
                     pageSize=max_results,
                     pageToken=page_token,
                     fields=self.LIST_FIELDS,
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
                 )
             )
 
@@ -262,6 +271,8 @@ class DriveService(BaseService):
                     pageSize=max_results,
                     pageToken=page_token,
                     fields=self.LIST_FIELDS,
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
                 )
             )
 
@@ -291,7 +302,9 @@ class DriveService(BaseService):
                 "createdTime, modifiedTime, size, description, starred, trashed, "
                 "owners, permissions"
             )
-            file = self.execute(self.service.files().get(fileId=file_id, fields=fields))
+            file = self.execute(self.service.files().get(
+                fileId=file_id, fields=fields, supportsAllDrives=True
+            ))
 
             # Format owners and permissions
             owners = [
@@ -342,6 +355,7 @@ class DriveService(BaseService):
                 .create(
                     body=file_metadata,
                     fields="id, name, mimeType, webViewLink, parents, createdTime",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -368,7 +382,9 @@ class DriveService(BaseService):
         """Move a file to a different folder."""
         try:
             # Get current parents
-            file = self.execute(self.service.files().get(fileId=file_id, fields="parents"))
+            file = self.execute(self.service.files().get(
+                fileId=file_id, fields="parents", supportsAllDrives=True
+            ))
             previous_parents = ",".join(file.get("parents", []))
 
             result = self.execute(
@@ -378,6 +394,7 @@ class DriveService(BaseService):
                     addParents=folder_id,
                     removeParents=previous_parents,
                     fields="id, name, parents, webViewLink",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -453,13 +470,14 @@ class DriveService(BaseService):
                     fileId=file_id,
                     body=permission,
                     fields="id, type, role, emailAddress, domain",
+                    supportsAllDrives=True,
                 )
             )
 
             # Get updated file info with sharing link
             file = self.execute(
                 self.service.files()
-                .get(fileId=file_id, fields="webViewLink, webContentLink")
+                .get(fileId=file_id, fields="webViewLink, webContentLink", supportsAllDrives=True)
             )
 
             output_success(
@@ -503,6 +521,7 @@ class DriveService(BaseService):
                     fileId=file_id,
                     body=file_metadata,
                     fields="id, name, mimeType, webViewLink, parents, createdTime",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -550,6 +569,7 @@ class DriveService(BaseService):
                     body=file_metadata if file_metadata else None,
                     media_body=media,
                     fields="id, name, mimeType, webViewLink, modifiedTime, size",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -570,10 +590,10 @@ class DriveService(BaseService):
         """Delete a file (trash or permanent)."""
         try:
             if permanent:
-                self.execute(self.service.files().delete(fileId=file_id))
+                self.execute(self.service.files().delete(fileId=file_id, supportsAllDrives=True))
             else:
                 self.execute(self.service.files().update(
-                    fileId=file_id, body={"trashed": True}
+                    fileId=file_id, body={"trashed": True}, supportsAllDrives=True
                 ))
 
             output_success(
@@ -615,6 +635,7 @@ class DriveService(BaseService):
                     includeDeleted=include_deleted,
                     pageSize=max_results,
                     fields="comments(id,content,author,createdTime,modifiedTime,resolved,replies)",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -662,6 +683,7 @@ class DriveService(BaseService):
                     fileId=file_id,
                     body={"content": content},
                     fields="id,content,author,createdTime",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -699,6 +721,7 @@ class DriveService(BaseService):
                     commentId=comment_id,
                     body={"resolved": True},
                     fields="id,content,resolved",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -729,7 +752,7 @@ class DriveService(BaseService):
         """
         try:
             self.execute(self.service.comments().delete(
-                fileId=file_id, commentId=comment_id
+                fileId=file_id, commentId=comment_id, supportsAllDrives=True
             ))
 
             output_success(
@@ -767,6 +790,7 @@ class DriveService(BaseService):
                     commentId=comment_id,
                     body={"content": content},
                     fields="id,content,author,createdTime",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -807,6 +831,7 @@ class DriveService(BaseService):
                     fileId=file_id,
                     pageSize=max_results,
                     fields="revisions(id,mimeType,modifiedTime,lastModifyingUser,originalFilename,size)",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -853,6 +878,7 @@ class DriveService(BaseService):
                     fileId=file_id,
                     revisionId=revision_id,
                     fields="id,mimeType,modifiedTime,lastModifyingUser,originalFilename,size,keepForever,publishAuto,published",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -886,7 +912,7 @@ class DriveService(BaseService):
         """
         try:
             self.execute(self.service.revisions().delete(
-                fileId=file_id, revisionId=revision_id
+                fileId=file_id, revisionId=revision_id, supportsAllDrives=True
             ))
 
             output_success(
@@ -923,6 +949,8 @@ class DriveService(BaseService):
                     q="trashed=true",
                     pageSize=max_results,
                     fields="files(id,name,mimeType,trashedTime,trashingUser)",
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
                 )
             )
 
@@ -966,6 +994,7 @@ class DriveService(BaseService):
                     fileId=file_id,
                     body={"trashed": False},
                     fields="id,name,mimeType,webViewLink",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -1020,6 +1049,7 @@ class DriveService(BaseService):
                 .list(
                     fileId=file_id,
                     fields="permissions(id,type,role,emailAddress,displayName,domain,expirationTime,deleted)",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -1069,6 +1099,7 @@ class DriveService(BaseService):
                     fileId=file_id,
                     permissionId=permission_id,
                     fields="id,type,role,emailAddress,displayName,domain,expirationTime,deleted,pendingOwner",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -1126,6 +1157,7 @@ class DriveService(BaseService):
                     permissionId=permission_id,
                     body=body,
                     fields="id,type,role,emailAddress,expirationTime",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -1167,6 +1199,7 @@ class DriveService(BaseService):
             self.execute(self.service.permissions().delete(
                 fileId=file_id,
                 permissionId=permission_id,
+                supportsAllDrives=True,
             ))
 
             output_success(
@@ -1214,6 +1247,7 @@ class DriveService(BaseService):
                     },
                     transferOwnership=True,
                     fields="id,emailAddress,role",
+                    supportsAllDrives=True,
                 )
             )
 
@@ -1228,6 +1262,554 @@ class DriveService(BaseService):
             output_error(
                 error_code="API_ERROR",
                 operation="drive.transfer_ownership",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # REPLIES (extended)
+    # =========================================================================
+
+    def list_replies(
+        self,
+        file_id: str,
+        comment_id: str,
+        max_results: int = 20,
+    ) -> dict[str, Any]:
+        """List replies to a comment.
+
+        Args:
+            file_id: The file ID.
+            comment_id: The comment ID.
+            max_results: Maximum replies to return.
+        """
+        try:
+            result = self.execute(
+                self.service.replies()
+                .list(
+                    fileId=file_id,
+                    commentId=comment_id,
+                    pageSize=max_results,
+                    fields="replies(id,content,author,createdTime,modifiedTime)",
+                    supportsAllDrives=True,
+                )
+            )
+
+            replies = []
+            for reply in result.get("replies", []):
+                replies.append({
+                    "reply_id": reply.get("id"),
+                    "content": reply.get("content"),
+                    "author": reply.get("author", {}).get("displayName"),
+                    "created_time": reply.get("createdTime"),
+                    "modified_time": reply.get("modifiedTime"),
+                })
+
+            output_success(
+                operation="drive.list_replies",
+                file_id=file_id,
+                comment_id=comment_id,
+                reply_count=len(replies),
+                replies=replies,
+            )
+            return {"replies": replies}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.list_replies",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_reply(
+        self,
+        file_id: str,
+        comment_id: str,
+        reply_id: str,
+    ) -> dict[str, Any]:
+        """Get a specific reply.
+
+        Args:
+            file_id: The file ID.
+            comment_id: The comment ID.
+            reply_id: The reply ID.
+        """
+        try:
+            result = self.execute(
+                self.service.replies()
+                .get(
+                    fileId=file_id,
+                    commentId=comment_id,
+                    replyId=reply_id,
+                    fields="id,content,author,createdTime,modifiedTime,action",
+                    supportsAllDrives=True,
+                )
+            )
+
+            output_success(
+                operation="drive.get_reply",
+                file_id=file_id,
+                comment_id=comment_id,
+                reply_id=reply_id,
+                content=result.get("content"),
+                author=result.get("author", {}).get("displayName"),
+                created_time=result.get("createdTime"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.get_reply",
+                    message=f"Reply not found: {reply_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.get_reply",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def update_reply(
+        self,
+        file_id: str,
+        comment_id: str,
+        reply_id: str,
+        content: str,
+    ) -> dict[str, Any]:
+        """Update a reply's content.
+
+        Args:
+            file_id: The file ID.
+            comment_id: The comment ID.
+            reply_id: The reply ID.
+            content: New reply content.
+        """
+        try:
+            result = self.execute(
+                self.service.replies()
+                .update(
+                    fileId=file_id,
+                    commentId=comment_id,
+                    replyId=reply_id,
+                    body={"content": content},
+                    fields="id,content,modifiedTime",
+                    supportsAllDrives=True,
+                )
+            )
+
+            output_success(
+                operation="drive.update_reply",
+                file_id=file_id,
+                comment_id=comment_id,
+                reply_id=reply_id,
+                content=result.get("content"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.update_reply",
+                    message=f"Reply not found: {reply_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.update_reply",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_reply(
+        self,
+        file_id: str,
+        comment_id: str,
+        reply_id: str,
+    ) -> dict[str, Any]:
+        """Delete a reply.
+
+        Args:
+            file_id: The file ID.
+            comment_id: The comment ID.
+            reply_id: The reply ID to delete.
+        """
+        try:
+            self.execute(
+                self.service.replies()
+                .delete(
+                    fileId=file_id,
+                    commentId=comment_id,
+                    replyId=reply_id,
+                    supportsAllDrives=True,
+                )
+            )
+
+            output_success(
+                operation="drive.delete_reply",
+                file_id=file_id,
+                comment_id=comment_id,
+                reply_id=reply_id,
+            )
+            return {"file_id": file_id, "comment_id": comment_id, "reply_id": reply_id}
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.delete_reply",
+                    message=f"Reply not found: {reply_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.delete_reply",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # REVISIONS (extended)
+    # =========================================================================
+
+    def update_revision(
+        self,
+        file_id: str,
+        revision_id: str,
+        keep_forever: bool | None = None,
+        published: bool | None = None,
+        publish_auto: bool | None = None,
+    ) -> dict[str, Any]:
+        """Update revision metadata.
+
+        Args:
+            file_id: The file ID.
+            revision_id: The revision ID.
+            keep_forever: Whether to keep this revision forever (prevents auto-deletion).
+            published: Whether this revision is published (for Google Docs/Sheets/Slides).
+            publish_auto: Whether future revisions automatically publish.
+        """
+        try:
+            body: dict[str, Any] = {}
+            if keep_forever is not None:
+                body["keepForever"] = keep_forever
+            if published is not None:
+                body["published"] = published
+            if publish_auto is not None:
+                body["publishAuto"] = publish_auto
+
+            if not body:
+                output_error(
+                    error_code="INVALID_ARGUMENT",
+                    operation="drive.update_revision",
+                    message="At least one update field required (keep_forever, published, publish_auto)",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            result = self.execute(
+                self.service.revisions()
+                .update(
+                    fileId=file_id,
+                    revisionId=revision_id,
+                    body=body,
+                    fields="id,modifiedTime,keepForever,published,publishAuto",
+                    supportsAllDrives=True,
+                )
+            )
+
+            output_success(
+                operation="drive.update_revision",
+                file_id=file_id,
+                revision_id=revision_id,
+                keep_forever=result.get("keepForever"),
+                published=result.get("published"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.update_revision",
+                    message=f"Revision not found: {revision_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.update_revision",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # CHANGES
+    # =========================================================================
+
+    def get_start_page_token(self) -> dict[str, Any]:
+        """Get the starting page token for listing future changes."""
+        try:
+            result = self.execute(
+                self.service.changes()
+                .getStartPageToken(supportsAllDrives=True)
+            )
+
+            output_success(
+                operation="drive.get_start_page_token",
+                start_page_token=result.get("startPageToken"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.get_start_page_token",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def list_changes(
+        self,
+        page_token: str,
+        page_size: int = 100,
+        include_removed: bool = True,
+    ) -> dict[str, Any]:
+        """List changes to files.
+
+        Args:
+            page_token: The token for continuing a previous list request.
+            page_size: Maximum number of changes to return.
+            include_removed: Whether to include deleted files/drives.
+        """
+        try:
+            result = self.execute(
+                self.service.changes()
+                .list(
+                    pageToken=page_token,
+                    pageSize=page_size,
+                    includeRemoved=include_removed,
+                    fields="nextPageToken,newStartPageToken,changes(fileId,changeType,time,removed,file(id,name,mimeType,trashed))",
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
+                )
+            )
+
+            changes = []
+            for change in result.get("changes", []):
+                change_data = {
+                    "file_id": change.get("fileId"),
+                    "change_type": change.get("changeType"),
+                    "time": change.get("time"),
+                    "removed": change.get("removed", False),
+                }
+                if change.get("file"):
+                    change_data["file"] = {
+                        "name": change["file"].get("name"),
+                        "mime_type": change["file"].get("mimeType"),
+                        "trashed": change["file"].get("trashed", False),
+                    }
+                changes.append(change_data)
+
+            output_success(
+                operation="drive.list_changes",
+                change_count=len(changes),
+                next_page_token=result.get("nextPageToken"),
+                new_start_page_token=result.get("newStartPageToken"),
+                changes=changes,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.list_changes",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # SHARED DRIVES
+    # =========================================================================
+
+    def list_shared_drives(
+        self,
+        max_results: int = 100,
+        page_token: str | None = None,
+    ) -> dict[str, Any]:
+        """List shared drives the user has access to.
+
+        Args:
+            max_results: Maximum number of shared drives to return.
+            page_token: Token for pagination.
+        """
+        try:
+            result = self.execute(
+                self.service.drives()
+                .list(
+                    pageSize=max_results,
+                    pageToken=page_token,
+                    fields="nextPageToken,drives(id,name,createdTime,hidden)",
+                )
+            )
+
+            drives = []
+            for drive in result.get("drives", []):
+                drives.append({
+                    "drive_id": drive.get("id"),
+                    "name": drive.get("name"),
+                    "created_time": drive.get("createdTime"),
+                    "hidden": drive.get("hidden", False),
+                })
+
+            output_success(
+                operation="drive.list_shared_drives",
+                drive_count=len(drives),
+                next_page_token=result.get("nextPageToken"),
+                drives=drives,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.list_shared_drives",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def get_shared_drive(self, drive_id: str) -> dict[str, Any]:
+        """Get metadata for a shared drive.
+
+        Args:
+            drive_id: The shared drive ID.
+        """
+        try:
+            result = self.execute(
+                self.service.drives()
+                .get(
+                    driveId=drive_id,
+                    fields="id,name,createdTime,hidden,capabilities,restrictions",
+                )
+            )
+
+            output_success(
+                operation="drive.get_shared_drive",
+                drive_id=drive_id,
+                name=result.get("name"),
+                created_time=result.get("createdTime"),
+                capabilities=result.get("capabilities"),
+                restrictions=result.get("restrictions"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.get_shared_drive",
+                    message=f"Shared drive not found: {drive_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.get_shared_drive",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def create_shared_drive(self, name: str) -> dict[str, Any]:
+        """Create a new shared drive.
+
+        Args:
+            name: Name for the shared drive.
+        """
+        import uuid
+
+        try:
+            result = self.execute(
+                self.service.drives()
+                .create(
+                    requestId=str(uuid.uuid4()),
+                    body={"name": name},
+                    fields="id,name,createdTime",
+                )
+            )
+
+            output_success(
+                operation="drive.create_shared_drive",
+                drive_id=result.get("id"),
+                name=result.get("name"),
+                created_time=result.get("createdTime"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.create_shared_drive",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def delete_shared_drive(self, drive_id: str) -> dict[str, Any]:
+        """Delete a shared drive (must be empty).
+
+        Args:
+            drive_id: The shared drive ID to delete.
+        """
+        try:
+            self.execute(self.service.drives().delete(driveId=drive_id))
+
+            output_success(
+                operation="drive.delete_shared_drive",
+                drive_id=drive_id,
+                deleted=True,
+            )
+            return {"drive_id": drive_id, "deleted": True}
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.delete_shared_drive",
+                    message=f"Shared drive not found: {drive_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.delete_shared_drive",
+                message=f"Google Drive API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # FILE IDS
+    # =========================================================================
+
+    def generate_ids(
+        self,
+        count: int = 10,
+        space: str = "drive",
+    ) -> dict[str, Any]:
+        """Generate file IDs for use with create operations.
+
+        Args:
+            count: Number of IDs to generate (max 1000).
+            space: Space for the IDs ('drive' or 'appDataFolder').
+        """
+        try:
+            result = self.execute(
+                self.service.files()
+                .generateIds(
+                    count=count,
+                    space=space,
+                    fields="ids,space,kind",
+                )
+            )
+
+            output_success(
+                operation="drive.generate_ids",
+                count=len(result.get("ids", [])),
+                space=result.get("space"),
+                ids=result.get("ids"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="drive.generate_ids",
                 message=f"Google Drive API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)

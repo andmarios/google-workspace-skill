@@ -400,3 +400,181 @@ def transfer_ownership(
     """Transfer ownership of a file to another user."""
     service = DriveService()
     service.transfer_ownership(file_id=file_id, new_owner_email=new_owner_email)
+
+
+# ===== Replies (extended) =====
+
+
+@app.command("list-replies")
+def list_replies(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    comment_id: Annotated[str, typer.Argument(help="Comment ID.")],
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum number of replies to return."),
+    ] = 20,
+) -> None:
+    """List replies to a comment."""
+    service = DriveService()
+    service.list_replies(file_id=file_id, comment_id=comment_id, max_results=max_results)
+
+
+@app.command("get-reply")
+def get_reply(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    comment_id: Annotated[str, typer.Argument(help="Comment ID.")],
+    reply_id: Annotated[str, typer.Argument(help="Reply ID.")],
+) -> None:
+    """Get a specific reply."""
+    service = DriveService()
+    service.get_reply(file_id=file_id, comment_id=comment_id, reply_id=reply_id)
+
+
+@app.command("update-reply")
+def update_reply(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    comment_id: Annotated[str, typer.Argument(help="Comment ID.")],
+    reply_id: Annotated[str, typer.Argument(help="Reply ID.")],
+    content: Annotated[str, typer.Argument(help="New reply content.")],
+) -> None:
+    """Update a reply's content."""
+    service = DriveService()
+    service.update_reply(file_id=file_id, comment_id=comment_id, reply_id=reply_id, content=content)
+
+
+@app.command("delete-reply")
+def delete_reply(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    comment_id: Annotated[str, typer.Argument(help="Comment ID.")],
+    reply_id: Annotated[str, typer.Argument(help="Reply ID to delete.")],
+) -> None:
+    """Delete a reply."""
+    service = DriveService()
+    service.delete_reply(file_id=file_id, comment_id=comment_id, reply_id=reply_id)
+
+
+# ===== Revisions (extended) =====
+
+
+@app.command("update-revision")
+def update_revision(
+    file_id: Annotated[str, typer.Argument(help="File ID.")],
+    revision_id: Annotated[str, typer.Argument(help="Revision ID.")],
+    keep_forever: Annotated[
+        Optional[bool],
+        typer.Option("--keep-forever", help="Keep this revision forever."),
+    ] = None,
+    published: Annotated[
+        Optional[bool],
+        typer.Option("--published", help="Publish this revision."),
+    ] = None,
+    publish_auto: Annotated[
+        Optional[bool],
+        typer.Option("--publish-auto", help="Auto-publish future revisions."),
+    ] = None,
+) -> None:
+    """Update revision metadata (keep forever, publish settings)."""
+    service = DriveService()
+    service.update_revision(
+        file_id=file_id,
+        revision_id=revision_id,
+        keep_forever=keep_forever,
+        published=published,
+        publish_auto=publish_auto,
+    )
+
+
+# ===== Changes =====
+
+
+@app.command("changes-token")
+def get_changes_token() -> None:
+    """Get a token for tracking future file changes."""
+    service = DriveService()
+    service.get_start_page_token()
+
+
+@app.command("list-changes")
+def list_changes(
+    page_token: Annotated[str, typer.Argument(help="Page token from changes-token command.")],
+    page_size: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum number of changes to return."),
+    ] = 100,
+    include_removed: Annotated[
+        bool,
+        typer.Option("--include-removed/--no-removed", help="Include removed files."),
+    ] = True,
+) -> None:
+    """List changes to files since the given token."""
+    service = DriveService()
+    service.list_changes(
+        page_token=page_token,
+        page_size=page_size,
+        include_removed=include_removed,
+    )
+
+
+# ===== Shared Drives =====
+
+
+@app.command("list-shared-drives")
+def list_shared_drives(
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum number of drives to return."),
+    ] = 100,
+    page_token: Annotated[
+        Optional[str],
+        typer.Option("--page-token", help="Token for pagination."),
+    ] = None,
+) -> None:
+    """List shared drives the user has access to."""
+    service = DriveService()
+    service.list_shared_drives(max_results=max_results, page_token=page_token)
+
+
+@app.command("get-shared-drive")
+def get_shared_drive(
+    drive_id: Annotated[str, typer.Argument(help="Shared drive ID.")],
+) -> None:
+    """Get metadata for a shared drive."""
+    service = DriveService()
+    service.get_shared_drive(drive_id=drive_id)
+
+
+@app.command("create-shared-drive")
+def create_shared_drive(
+    name: Annotated[str, typer.Argument(help="Name for the shared drive.")],
+) -> None:
+    """Create a new shared drive."""
+    service = DriveService()
+    service.create_shared_drive(name=name)
+
+
+@app.command("delete-shared-drive")
+def delete_shared_drive(
+    drive_id: Annotated[str, typer.Argument(help="Shared drive ID to delete.")],
+) -> None:
+    """Delete a shared drive (must be empty)."""
+    service = DriveService()
+    service.delete_shared_drive(drive_id=drive_id)
+
+
+# ===== File IDs =====
+
+
+@app.command("generate-ids")
+def generate_ids(
+    count: Annotated[
+        int,
+        typer.Option("--count", "-c", help="Number of IDs to generate (max 1000)."),
+    ] = 10,
+    space: Annotated[
+        str,
+        typer.Option("--space", "-s", help="Space for IDs (drive or appDataFolder)."),
+    ] = "drive",
+) -> None:
+    """Generate file IDs for use with create operations."""
+    service = DriveService()
+    service.generate_ids(count=count, space=space)
