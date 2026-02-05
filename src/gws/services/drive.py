@@ -635,7 +635,6 @@ class DriveService(BaseService):
                     includeDeleted=include_deleted,
                     pageSize=max_results,
                     fields="comments(id,content,author,createdTime,modifiedTime,resolved,replies)",
-                    supportsAllDrives=True,
                 )
             )
 
@@ -683,7 +682,6 @@ class DriveService(BaseService):
                     fileId=file_id,
                     body={"content": content},
                     fields="id,content,author,createdTime",
-                    supportsAllDrives=True,
                 )
             )
 
@@ -721,7 +719,6 @@ class DriveService(BaseService):
                     commentId=comment_id,
                     body={"resolved": True},
                     fields="id,content,resolved",
-                    supportsAllDrives=True,
                 )
             )
 
@@ -752,7 +749,7 @@ class DriveService(BaseService):
         """
         try:
             self.execute(self.service.comments().delete(
-                fileId=file_id, commentId=comment_id, supportsAllDrives=True
+                fileId=file_id, commentId=comment_id
             ))
 
             output_success(
@@ -790,7 +787,6 @@ class DriveService(BaseService):
                     commentId=comment_id,
                     body={"content": content},
                     fields="id,content,author,createdTime",
-                    supportsAllDrives=True,
                 )
             )
 
@@ -1291,7 +1287,6 @@ class DriveService(BaseService):
                     commentId=comment_id,
                     pageSize=max_results,
                     fields="replies(id,content,author,createdTime,modifiedTime)",
-                    supportsAllDrives=True,
                 )
             )
 
@@ -1342,7 +1337,6 @@ class DriveService(BaseService):
                     commentId=comment_id,
                     replyId=reply_id,
                     fields="id,content,author,createdTime,modifiedTime,action",
-                    supportsAllDrives=True,
                 )
             )
 
@@ -1395,7 +1389,6 @@ class DriveService(BaseService):
                     replyId=reply_id,
                     body={"content": content},
                     fields="id,content,modifiedTime",
-                    supportsAllDrives=True,
                 )
             )
 
@@ -1442,7 +1435,6 @@ class DriveService(BaseService):
                     fileId=file_id,
                     commentId=comment_id,
                     replyId=reply_id,
-                    supportsAllDrives=True,
                 )
             )
 
