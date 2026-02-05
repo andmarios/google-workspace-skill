@@ -37,34 +37,52 @@ class GmailService(BaseService):
 
             result = self.execute(self.service.users().messages().list(**params))
 
-            messages = []
-            for msg_ref in result.get("messages", []):
-                # Get minimal message info
-                msg = self.execute(
-                    self.service.users()
-                    .messages()
-                    .get(
-                        userId="me",
-                        id=msg_ref["id"],
-                        format="metadata",
-                        metadataHeaders=["From", "To", "Subject", "Date"],
+            messages: list[dict[str, Any]] = []
+            msg_refs = result.get("messages", [])
+
+            if msg_refs:
+                # Use batch request to fetch all messages in one round-trip
+                batch_results: dict[str, Any] = {}
+
+                def handle_response(request_id: str, response: Any, exception: Any) -> None:
+                    if exception is None:
+                        batch_results[request_id] = response
+
+                batch = self.service.new_batch_http_request(callback=handle_response)
+                for msg_ref in msg_refs:
+                    batch.add(
+                        self.service.users()
+                        .messages()
+                        .get(
+                            userId="me",
+                            id=msg_ref["id"],
+                            format="metadata",
+                            metadataHeaders=["From", "To", "Subject", "Date"],
+                        ),
+                        request_id=msg_ref["id"],
                     )
-                )
+                batch.execute()
 
-                headers = {
-                    h["name"]: h["value"]
-                    for h in msg.get("payload", {}).get("headers", [])
-                }
+                # Process batch results in original order
+                for msg_ref in msg_refs:
+                    msg = batch_results.get(msg_ref["id"])
+                    if not msg:
+                        continue
 
-                messages.append({
-                    "id": msg["id"],
-                    "thread_id": msg["threadId"],
-                    "subject": headers.get("Subject", "(no subject)"),
-                    "from": headers.get("From", ""),
-                    "to": headers.get("To", ""),
-                    "date": headers.get("Date", ""),
-                    "snippet": msg.get("snippet", "")[:100],
-                })
+                    headers = {
+                        h["name"]: h["value"]
+                        for h in msg.get("payload", {}).get("headers", [])
+                    }
+
+                    messages.append({
+                        "id": msg["id"],
+                        "thread_id": msg["threadId"],
+                        "subject": headers.get("Subject", "(no subject)"),
+                        "from": headers.get("From", ""),
+                        "to": headers.get("To", ""),
+                        "date": headers.get("Date", ""),
+                        "snippet": msg.get("snippet", "")[:100],
+                    })
 
             output_success(
                 operation="gmail.list",
@@ -1668,6 +1686,277 @@ class GmailService(BaseService):
             output_error(
                 error_code="API_ERROR",
                 operation="gmail.delete_filter",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # ADDITIONAL MESSAGE OPERATIONS
+    # =========================================================================
+
+    def untrash_message(self, message_id: str) -> dict[str, Any]:
+        """Remove a message from trash."""
+        try:
+            result = self.execute(
+                self.service.users()
+                .messages()
+                .untrash(userId="me", id=message_id)
+            )
+
+            output_success(
+                operation="gmail.untrash_message",
+                message_id=message_id,
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="gmail.untrash_message",
+                    message=f"Message not found: {message_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.untrash_message",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def batch_modify_messages(
+        self,
+        message_ids: list[str],
+        add_label_ids: list[str] | None = None,
+        remove_label_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Modify labels on multiple messages at once.
+
+        Args:
+            message_ids: List of message IDs to modify.
+            add_label_ids: Labels to add to all messages.
+            remove_label_ids: Labels to remove from all messages.
+        """
+        try:
+            body: dict[str, Any] = {"ids": message_ids}
+            if add_label_ids:
+                body["addLabelIds"] = add_label_ids
+            if remove_label_ids:
+                body["removeLabelIds"] = remove_label_ids
+
+            self.execute(
+                self.service.users()
+                .messages()
+                .batchModify(userId="me", body=body)
+            )
+
+            output_success(
+                operation="gmail.batch_modify",
+                message_count=len(message_ids),
+                add_label_ids=add_label_ids,
+                remove_label_ids=remove_label_ids,
+            )
+            return {"modified": len(message_ids)}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.batch_modify",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # LABEL OPERATIONS (extended)
+    # =========================================================================
+
+    def get_label(self, label_id: str) -> dict[str, Any]:
+        """Get details of a specific label."""
+        try:
+            result = self.execute(
+                self.service.users()
+                .labels()
+                .get(userId="me", id=label_id)
+            )
+
+            output_success(
+                operation="gmail.get_label",
+                label_id=label_id,
+                name=result.get("name"),
+                label_type=result.get("type"),
+                message_list_visibility=result.get("messageListVisibility"),
+                label_list_visibility=result.get("labelListVisibility"),
+                messages_total=result.get("messagesTotal"),
+                messages_unread=result.get("messagesUnread"),
+                threads_total=result.get("threadsTotal"),
+                threads_unread=result.get("threadsUnread"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="gmail.get_label",
+                    message=f"Label not found: {label_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.get_label",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def update_label(
+        self,
+        label_id: str,
+        name: str | None = None,
+        message_list_visibility: str | None = None,
+        label_list_visibility: str | None = None,
+        text_color: str | None = None,
+        background_color: str | None = None,
+    ) -> dict[str, Any]:
+        """Update a label's properties.
+
+        Args:
+            label_id: The label ID to update.
+            name: New label name.
+            message_list_visibility: 'show' or 'hide' in message list.
+            label_list_visibility: 'labelShow', 'labelShowIfUnread', or 'labelHide'.
+            text_color: Text color (hex, e.g., '#000000').
+            background_color: Background color (hex, e.g., '#ffffff').
+        """
+        try:
+            body: dict[str, Any] = {}
+
+            if name is not None:
+                body["name"] = name
+            if message_list_visibility is not None:
+                body["messageListVisibility"] = message_list_visibility
+            if label_list_visibility is not None:
+                body["labelListVisibility"] = label_list_visibility
+            if text_color is not None or background_color is not None:
+                body["color"] = {}
+                if text_color:
+                    body["color"]["textColor"] = text_color
+                if background_color:
+                    body["color"]["backgroundColor"] = background_color
+
+            if not body:
+                output_error(
+                    error_code="INVALID_ARGUMENT",
+                    operation="gmail.update_label",
+                    message="At least one update field required",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            result = self.execute(
+                self.service.users()
+                .labels()
+                .patch(userId="me", id=label_id, body=body)
+            )
+
+            output_success(
+                operation="gmail.update_label",
+                label_id=label_id,
+                name=result.get("name"),
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="gmail.update_label",
+                    message=f"Label not found: {label_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.update_label",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # THREAD OPERATIONS (extended)
+    # =========================================================================
+
+    def delete_thread(self, thread_id: str) -> dict[str, Any]:
+        """Permanently delete a thread (cannot be undone)."""
+        try:
+            self.execute(
+                self.service.users()
+                .threads()
+                .delete(userId="me", id=thread_id)
+            )
+
+            output_success(
+                operation="gmail.delete_thread",
+                thread_id=thread_id,
+                deleted=True,
+            )
+            return {"deleted": True, "thread_id": thread_id}
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="gmail.delete_thread",
+                    message=f"Thread not found: {thread_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.delete_thread",
+                message=f"Gmail API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # HISTORY
+    # =========================================================================
+
+    def list_history(
+        self,
+        start_history_id: str,
+        max_results: int = 100,
+        history_types: list[str] | None = None,
+        label_id: str | None = None,
+    ) -> dict[str, Any]:
+        """List changes to the mailbox since a given history ID.
+
+        Args:
+            start_history_id: History ID to start from (from a previous sync).
+            max_results: Maximum number of history records to return.
+            history_types: Types to filter (messageAdded, messageDeleted, labelAdded, labelRemoved).
+            label_id: Only return changes to messages with this label.
+        """
+        try:
+            params: dict[str, Any] = {
+                "userId": "me",
+                "startHistoryId": start_history_id,
+                "maxResults": max_results,
+            }
+            if history_types:
+                params["historyTypes"] = history_types
+            if label_id:
+                params["labelId"] = label_id
+
+            result = self.execute(
+                self.service.users()
+                .history()
+                .list(**params)
+            )
+
+            history_records = result.get("history", [])
+            output_success(
+                operation="gmail.list_history",
+                history_count=len(history_records),
+                history_id=result.get("historyId"),
+                next_page_token=result.get("nextPageToken"),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="gmail.list_history",
                 message=f"Gmail API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)

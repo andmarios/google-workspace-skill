@@ -741,3 +741,131 @@ def delete_filter(
     """Delete a mail filter."""
     service = GmailService()
     service.delete_filter(filter_id=filter_id)
+
+
+# ===== Additional Message Operations =====
+
+
+@app.command("untrash")
+def untrash_message(
+    message_id: Annotated[str, typer.Argument(help="Message ID to restore from trash.")],
+) -> None:
+    """Remove a message from trash."""
+    service = GmailService()
+    service.untrash_message(message_id=message_id)
+
+
+@app.command("batch-modify")
+def batch_modify_messages(
+    message_ids: Annotated[str, typer.Argument(help="Comma-separated message IDs.")],
+    add_labels: Annotated[
+        Optional[str],
+        typer.Option("--add-labels", "-a", help="Comma-separated label IDs to add."),
+    ] = None,
+    remove_labels: Annotated[
+        Optional[str],
+        typer.Option("--remove-labels", "-r", help="Comma-separated label IDs to remove."),
+    ] = None,
+) -> None:
+    """Modify labels on multiple messages at once."""
+    ids = [m.strip() for m in message_ids.split(",")]
+    add_label_ids = [label.strip() for label in add_labels.split(",")] if add_labels else None
+    remove_label_ids = [label.strip() for label in remove_labels.split(",")] if remove_labels else None
+
+    service = GmailService()
+    service.batch_modify_messages(
+        message_ids=ids,
+        add_label_ids=add_label_ids,
+        remove_label_ids=remove_label_ids,
+    )
+
+
+# ===== Label Operations (extended) =====
+
+
+@app.command("get-label")
+def get_label(
+    label_id: Annotated[str, typer.Argument(help="Label ID.")],
+) -> None:
+    """Get details of a specific label."""
+    service = GmailService()
+    service.get_label(label_id=label_id)
+
+
+@app.command("update-label")
+def update_label(
+    label_id: Annotated[str, typer.Argument(help="Label ID to update.")],
+    name: Annotated[
+        Optional[str],
+        typer.Option("--name", "-n", help="New label name."),
+    ] = None,
+    message_list_visibility: Annotated[
+        Optional[str],
+        typer.Option("--message-visibility", help="'show' or 'hide' in message list."),
+    ] = None,
+    label_list_visibility: Annotated[
+        Optional[str],
+        typer.Option("--label-visibility", help="'labelShow', 'labelShowIfUnread', or 'labelHide'."),
+    ] = None,
+    text_color: Annotated[
+        Optional[str],
+        typer.Option("--text-color", help="Text color (hex, e.g., '#000000')."),
+    ] = None,
+    background_color: Annotated[
+        Optional[str],
+        typer.Option("--background-color", help="Background color (hex)."),
+    ] = None,
+) -> None:
+    """Update a label's name, visibility, or colors."""
+    service = GmailService()
+    service.update_label(
+        label_id=label_id,
+        name=name,
+        message_list_visibility=message_list_visibility,
+        label_list_visibility=label_list_visibility,
+        text_color=text_color,
+        background_color=background_color,
+    )
+
+
+# ===== Thread Operations (extended) =====
+
+
+@app.command("delete-thread")
+def delete_thread(
+    thread_id: Annotated[str, typer.Argument(help="Thread ID to permanently delete.")],
+) -> None:
+    """Permanently delete a thread (cannot be undone)."""
+    service = GmailService()
+    service.delete_thread(thread_id=thread_id)
+
+
+# ===== History =====
+
+
+@app.command("history")
+def list_history(
+    start_history_id: Annotated[str, typer.Argument(help="History ID to start from.")],
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum number of history records."),
+    ] = 100,
+    history_types: Annotated[
+        Optional[str],
+        typer.Option("--types", "-t", help="Comma-separated types (messageAdded,messageDeleted,labelAdded,labelRemoved)."),
+    ] = None,
+    label_id: Annotated[
+        Optional[str],
+        typer.Option("--label", "-l", help="Only return changes to messages with this label."),
+    ] = None,
+) -> None:
+    """List changes to the mailbox since a given history ID."""
+    types = [t.strip() for t in history_types.split(",")] if history_types else None
+
+    service = GmailService()
+    service.list_history(
+        start_history_id=start_history_id,
+        max_results=max_results,
+        history_types=types,
+        label_id=label_id,
+    )
