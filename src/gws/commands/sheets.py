@@ -1242,3 +1242,277 @@ def delete_named_range(
         spreadsheet_id=spreadsheet_id,
         named_range_id=named_range_id,
     )
+
+
+# ===== Chart Updates =====
+
+
+@app.command("update-chart")
+def update_chart(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    chart_id: Annotated[int, typer.Argument(help="Chart ID to update.")],
+    title: Annotated[
+        Optional[str],
+        typer.Option("--title", "-t", help="New chart title."),
+    ] = None,
+    chart_type: Annotated[
+        Optional[str],
+        typer.Option("--type", help="Chart type (LINE, BAR, COLUMN, AREA, SCATTER, PIE)."),
+    ] = None,
+    legend_position: Annotated[
+        Optional[str],
+        typer.Option("--legend", help="Legend position (TOP, BOTTOM, LEFT, RIGHT, NONE)."),
+    ] = None,
+) -> None:
+    """Update a chart's title, type, or legend position."""
+    service = SheetsService()
+    service.update_chart(
+        spreadsheet_id=spreadsheet_id,
+        chart_id=chart_id,
+        title=title,
+        chart_type=chart_type,
+        legend_position=legend_position,
+    )
+
+
+# ===== Row/Column Movement =====
+
+
+@app.command("move-rows")
+def move_rows(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    source_start: Annotated[int, typer.Argument(help="Source start row (0-indexed).")],
+    source_end: Annotated[int, typer.Argument(help="Source end row (exclusive).")],
+    destination_index: Annotated[int, typer.Argument(help="Destination row index (0-indexed).")],
+) -> None:
+    """Move rows to a new position."""
+    service = SheetsService()
+    service.move_rows(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        source_start=source_start,
+        source_end=source_end,
+        destination_index=destination_index,
+    )
+
+
+@app.command("move-columns")
+def move_columns(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    source_start: Annotated[int, typer.Argument(help="Source start column (0-indexed).")],
+    source_end: Annotated[int, typer.Argument(help="Source end column (exclusive).")],
+    destination_index: Annotated[int, typer.Argument(help="Destination column index (0-indexed).")],
+) -> None:
+    """Move columns to a new position."""
+    service = SheetsService()
+    service.move_columns(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        source_start=source_start,
+        source_end=source_end,
+        destination_index=destination_index,
+    )
+
+
+# ===== Copy/Paste & Auto-Fill =====
+
+
+@app.command("copy-paste")
+def copy_paste(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    source_sheet_id: Annotated[int, typer.Option("--source-sheet", help="Source sheet ID.")],
+    source_start_row: Annotated[int, typer.Option("--source-start-row", help="Source start row.")],
+    source_end_row: Annotated[int, typer.Option("--source-end-row", help="Source end row.")],
+    source_start_col: Annotated[int, typer.Option("--source-start-col", help="Source start column.")],
+    source_end_col: Annotated[int, typer.Option("--source-end-col", help="Source end column.")],
+    dest_sheet_id: Annotated[int, typer.Option("--dest-sheet", help="Destination sheet ID.")],
+    dest_start_row: Annotated[int, typer.Option("--dest-start-row", help="Destination start row.")],
+    dest_start_col: Annotated[int, typer.Option("--dest-start-col", help="Destination start column.")],
+    paste_type: Annotated[
+        str,
+        typer.Option("--paste-type", help="What to paste (PASTE_NORMAL, PASTE_VALUES, PASTE_FORMAT)."),
+    ] = "PASTE_NORMAL",
+) -> None:
+    """Copy a range and paste it to another location."""
+    service = SheetsService()
+    service.copy_paste(
+        spreadsheet_id=spreadsheet_id,
+        source_sheet_id=source_sheet_id,
+        source_start_row=source_start_row,
+        source_end_row=source_end_row,
+        source_start_col=source_start_col,
+        source_end_col=source_end_col,
+        dest_sheet_id=dest_sheet_id,
+        dest_start_row=dest_start_row,
+        dest_start_col=dest_start_col,
+        paste_type=paste_type,
+    )
+
+
+@app.command("auto-fill")
+def auto_fill(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    source_start_row: Annotated[int, typer.Option("--source-start-row", help="Source start row.")],
+    source_end_row: Annotated[int, typer.Option("--source-end-row", help="Source end row.")],
+    source_start_col: Annotated[int, typer.Option("--source-start-col", help="Source start column.")],
+    source_end_col: Annotated[int, typer.Option("--source-end-col", help="Source end column.")],
+    fill_start_row: Annotated[int, typer.Option("--fill-start-row", help="Fill start row.")],
+    fill_end_row: Annotated[int, typer.Option("--fill-end-row", help="Fill end row.")],
+    fill_start_col: Annotated[int, typer.Option("--fill-start-col", help="Fill start column.")],
+    fill_end_col: Annotated[int, typer.Option("--fill-end-col", help="Fill end column.")],
+    use_alternate_series: Annotated[
+        bool,
+        typer.Option("--alternate-series", help="Use alternate series for fill."),
+    ] = False,
+) -> None:
+    """Auto-fill a range based on source data patterns."""
+    service = SheetsService()
+    service.auto_fill(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        source_start_row=source_start_row,
+        source_end_row=source_end_row,
+        source_start_col=source_start_col,
+        source_end_col=source_end_col,
+        fill_start_row=fill_start_row,
+        fill_end_row=fill_end_row,
+        fill_start_col=fill_start_col,
+        fill_end_col=fill_end_col,
+        use_alternate_series=use_alternate_series,
+    )
+
+
+# ===== Data Cleanup =====
+
+
+@app.command("trim-whitespace")
+def trim_whitespace(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Option("--start-row", help="Start row (0-indexed).")] = 0,
+    end_row: Annotated[
+        Optional[int],
+        typer.Option("--end-row", help="End row (exclusive), omit for entire sheet."),
+    ] = None,
+    start_col: Annotated[int, typer.Option("--start-col", help="Start column (0-indexed).")] = 0,
+    end_col: Annotated[
+        Optional[int],
+        typer.Option("--end-col", help="End column (exclusive), omit for entire sheet."),
+    ] = None,
+) -> None:
+    """Trim leading and trailing whitespace from cells."""
+    service = SheetsService()
+    service.trim_whitespace(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+    )
+
+
+@app.command("text-to-columns")
+def text_to_columns(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    sheet_id: Annotated[int, typer.Argument(help="Sheet ID (numeric).")],
+    start_row: Annotated[int, typer.Argument(help="Start row (0-indexed).")],
+    end_row: Annotated[int, typer.Argument(help="End row (exclusive).")],
+    source_column: Annotated[int, typer.Argument(help="Column to split (0-indexed).")],
+    delimiter_type: Annotated[
+        str,
+        typer.Option("--delimiter", "-d", help="Delimiter type (COMMA, SEMICOLON, PERIOD, SPACE, CUSTOM, AUTODETECT)."),
+    ] = "COMMA",
+    custom_delimiter: Annotated[
+        Optional[str],
+        typer.Option("--custom", help="Custom delimiter (required if delimiter type is CUSTOM)."),
+    ] = None,
+) -> None:
+    """Split text in a column into multiple columns by delimiter."""
+    service = SheetsService()
+    service.text_to_columns(
+        spreadsheet_id=spreadsheet_id,
+        sheet_id=sheet_id,
+        start_row=start_row,
+        end_row=end_row,
+        source_column=source_column,
+        delimiter_type=delimiter_type,
+        custom_delimiter=custom_delimiter,
+    )
+
+
+# ===== Banding & Filter View Updates =====
+
+
+@app.command("update-banding")
+def update_banding(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    banded_range_id: Annotated[int, typer.Argument(help="Banded range ID to update.")],
+    header_color: Annotated[
+        Optional[str],
+        typer.Option("--header-color", help="Header row color (hex, e.g., '#4285F4')."),
+    ] = None,
+    first_band_color: Annotated[
+        Optional[str],
+        typer.Option("--first-color", help="First alternating band color (hex)."),
+    ] = None,
+    second_band_color: Annotated[
+        Optional[str],
+        typer.Option("--second-color", help="Second alternating band color (hex)."),
+    ] = None,
+    footer_color: Annotated[
+        Optional[str],
+        typer.Option("--footer-color", help="Footer row color (hex)."),
+    ] = None,
+) -> None:
+    """Update banding colors on a range."""
+    service = SheetsService()
+    service.update_banding(
+        spreadsheet_id=spreadsheet_id,
+        banded_range_id=banded_range_id,
+        header_color=header_color,
+        first_band_color=first_band_color,
+        second_band_color=second_band_color,
+        footer_color=footer_color,
+    )
+
+
+@app.command("update-filter-view")
+def update_filter_view(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    filter_view_id: Annotated[int, typer.Argument(help="Filter view ID to update.")],
+    title: Annotated[
+        Optional[str],
+        typer.Option("--title", "-t", help="New filter view title."),
+    ] = None,
+    start_row: Annotated[
+        Optional[int],
+        typer.Option("--start-row", help="New start row (0-indexed)."),
+    ] = None,
+    end_row: Annotated[
+        Optional[int],
+        typer.Option("--end-row", help="New end row (exclusive)."),
+    ] = None,
+    start_col: Annotated[
+        Optional[int],
+        typer.Option("--start-col", help="New start column (0-indexed)."),
+    ] = None,
+    end_col: Annotated[
+        Optional[int],
+        typer.Option("--end-col", help="New end column (exclusive)."),
+    ] = None,
+) -> None:
+    """Update a filter view's title or range."""
+    service = SheetsService()
+    service.update_filter_view(
+        spreadsheet_id=spreadsheet_id,
+        filter_view_id=filter_view_id,
+        title=title,
+        start_row=start_row,
+        end_row=end_row,
+        start_col=start_col,
+        end_col=end_col,
+    )
