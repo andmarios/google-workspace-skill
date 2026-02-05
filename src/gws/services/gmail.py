@@ -133,6 +133,7 @@ class GmailService(BaseService):
                 },
                 message_id=message_id,
                 thread_id=msg["threadId"],
+                history_id=msg.get("historyId"),
                 from_address=headers.get("From", ""),
                 to_address=headers.get("To", ""),
                 cc=headers.get("Cc", ""),
