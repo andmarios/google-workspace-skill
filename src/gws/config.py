@@ -56,11 +56,12 @@ class Config:
             "list", "read", "search", "labels", "drafts", "get-draft",
             "list-attachments", "download-attachment", "threads", "get-thread",
             "get-vacation", "get-signature", "filters", "get-filter",
+            "get-label", "history",
         ],
         "docs": [
-            "list-tabs", "get-tab", "read", "structure", "list-tables",
+            "list-tabs", "read", "structure", "list-tables",
             "list-headers-footers", "find-text", "list-named-ranges",
-            "list-footnotes", "suggestions", "get-page-format",
+            "list-footnotes", "suggestions", "get-page-format", "document-mode",
         ],
         "sheets": [
             "metadata", "read", "batch-get", "list-filter-views",
@@ -70,13 +71,17 @@ class Config:
         "drive": [
             "list", "search", "get", "download", "export", "list-comments",
             "list-revisions", "get-revision", "list-trash", "list-permissions",
-            "get-permission",
+            "get-permission", "list-replies", "get-reply", "changes-token",
+            "list-changes", "list-shared-drives", "get-shared-drive", "generate-ids",
         ],
         "calendar": [
             "calendars", "list", "get", "instances", "attendees", "freebusy",
-            "list-acl", "get-reminders", "get-default-reminders",
+            "list-acl", "get-reminders", "get-default-reminders", "colors",
         ],
-        "contacts": ["list", "get", "groups", "get-group", "get-photo"],
+        "contacts": [
+            "list", "get", "groups", "get-group", "get-photo",
+            "search-directory", "list-directory", "batch-get",
+        ],
         "convert": [],
     }
 
