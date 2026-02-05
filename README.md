@@ -6,13 +6,13 @@ A Claude Code skill for managing Google Workspace: Docs, Sheets, Slides, Drive, 
 
 | Service | Operations |
 |---------|-----------|
-| **Docs** | Read, create, edit, and format documents |
-| **Sheets** | Read/write data, format cells, manage sheets |
-| **Slides** | Create slides, add text and images, format content |
-| **Drive** | Upload, download, search, share, and organize files |
-| **Gmail** | Read, send, reply to, and search messages |
-| **Calendar** | View and create events, manage schedules |
-| **Contacts** | List and manage contacts |
+| **Docs** | Read, create, edit, format documents, tables, headers/footers, images, named ranges |
+| **Sheets** | Read/write data, format cells, manage sheets, move/copy data, charts, conditional formatting |
+| **Slides** | Create slides, text, images, shapes, tables, transforms, grouping, Sheets chart embedding |
+| **Drive** | Upload, download, search, share, comments, replies, shared drives, change tracking |
+| **Gmail** | Read, send, reply, search, history sync, batch label operations, label management |
+| **Calendar** | View/create events, manage calendars, move events, color definitions, subscriptions |
+| **Contacts** | List, manage contacts and groups, photos, directory search (Workspace), batch operations |
 | **Convert** | Transform Markdown to Docs, Slides, or PDF (with diagrams) |
 
 ## Installation
