@@ -3,7 +3,7 @@ name: google-workspace
 description: Manage Google Workspace with Docs, Sheets, Slides, Drive, Gmail, Calendar, and Contacts. Create professional documents, engaging presentations, reports from markdown. Convert markdown to Google Docs/Slides/PDF. Full editing, formatting, file management, email, and scheduling.
 category: productivity
 version: 1.0.0
-key_capabilities: Docs (read/edit/format), Sheets (read/write/format), Slides (create/edit), Drive (upload/download/share), Gmail (send/search), Calendar (events), Contacts (manage), Convert (markdown)
+key_capabilities: Docs (read/edit/format/named-ranges), Sheets (read/write/format/manipulate), Slides (create/edit/transform/embed), Drive (files/comments/shared-drives/changes), Gmail (send/search/sync/batch), Calendar (events/calendars/colors), Contacts (manage/groups/directory), Convert (markdown)
 when_to_use: Document operations, spreadsheet data, presentations, Drive file management, email, calendar events, contacts
 allowed_tools:
   - Bash(uv run gws:*)
@@ -17,19 +17,19 @@ Manage Google Workspace documents, spreadsheets, presentations, drive files, ema
 
 ## Purpose
 
-**Google Docs:** Read, create, insert/append text, find-replace, format (text, paragraph, extended), tables (insert, style, merge, row/column ops), headers/footers, lists/bullets, page breaks, section breaks, document styling, images
+**Google Docs:** Read, create, insert/append text, find-replace, format (text, paragraph, extended), tables (insert, style, merge, row/column ops), headers/footers, lists/bullets, page breaks, section breaks, document styling, images, named range replacement
 
-**Google Sheets:** Read, create, write/append data, full cell formatting (fonts, colors, alignment, number formats), borders, merge/unmerge cells, row/column sizing, freeze panes, conditional formatting (rules and color scales)
+**Google Sheets:** Read, create, write/append data, full cell formatting (fonts, colors, alignment, number formats), borders, merge/unmerge cells, row/column sizing, freeze panes, conditional formatting, move rows/columns, copy-paste, auto-fill, trim whitespace, text-to-columns, chart updates
 
-**Google Slides:** Read, create presentations, add/delete slides, text boxes, images, full text formatting (fonts, colors, effects, superscript/subscript, links), paragraph formatting (alignment, spacing, indentation), shapes (create and style), tables (insert, style cells, add/delete rows/columns)
+**Google Slides:** Read, create presentations, add/delete slides, text boxes, images, full text formatting (fonts, colors, effects, superscript/subscript, links), paragraph formatting (alignment, spacing, indentation), shapes (create and style), tables, element transforms (scale/rotate), grouping, alt text, Sheets chart embedding
 
-**Google Drive:** Upload, download, search, share, create folders, move, copy, delete
+**Google Drive:** Upload, download, search, share, create folders, move, copy, delete, comments, replies, shared drives, change tracking, revision management
 
-**Gmail:** List, read, send, reply, search emails
+**Gmail:** List, read, send, reply, search emails, history sync, batch label operations, label management
 
-**Calendar:** List calendars, create/update/delete events
+**Calendar:** List calendars, create/update/delete calendars, events, move events, color definitions, subscriptions
 
-**Contacts:** List, create, update, delete contacts (People API)
+**Contacts:** List, create, update, delete contacts, groups, photos, directory search (Workspace), batch operations
 
 **Convert:** Markdown to Google Docs, Slides, or PDF
 
