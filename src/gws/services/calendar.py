@@ -86,7 +86,7 @@ class CalendarService(BaseService):
                 start = event.get("start", {})
                 end = event.get("end", {})
 
-                events.append({
+                event_data: dict[str, Any] = {
                     "id": event["id"],
                     "summary": event.get("summary", "(no title)"),
                     "start": start.get("dateTime", start.get("date", "")),
@@ -95,7 +95,11 @@ class CalendarService(BaseService):
                     "description": event.get("description", "")[:200] if event.get("description") else "",
                     "status": event.get("status", ""),
                     "html_link": event.get("htmlLink", ""),
-                })
+                }
+                # Include colorId if event has a custom color
+                if "colorId" in event:
+                    event_data["color_id"] = event["colorId"]
+                events.append(event_data)
 
             output_success(
                 operation="calendar.list",
