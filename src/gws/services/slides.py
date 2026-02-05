@@ -2354,3 +2354,472 @@ class SlidesService(BaseService):
                 message=f"Google Slides API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # ELEMENT TRANSFORMS
+    # =========================================================================
+
+    def transform_element(
+        self,
+        presentation_id: str,
+        object_id: str,
+        scale_x: float | None = None,
+        scale_y: float | None = None,
+        translate_x: float | None = None,
+        translate_y: float | None = None,
+        rotate: float | None = None,
+        apply_mode: str = "RELATIVE",
+    ) -> dict[str, Any]:
+        """Transform a page element (scale, translate, rotate).
+
+        Args:
+            presentation_id: The presentation ID.
+            object_id: The element object ID.
+            scale_x: Horizontal scale factor.
+            scale_y: Vertical scale factor.
+            translate_x: Horizontal translation in EMU.
+            translate_y: Vertical translation in EMU.
+            rotate: Rotation angle in degrees.
+            apply_mode: 'RELATIVE' (add to current) or 'ABSOLUTE' (replace).
+        """
+        try:
+            # Build transform matrix
+            transform: dict[str, Any] = {"unit": "EMU"}
+
+            if scale_x is not None:
+                transform["scaleX"] = scale_x
+            if scale_y is not None:
+                transform["scaleY"] = scale_y
+            if translate_x is not None:
+                transform["translateX"] = translate_x
+            if translate_y is not None:
+                transform["translateY"] = translate_y
+
+            # Rotation requires converting degrees to affine transform
+            # For simplicity, we handle rotation as shearX/shearY if provided
+            if rotate is not None:
+                import math
+                rad = math.radians(rotate)
+                cos_r = math.cos(rad)
+                sin_r = math.sin(rad)
+                transform["scaleX"] = transform.get("scaleX", 1.0) * cos_r
+                transform["scaleY"] = transform.get("scaleY", 1.0) * cos_r
+                transform["shearX"] = -sin_r
+                transform["shearY"] = sin_r
+
+            if len(transform) == 1:  # Only 'unit'
+                output_error(
+                    error_code="INVALID_ARGUMENT",
+                    operation="slides.transform_element",
+                    message="At least one transform parameter required",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            request = {
+                "updatePageElementTransform": {
+                    "objectId": object_id,
+                    "transform": transform,
+                    "applyMode": apply_mode,
+                }
+            }
+
+            result = self.execute(
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+            )
+
+            output_success(
+                operation="slides.transform_element",
+                presentation_id=presentation_id,
+                object_id=object_id,
+                apply_mode=apply_mode,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.transform_element",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # IMAGE PROPERTIES
+    # =========================================================================
+
+    def update_image_properties(
+        self,
+        presentation_id: str,
+        object_id: str,
+        transparency: float | None = None,
+        outline_color: str | None = None,
+        outline_weight: float | None = None,
+    ) -> dict[str, Any]:
+        """Update image properties.
+
+        Args:
+            presentation_id: The presentation ID.
+            object_id: The image element object ID.
+            transparency: Image transparency (0.0 = opaque, 1.0 = fully transparent).
+            outline_color: Outline color (hex, e.g., '#000000').
+            outline_weight: Outline weight in points.
+        """
+        try:
+            from gws.utils.colors import parse_hex_color
+
+            image_properties: dict[str, Any] = {}
+            fields = []
+
+            if transparency is not None:
+                image_properties["transparency"] = transparency
+                fields.append("transparency")
+
+            if outline_color is not None or outline_weight is not None:
+                outline: dict[str, Any] = {}
+                if outline_color:
+                    rgb = parse_hex_color(outline_color)
+                    outline["outlineFill"] = {
+                        "solidFill": {
+                            "color": {"rgbColor": rgb}
+                        }
+                    }
+                    fields.append("outline.outlineFill.solidFill.color")
+                if outline_weight is not None:
+                    outline["weight"] = {"magnitude": outline_weight, "unit": "PT"}
+                    fields.append("outline.weight")
+                image_properties["outline"] = outline
+
+            if not fields:
+                output_error(
+                    error_code="INVALID_ARGUMENT",
+                    operation="slides.update_image_properties",
+                    message="At least one image property required",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            request = {
+                "updateImageProperties": {
+                    "objectId": object_id,
+                    "imageProperties": image_properties,
+                    "fields": ",".join(fields),
+                }
+            }
+
+            result = self.execute(
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+            )
+
+            output_success(
+                operation="slides.update_image_properties",
+                presentation_id=presentation_id,
+                object_id=object_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.update_image_properties",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # GROUPING
+    # =========================================================================
+
+    def group_objects(
+        self,
+        presentation_id: str,
+        children_object_ids: list[str],
+        group_object_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Group multiple page elements.
+
+        Args:
+            presentation_id: The presentation ID.
+            children_object_ids: List of object IDs to group.
+            group_object_id: Optional ID for the new group (auto-generated if not provided).
+        """
+        import uuid
+
+        try:
+            request: dict[str, Any] = {
+                "groupObjects": {
+                    "groupObjectId": group_object_id or f"group_{uuid.uuid4().hex[:8]}",
+                    "childrenObjectIds": children_object_ids,
+                }
+            }
+
+            result = self.execute(
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+            )
+
+            output_success(
+                operation="slides.group_objects",
+                presentation_id=presentation_id,
+                group_object_id=request["groupObjects"]["groupObjectId"],
+                children_count=len(children_object_ids),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.group_objects",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def ungroup_objects(
+        self,
+        presentation_id: str,
+        group_object_ids: list[str],
+    ) -> dict[str, Any]:
+        """Ungroup one or more groups.
+
+        Args:
+            presentation_id: The presentation ID.
+            group_object_ids: List of group object IDs to ungroup.
+        """
+        try:
+            requests = [
+                {"ungroupObjects": {"objectIds": group_object_ids}}
+            ]
+
+            result = self.execute(
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": requests}
+                )
+            )
+
+            output_success(
+                operation="slides.ungroup_objects",
+                presentation_id=presentation_id,
+                ungrouped_count=len(group_object_ids),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.ungroup_objects",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # SHAPE REPLACEMENT
+    # =========================================================================
+
+    def replace_shapes_with_image(
+        self,
+        presentation_id: str,
+        contains_text: str,
+        image_url: str,
+        image_replace_method: str = "CENTER_INSIDE",
+        page_object_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Replace all shapes containing specific text with an image.
+
+        Args:
+            presentation_id: The presentation ID.
+            contains_text: Text to search for in shapes.
+            image_url: URL of the image to insert.
+            image_replace_method: How to replace ('CENTER_INSIDE' or 'CENTER_CROP').
+            page_object_ids: Optional list of page IDs to limit the search.
+        """
+        try:
+            request: dict[str, Any] = {
+                "replaceAllShapesWithImage": {
+                    "containsText": {
+                        "text": contains_text,
+                        "matchCase": False,
+                    },
+                    "imageUrl": image_url,
+                    "imageReplaceMethod": image_replace_method,
+                }
+            }
+
+            if page_object_ids:
+                request["replaceAllShapesWithImage"]["pageObjectIds"] = page_object_ids
+
+            result = self.execute(
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+            )
+
+            # Get replacement count from response
+            replies = result.get("replies", [{}])
+            occurrences = replies[0].get("replaceAllShapesWithImage", {}).get("occurrencesChanged", 0)
+
+            output_success(
+                operation="slides.replace_shapes_with_image",
+                presentation_id=presentation_id,
+                contains_text=contains_text,
+                occurrences_replaced=occurrences,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.replace_shapes_with_image",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # ACCESSIBILITY
+    # =========================================================================
+
+    def set_alt_text(
+        self,
+        presentation_id: str,
+        object_id: str,
+        title: str | None = None,
+        description: str | None = None,
+    ) -> dict[str, Any]:
+        """Set alt text (accessibility text) on a page element.
+
+        Args:
+            presentation_id: The presentation ID.
+            object_id: The element object ID.
+            title: Brief title for the element.
+            description: Detailed description for screen readers.
+        """
+        try:
+            alt_text: dict[str, Any] = {}
+            fields = []
+
+            if title is not None:
+                alt_text["title"] = title
+                fields.append("title")
+            if description is not None:
+                alt_text["description"] = description
+                fields.append("description")
+
+            if not fields:
+                output_error(
+                    error_code="INVALID_ARGUMENT",
+                    operation="slides.set_alt_text",
+                    message="At least one of title or description required",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            request = {
+                "updatePageElementAltText": {
+                    "objectId": object_id,
+                    **alt_text,
+                }
+            }
+
+            result = self.execute(
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+            )
+
+            output_success(
+                operation="slides.set_alt_text",
+                presentation_id=presentation_id,
+                object_id=object_id,
+                updated_fields=fields,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.set_alt_text",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # EMBEDDED CHARTS
+    # =========================================================================
+
+    def insert_sheets_chart(
+        self,
+        presentation_id: str,
+        page_object_id: str,
+        spreadsheet_id: str,
+        chart_id: int,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        linking_mode: str = "LINKED",
+    ) -> dict[str, Any]:
+        """Insert a chart from Google Sheets.
+
+        Args:
+            presentation_id: The presentation ID.
+            page_object_id: The page (slide) to insert on.
+            spreadsheet_id: The source spreadsheet ID.
+            chart_id: The chart ID in the spreadsheet.
+            x: X position in points from top-left.
+            y: Y position in points from top-left.
+            width: Width in points.
+            height: Height in points.
+            linking_mode: 'LINKED' (updates with source) or 'NOT_LINKED_IMAGE' (static).
+        """
+        import uuid
+
+        try:
+            element_id = f"chart_{uuid.uuid4().hex[:8]}"
+
+            request = {
+                "createSheetsChart": {
+                    "objectId": element_id,
+                    "spreadsheetId": spreadsheet_id,
+                    "chartId": chart_id,
+                    "linkingMode": linking_mode,
+                    "elementProperties": {
+                        "pageObjectId": page_object_id,
+                        "size": {
+                            "width": {"magnitude": width, "unit": "PT"},
+                            "height": {"magnitude": height, "unit": "PT"},
+                        },
+                        "transform": {
+                            "scaleX": 1,
+                            "scaleY": 1,
+                            "translateX": x * 12700,  # PT to EMU
+                            "translateY": y * 12700,  # PT to EMU
+                            "unit": "EMU",
+                        },
+                    },
+                }
+            }
+
+            result = self.execute(
+                self.service.presentations()
+                .batchUpdate(
+                    presentationId=presentation_id, body={"requests": [request]}
+                )
+            )
+
+            output_success(
+                operation="slides.insert_sheets_chart",
+                presentation_id=presentation_id,
+                page_object_id=page_object_id,
+                element_id=element_id,
+                spreadsheet_id=spreadsheet_id,
+                chart_id=chart_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="slides.insert_sheets_chart",
+                message=f"Google Slides API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

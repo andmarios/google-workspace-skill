@@ -904,3 +904,204 @@ def update_video_properties(
         end_time=end_time,
         mute=mute,
     )
+
+
+# ===== Element Transforms =====
+
+
+@app.command("transform-element")
+def transform_element(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_id: Annotated[str, typer.Argument(help="Element object ID.")],
+    scale_x: Annotated[
+        Optional[float],
+        typer.Option("--scale-x", help="Horizontal scale factor."),
+    ] = None,
+    scale_y: Annotated[
+        Optional[float],
+        typer.Option("--scale-y", help="Vertical scale factor."),
+    ] = None,
+    translate_x: Annotated[
+        Optional[float],
+        typer.Option("--translate-x", help="Horizontal translation in EMU."),
+    ] = None,
+    translate_y: Annotated[
+        Optional[float],
+        typer.Option("--translate-y", help="Vertical translation in EMU."),
+    ] = None,
+    rotate: Annotated[
+        Optional[float],
+        typer.Option("--rotate", "-r", help="Rotation angle in degrees."),
+    ] = None,
+    apply_mode: Annotated[
+        str,
+        typer.Option("--mode", "-m", help="'RELATIVE' or 'ABSOLUTE'."),
+    ] = "RELATIVE",
+) -> None:
+    """Transform an element (scale, translate, rotate)."""
+    service = SlidesService()
+    service.transform_element(
+        presentation_id=presentation_id,
+        object_id=object_id,
+        scale_x=scale_x,
+        scale_y=scale_y,
+        translate_x=translate_x,
+        translate_y=translate_y,
+        rotate=rotate,
+        apply_mode=apply_mode,
+    )
+
+
+# ===== Image Properties =====
+
+
+@app.command("update-image")
+def update_image_properties(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_id: Annotated[str, typer.Argument(help="Image element object ID.")],
+    transparency: Annotated[
+        Optional[float],
+        typer.Option("--transparency", "-t", help="Transparency (0.0=opaque, 1.0=transparent)."),
+    ] = None,
+    outline_color: Annotated[
+        Optional[str],
+        typer.Option("--outline-color", help="Outline color (hex, e.g., '#000000')."),
+    ] = None,
+    outline_weight: Annotated[
+        Optional[float],
+        typer.Option("--outline-weight", help="Outline weight in points."),
+    ] = None,
+) -> None:
+    """Update image properties (transparency, outline)."""
+    service = SlidesService()
+    service.update_image_properties(
+        presentation_id=presentation_id,
+        object_id=object_id,
+        transparency=transparency,
+        outline_color=outline_color,
+        outline_weight=outline_weight,
+    )
+
+
+# ===== Grouping =====
+
+
+@app.command("group")
+def group_objects(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_ids: Annotated[str, typer.Argument(help="Comma-separated object IDs to group.")],
+    group_id: Annotated[
+        Optional[str],
+        typer.Option("--group-id", help="Optional ID for the new group."),
+    ] = None,
+) -> None:
+    """Group multiple page elements."""
+    ids = [o.strip() for o in object_ids.split(",")]
+    service = SlidesService()
+    service.group_objects(
+        presentation_id=presentation_id,
+        children_object_ids=ids,
+        group_object_id=group_id,
+    )
+
+
+@app.command("ungroup")
+def ungroup_objects(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    group_ids: Annotated[str, typer.Argument(help="Comma-separated group IDs to ungroup.")],
+) -> None:
+    """Ungroup one or more groups."""
+    ids = [g.strip() for g in group_ids.split(",")]
+    service = SlidesService()
+    service.ungroup_objects(
+        presentation_id=presentation_id,
+        group_object_ids=ids,
+    )
+
+
+# ===== Shape Replacement =====
+
+
+@app.command("replace-shapes-with-image")
+def replace_shapes_with_image(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    contains_text: Annotated[str, typer.Argument(help="Text to search for in shapes.")],
+    image_url: Annotated[str, typer.Argument(help="URL of the image to insert.")],
+    replace_method: Annotated[
+        str,
+        typer.Option("--method", "-m", help="'CENTER_INSIDE' or 'CENTER_CROP'."),
+    ] = "CENTER_INSIDE",
+    page_ids: Annotated[
+        Optional[str],
+        typer.Option("--pages", "-p", help="Comma-separated page IDs to limit search."),
+    ] = None,
+) -> None:
+    """Replace all shapes containing specific text with an image."""
+    page_object_ids = [p.strip() for p in page_ids.split(",")] if page_ids else None
+    service = SlidesService()
+    service.replace_shapes_with_image(
+        presentation_id=presentation_id,
+        contains_text=contains_text,
+        image_url=image_url,
+        image_replace_method=replace_method,
+        page_object_ids=page_object_ids,
+    )
+
+
+# ===== Accessibility =====
+
+
+@app.command("set-alt-text")
+def set_alt_text(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    object_id: Annotated[str, typer.Argument(help="Element object ID.")],
+    title: Annotated[
+        Optional[str],
+        typer.Option("--title", "-t", help="Brief title for the element."),
+    ] = None,
+    description: Annotated[
+        Optional[str],
+        typer.Option("--description", "-d", help="Detailed description for screen readers."),
+    ] = None,
+) -> None:
+    """Set alt text (accessibility text) on a page element."""
+    service = SlidesService()
+    service.set_alt_text(
+        presentation_id=presentation_id,
+        object_id=object_id,
+        title=title,
+        description=description,
+    )
+
+
+# ===== Embedded Charts =====
+
+
+@app.command("insert-sheets-chart")
+def insert_sheets_chart(
+    presentation_id: Annotated[str, typer.Argument(help="Presentation ID.")],
+    page_object_id: Annotated[str, typer.Argument(help="Page (slide) object ID.")],
+    spreadsheet_id: Annotated[str, typer.Argument(help="Source spreadsheet ID.")],
+    chart_id: Annotated[int, typer.Argument(help="Chart ID in the spreadsheet.")],
+    x: Annotated[float, typer.Option("--x", help="X position in points.")] = 100,
+    y: Annotated[float, typer.Option("--y", help="Y position in points.")] = 100,
+    width: Annotated[float, typer.Option("--width", "-w", help="Width in points.")] = 400,
+    height: Annotated[float, typer.Option("--height", "-h", help="Height in points.")] = 300,
+    linking_mode: Annotated[
+        str,
+        typer.Option("--linking", "-l", help="'LINKED' or 'NOT_LINKED_IMAGE'."),
+    ] = "LINKED",
+) -> None:
+    """Insert a chart from Google Sheets."""
+    service = SlidesService()
+    service.insert_sheets_chart(
+        presentation_id=presentation_id,
+        page_object_id=page_object_id,
+        spreadsheet_id=spreadsheet_id,
+        chart_id=chart_id,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
+        linking_mode=linking_mode,
+    )
