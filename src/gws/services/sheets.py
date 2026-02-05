@@ -436,13 +436,11 @@ class SheetsService(BaseService):
                 cell_format["textFormat"] = text_format
 
             if background_color is not None:
-                from gws.utils.colors import parse_hex_color
                 rgb = parse_hex_color(background_color)
                 cell_format["backgroundColor"] = rgb
                 fields.append("userEnteredFormat.backgroundColor")
 
             if foreground_color is not None:
-                from gws.utils.colors import parse_hex_color
                 rgb = parse_hex_color(foreground_color)
                 if "textFormat" not in cell_format:
                     cell_format["textFormat"] = {}
@@ -578,8 +576,6 @@ class SheetsService(BaseService):
             number_format: Number format pattern (e.g., "#,##0.00", "0%").
         """
         try:
-            from gws.utils.colors import parse_hex_color
-
             cell_format: dict[str, Any] = {}
             fields = []
 
@@ -745,8 +741,6 @@ class SheetsService(BaseService):
             width: Border width (1, 2, or 3).
         """
         try:
-            from gws.utils.colors import parse_hex_color
-
             valid_styles = {
                 "SOLID",
                 "DOTTED",

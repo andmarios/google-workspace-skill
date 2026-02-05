@@ -250,7 +250,7 @@ def add_labels(
     label_ids: Annotated[str, typer.Argument(help="Comma-separated label IDs to add.")],
 ) -> None:
     """Add labels to a message."""
-    labels = [l.strip() for l in label_ids.split(",")]
+    labels = [label.strip() for label in label_ids.split(",")]
 
     service = GmailService()
     service.add_labels(message_id=message_id, label_ids=labels)
@@ -262,7 +262,7 @@ def remove_labels(
     label_ids: Annotated[str, typer.Argument(help="Comma-separated label IDs to remove.")],
 ) -> None:
     """Remove labels from a message."""
-    labels = [l.strip() for l in label_ids.split(",")]
+    labels = [label.strip() for label in label_ids.split(",")]
 
     service = GmailService()
     service.remove_labels(message_id=message_id, label_ids=labels)
@@ -542,8 +542,8 @@ def modify_thread_labels(
     ] = None,
 ) -> None:
     """Add or remove labels from all messages in a thread."""
-    add_label_ids = [l.strip() for l in add_labels.split(",")] if add_labels else None
-    remove_label_ids = [l.strip() for l in remove_labels.split(",")] if remove_labels else None
+    add_label_ids = [label.strip() for label in add_labels.split(",")] if add_labels else None
+    remove_label_ids = [label.strip() for label in remove_labels.split(",")] if remove_labels else None
 
     service = GmailService()
     service.modify_thread_labels(
@@ -713,8 +713,8 @@ def create_filter(
     Example: Create filter to archive newsletters:
         gws gmail create-filter --from newsletter@example.com --archive --add-labels Label_123
     """
-    add_label_ids = [l.strip() for l in add_labels.split(",")] if add_labels else None
-    remove_label_ids = [l.strip() for l in remove_labels.split(",")] if remove_labels else None
+    add_label_ids = [label.strip() for label in add_labels.split(",")] if add_labels else None
+    remove_label_ids = [label.strip() for label in remove_labels.split(",")] if remove_labels else None
 
     service = GmailService()
     service.create_filter(

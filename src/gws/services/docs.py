@@ -2804,12 +2804,7 @@ class DocsService(BaseService):
         made while in "Suggesting" mode.
         """
         try:
-            doc = self.execute(self.service.documents().get(
-                documentId=document_id,
-                suggestionsViewMode="PREVIEW_SUGGESTIONS_ACCEPTED"
-            ))
-
-            # Also get with suggestions visible to see what's pending
+            # Get document with suggestions visible to see what's pending
             doc_with_suggestions = self.execute(self.service.documents().get(
                 documentId=document_id,
                 suggestionsViewMode="SUGGESTIONS_INLINE"
@@ -3014,7 +3009,7 @@ class DocsService(BaseService):
                 for s in suggestions
             ]
 
-            result = self.execute(
+            self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
             )
@@ -3062,7 +3057,7 @@ class DocsService(BaseService):
                 for s in suggestions
             ]
 
-            result = self.execute(
+            self.execute(
                 self.service.documents()
                 .batchUpdate(documentId=document_id, body={"requests": requests})
             )

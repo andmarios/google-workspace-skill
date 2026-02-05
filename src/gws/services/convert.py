@@ -136,6 +136,74 @@ class ConvertService(BaseService):
 
         return modified_md, temp_folder_id
 
+    def _prepare_markdown_upload(
+        self,
+        input_path: str,
+        operation: str,
+        render_diagrams: bool = False,
+        mermaid_theme: str = "default",
+    ) -> tuple[Path, Path, Path | None, str | None, int]:
+        """Validate and prepare markdown file for upload, optionally processing diagrams.
+
+        Args:
+            input_path: Path to markdown file
+            operation: Operation name for error messages
+            render_diagrams: If True, render Mermaid/PlantUML diagrams via Kroki
+            mermaid_theme: Theme for Mermaid diagrams
+
+        Returns:
+            Tuple of (source_path, upload_path, temp_dir, temp_folder_id, diagrams_rendered)
+
+        Raises:
+            SystemExit: If file not found
+        """
+        path = Path(input_path)
+        if not path.exists():
+            output_error(
+                error_code="FILE_NOT_FOUND",
+                operation=operation,
+                message=f"File not found: {input_path}",
+            )
+            raise SystemExit(ExitCode.INVALID_ARGS)
+
+        upload_path = path
+        temp_dir = None
+        temp_folder_id = None
+        diagrams_rendered = 0
+
+        if render_diagrams:
+            markdown_content = path.read_text(encoding="utf-8")
+            temp_dir = Path(tempfile.mkdtemp(prefix="gws_diagrams_"))
+            blocks = find_diagram_blocks(markdown_content)
+            diagrams_rendered = len(blocks)
+
+            if blocks:
+                markdown_content, temp_folder_id = self._process_diagrams(
+                    markdown_content, temp_dir, mermaid_theme=mermaid_theme
+                )
+                # Write modified markdown to temp file
+                temp_md = temp_dir / "converted.md"
+                temp_md.write_text(markdown_content, encoding="utf-8")
+                upload_path = temp_md
+
+        return path, upload_path, temp_dir, temp_folder_id, diagrams_rendered
+
+    def _cleanup_temp_resources(
+        self,
+        temp_dir: Path | None,
+        temp_folder_id: str | None,
+    ) -> None:
+        """Clean up temporary local directory and Drive folder.
+
+        Args:
+            temp_dir: Local temporary directory to remove
+            temp_folder_id: Drive folder ID to delete
+        """
+        if temp_dir and temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        if temp_folder_id:
+            self._delete_temp_folder(temp_folder_id)
+
     def _resize_document_images(
         self,
         document_id: str,
@@ -297,43 +365,19 @@ class ConvertService(BaseService):
         temp_folder_id = None
 
         try:
-            path = Path(input_path)
-            if not path.exists():
-                output_error(
-                    error_code="FILE_NOT_FOUND",
-                    operation="convert.md_to_doc",
-                    message=f"File not found: {input_path}",
+            path, upload_path, temp_dir, temp_folder_id, diagrams_rendered = (
+                self._prepare_markdown_upload(
+                    input_path, "convert.md_to_doc", render_diagrams, mermaid_theme
                 )
-                raise SystemExit(ExitCode.INVALID_ARGS)
+            )
 
             doc_title = title or path.stem
 
-            # Read markdown content
-            markdown_content = path.read_text(encoding="utf-8")
-            upload_path = path
-
-            # Process diagrams if requested
-            diagrams_rendered = 0
-            if render_diagrams:
-                temp_dir = Path(tempfile.mkdtemp(prefix="gws_diagrams_"))
-                blocks = find_diagram_blocks(markdown_content)
-                diagrams_rendered = len(blocks)
-
-                if blocks:
-                    markdown_content, temp_folder_id = self._process_diagrams(
-                        markdown_content, temp_dir, mermaid_theme=mermaid_theme
-                    )
-                    # Write modified markdown to temp file
-                    temp_md = temp_dir / "converted.md"
-                    temp_md.write_text(markdown_content, encoding="utf-8")
-                    upload_path = temp_md
-
             # Upload markdown file and convert to Google Doc
-            file_metadata = {
+            file_metadata: dict[str, Any] = {
                 "name": doc_title,
                 "mimeType": "application/vnd.google-apps.document",
             }
-
             if folder_id:
                 file_metadata["parents"] = [folder_id]
 
@@ -343,11 +387,11 @@ class ConvertService(BaseService):
                 resumable=True,
             )
 
-            # Use retry logic for transient API errors (500, 502, 503)
-            request = self.drive_service.files().create(
-                body=file_metadata, media_body=media, fields="id,name,webViewLink"
+            file = self.execute(
+                self.drive_service.files().create(
+                    body=file_metadata, media_body=media, fields="id,name,webViewLink"
+                )
             )
-            file = self.execute(request)
 
             # Resize any oversized images to fit the page
             images_resized = self._resize_document_images(file["id"])
@@ -363,8 +407,7 @@ class ConvertService(BaseService):
                 "source_file": str(path),
                 "pageless": pageless,
             }
-
-            if render_diagrams and diagrams_rendered > 0:
+            if diagrams_rendered > 0:
                 result["diagrams_rendered"] = diagrams_rendered
             if images_resized > 0:
                 result["images_resized"] = images_resized
@@ -380,12 +423,7 @@ class ConvertService(BaseService):
             )
             raise SystemExit(ExitCode.API_ERROR)
         finally:
-            # Cleanup local temp directory
-            if temp_dir and temp_dir.exists():
-                shutil.rmtree(temp_dir, ignore_errors=True)
-            # Cleanup Drive temp folder (deletes folder and all diagram images)
-            if temp_folder_id:
-                self._delete_temp_folder(temp_folder_id)
+            self._cleanup_temp_resources(temp_dir, temp_folder_id)
 
     def md_to_pdf(
         self,
@@ -412,36 +450,13 @@ class ConvertService(BaseService):
         temp_folder_id = None
 
         try:
-            path = Path(input_path)
-            if not path.exists():
-                output_error(
-                    error_code="FILE_NOT_FOUND",
-                    operation="convert.md_to_pdf",
-                    message=f"File not found: {input_path}",
+            path, upload_path, temp_dir, temp_folder_id, diagrams_rendered = (
+                self._prepare_markdown_upload(
+                    input_path, "convert.md_to_pdf", render_diagrams, mermaid_theme
                 )
-                raise SystemExit(ExitCode.INVALID_ARGS)
+            )
 
             doc_title = title or f"_temp_{path.stem}"
-
-            # Read markdown content
-            markdown_content = path.read_text(encoding="utf-8")
-            upload_path = path
-
-            # Process diagrams if requested
-            diagrams_rendered = 0
-            if render_diagrams:
-                temp_dir = Path(tempfile.mkdtemp(prefix="gws_diagrams_"))
-                blocks = find_diagram_blocks(markdown_content)
-                diagrams_rendered = len(blocks)
-
-                if blocks:
-                    markdown_content, temp_folder_id = self._process_diagrams(
-                        markdown_content, temp_dir, mermaid_theme=mermaid_theme
-                    )
-                    # Write modified markdown to temp file
-                    temp_md = temp_dir / "converted.md"
-                    temp_md.write_text(markdown_content, encoding="utf-8")
-                    upload_path = temp_md
 
             # Upload as Doc
             file_metadata = {
@@ -455,12 +470,11 @@ class ConvertService(BaseService):
                 resumable=True,
             )
 
-            # Use retry logic for transient API errors (500, 502, 503)
-            request = self.drive_service.files().create(
-                body=file_metadata, media_body=media, fields="id"
+            file = self.execute(
+                self.drive_service.files().create(
+                    body=file_metadata, media_body=media, fields="id"
+                )
             )
-            file = self.execute(request)
-
             doc_id = file["id"]
 
             try:
@@ -468,19 +482,18 @@ class ConvertService(BaseService):
                 self._resize_document_images(doc_id)
 
                 # Export as PDF
-                request = self.drive_service.files().export_media(
+                export_request = self.drive_service.files().export_media(
                     fileId=doc_id,
                     mimeType="application/pdf",
                 )
 
                 output_file = Path(output_path)
                 fh = io.FileIO(str(output_file), "wb")
-                downloader = MediaIoBaseDownload(fh, request)
+                downloader = MediaIoBaseDownload(fh, export_request)
 
                 done = False
                 while not done:
                     _, done = downloader.next_chunk()
-
                 fh.close()
 
                 result = {
@@ -488,7 +501,7 @@ class ConvertService(BaseService):
                     "source_file": str(path),
                     "file_size": output_file.stat().st_size,
                 }
-                if render_diagrams and diagrams_rendered > 0:
+                if diagrams_rendered > 0:
                     result["diagrams_rendered"] = diagrams_rendered
 
                 output_success(operation="convert.md_to_pdf", **result)
@@ -508,7 +521,7 @@ class ConvertService(BaseService):
             )
             raise SystemExit(ExitCode.API_ERROR)
         finally:
-            # Cleanup local temp directory
+            # Cleanup local temp directory only (Drive folder cleaned in inner finally)
             if temp_dir and temp_dir.exists():
                 shutil.rmtree(temp_dir, ignore_errors=True)
 

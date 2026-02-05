@@ -803,7 +803,7 @@ def config_allowlist_list() -> None:
 
 
 # Register service command groups
-from gws.commands import drive, docs, sheets, slides, gmail, calendar, contacts, convert
+from gws.commands import drive, docs, sheets, slides, gmail, calendar, contacts, convert  # noqa: E402
 
 app.add_typer(drive.app, name="drive")
 app.add_typer(docs.app, name="docs")
