@@ -1326,3 +1326,73 @@ def insert_image_at_text(
         tab_id=tab_id,
         occurrence=occurrence,
     )
+
+
+# ===== Named Range Content =====
+
+
+@app.command("replace-named-range")
+def replace_named_range_content(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    text: Annotated[str, typer.Argument(help="New text to insert.")],
+    name: Annotated[
+        Optional[str],
+        typer.Option("--name", "-n", help="Named range name."),
+    ] = None,
+    range_id: Annotated[
+        Optional[str],
+        typer.Option("--id", "-i", help="Named range ID."),
+    ] = None,
+) -> None:
+    """Replace content within a named range."""
+    service = DocsService()
+    service.replace_named_range_content(
+        document_id=document_id,
+        text=text,
+        named_range_name=name,
+        named_range_id=range_id,
+    )
+
+
+# ===== Image Replacement =====
+
+
+@app.command("replace-image")
+def replace_image(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    image_object_id: Annotated[str, typer.Argument(help="Object ID of the image to replace.")],
+    uri: Annotated[str, typer.Argument(help="URL of the new image.")],
+    replace_method: Annotated[
+        str,
+        typer.Option("--method", "-m", help="Replacement method (CENTER_CROP)."),
+    ] = "CENTER_CROP",
+) -> None:
+    """Replace an existing image with a new one."""
+    service = DocsService()
+    service.replace_image(
+        document_id=document_id,
+        image_object_id=image_object_id,
+        uri=uri,
+        image_replace_method=replace_method,
+    )
+
+
+# ===== Positioned Objects =====
+
+
+@app.command("delete-positioned-object")
+def delete_positioned_object(
+    document_id: Annotated[str, typer.Argument(help="Document ID.")],
+    object_id: Annotated[str, typer.Argument(help="Positioned object ID to delete.")],
+    tab_id: Annotated[
+        Optional[str],
+        typer.Option("--tab", "-t", help="Tab ID."),
+    ] = None,
+) -> None:
+    """Delete a positioned object (floating image, drawing, etc.)."""
+    service = DocsService()
+    service.delete_positioned_object(
+        document_id=document_id,
+        object_id=object_id,
+        tab_id=tab_id,
+    )

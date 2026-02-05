@@ -648,3 +648,165 @@ class ContactsService(BaseService):
                 message=f"People API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # DIRECTORY (Google Workspace domain)
+    # =========================================================================
+
+    def search_directory(
+        self,
+        query: str,
+        max_results: int = 10,
+        read_mask: str = "names,emailAddresses,organizations",
+    ) -> dict[str, Any]:
+        """Search for people in the Google Workspace directory.
+
+        Args:
+            query: Search query string.
+            max_results: Maximum number of results.
+            read_mask: Comma-separated list of fields to return.
+        """
+        try:
+            result = self.execute(
+                self.service.people()
+                .searchDirectoryPeople(
+                    query=query,
+                    pageSize=max_results,
+                    readMask=read_mask,
+                    sources=["DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE"],
+                )
+            )
+
+            people = []
+            for person in result.get("people", []):
+                names = person.get("names", [{}])
+                emails = person.get("emailAddresses", [{}])
+                orgs = person.get("organizations", [{}])
+
+                people.append({
+                    "resource_name": person.get("resourceName"),
+                    "name": names[0].get("displayName") if names else None,
+                    "email": emails[0].get("value") if emails else None,
+                    "organization": orgs[0].get("name") if orgs else None,
+                    "title": orgs[0].get("title") if orgs else None,
+                })
+
+            output_success(
+                operation="contacts.search_directory",
+                query=query,
+                count=len(people),
+                people=people,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="contacts.search_directory",
+                message=f"People API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def list_directory(
+        self,
+        max_results: int = 100,
+        read_mask: str = "names,emailAddresses,organizations",
+        page_token: str | None = None,
+    ) -> dict[str, Any]:
+        """List all people in the Google Workspace directory.
+
+        Args:
+            max_results: Maximum number of results per page.
+            read_mask: Comma-separated list of fields to return.
+            page_token: Token for pagination.
+        """
+        try:
+            params: dict[str, Any] = {
+                "pageSize": max_results,
+                "readMask": read_mask,
+                "sources": ["DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE"],
+            }
+            if page_token:
+                params["pageToken"] = page_token
+
+            result = self.execute(
+                self.service.people()
+                .listDirectoryPeople(**params)
+            )
+
+            people = []
+            for person in result.get("people", []):
+                names = person.get("names", [{}])
+                emails = person.get("emailAddresses", [{}])
+
+                people.append({
+                    "resource_name": person.get("resourceName"),
+                    "name": names[0].get("displayName") if names else None,
+                    "email": emails[0].get("value") if emails else None,
+                })
+
+            output_success(
+                operation="contacts.list_directory",
+                count=len(people),
+                next_page_token=result.get("nextPageToken"),
+                people=people,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="contacts.list_directory",
+                message=f"People API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # BATCH OPERATIONS
+    # =========================================================================
+
+    def batch_get_contacts(
+        self,
+        resource_names: list[str],
+        read_mask: str = "names,emailAddresses,phoneNumbers,organizations",
+    ) -> dict[str, Any]:
+        """Get multiple contacts in a single request.
+
+        Args:
+            resource_names: List of contact resource names.
+            read_mask: Comma-separated list of fields to return.
+        """
+        try:
+            result = self.execute(
+                self.service.people()
+                .getBatchGet(
+                    resourceNames=resource_names,
+                    personFields=read_mask,
+                )
+            )
+
+            contacts = []
+            for response in result.get("responses", []):
+                person = response.get("person", {})
+                names = person.get("names", [{}])
+                emails = person.get("emailAddresses", [{}])
+                phones = person.get("phoneNumbers", [{}])
+
+                contacts.append({
+                    "resource_name": person.get("resourceName"),
+                    "name": names[0].get("displayName") if names else None,
+                    "email": emails[0].get("value") if emails else None,
+                    "phone": phones[0].get("value") if phones else None,
+                })
+
+            output_success(
+                operation="contacts.batch_get",
+                count=len(contacts),
+                contacts=contacts,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="contacts.batch_get",
+                message=f"People API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

@@ -232,3 +232,60 @@ def delete_photo(
     """Delete a contact's photo."""
     service = ContactsService()
     service.delete_contact_photo(resource_name=resource_name)
+
+
+# ===== Directory (Google Workspace domain) =====
+
+
+@app.command("search-directory")
+def search_directory(
+    query: Annotated[str, typer.Argument(help="Search query string.")],
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum number of results."),
+    ] = 10,
+    fields: Annotated[
+        str,
+        typer.Option("--fields", "-f", help="Comma-separated fields to return."),
+    ] = "names,emailAddresses,organizations",
+) -> None:
+    """Search for people in the Google Workspace directory."""
+    service = ContactsService()
+    service.search_directory(query=query, max_results=max_results, read_mask=fields)
+
+
+@app.command("list-directory")
+def list_directory(
+    max_results: Annotated[
+        int,
+        typer.Option("--max", "-m", help="Maximum results per page."),
+    ] = 100,
+    fields: Annotated[
+        str,
+        typer.Option("--fields", "-f", help="Comma-separated fields to return."),
+    ] = "names,emailAddresses,organizations",
+    page_token: Annotated[
+        Optional[str],
+        typer.Option("--page-token", help="Token for pagination."),
+    ] = None,
+) -> None:
+    """List all people in the Google Workspace directory."""
+    service = ContactsService()
+    service.list_directory(max_results=max_results, read_mask=fields, page_token=page_token)
+
+
+# ===== Batch Operations =====
+
+
+@app.command("batch-get")
+def batch_get_contacts(
+    resource_names: Annotated[str, typer.Argument(help="Comma-separated resource names.")],
+    fields: Annotated[
+        str,
+        typer.Option("--fields", "-f", help="Comma-separated fields to return."),
+    ] = "names,emailAddresses,phoneNumbers,organizations",
+) -> None:
+    """Get multiple contacts in a single request."""
+    names = [n.strip() for n in resource_names.split(",")]
+    service = ContactsService()
+    service.batch_get_contacts(resource_names=names, read_mask=fields)

@@ -3502,3 +3502,162 @@ class DocsService(BaseService):
             height=height,
             tab_id=tab_id,
         )
+
+    # =========================================================================
+    # NAMED RANGE CONTENT
+    # =========================================================================
+
+    def replace_named_range_content(
+        self,
+        document_id: str,
+        text: str,
+        named_range_name: str | None = None,
+        named_range_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Replace content within a named range.
+
+        Args:
+            document_id: The document ID.
+            text: The new text to insert.
+            named_range_name: Name of the named range (alternative to ID).
+            named_range_id: ID of the named range (alternative to name).
+        """
+        try:
+            if not named_range_name and not named_range_id:
+                output_error(
+                    error_code="INVALID_ARGUMENT",
+                    operation="docs.replace_named_range_content",
+                    message="Either named_range_name or named_range_id required",
+                )
+                raise SystemExit(ExitCode.INVALID_ARGS)
+
+            request: dict[str, Any] = {
+                "replaceNamedRangeContent": {
+                    "text": text,
+                }
+            }
+
+            if named_range_name:
+                request["replaceNamedRangeContent"]["namedRangeName"] = named_range_name
+            elif named_range_id:
+                request["replaceNamedRangeContent"]["namedRangeId"] = named_range_id
+
+            result = self.execute(
+                self.service.documents()
+                .batchUpdate(documentId=document_id, body={"requests": [request]})
+            )
+
+            output_success(
+                operation="docs.replace_named_range_content",
+                document_id=document_id,
+                named_range_name=named_range_name,
+                named_range_id=named_range_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.replace_named_range_content",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # IMAGE REPLACEMENT
+    # =========================================================================
+
+    def replace_image(
+        self,
+        document_id: str,
+        image_object_id: str,
+        uri: str,
+        image_replace_method: str = "CENTER_CROP",
+    ) -> dict[str, Any]:
+        """Replace an existing image with a new one.
+
+        Args:
+            document_id: The document ID.
+            image_object_id: The object ID of the image to replace.
+            uri: URL of the new image.
+            image_replace_method: 'CENTER_CROP' or other replacement method.
+        """
+        try:
+            request = {
+                "replaceImage": {
+                    "imageObjectId": image_object_id,
+                    "uri": uri,
+                    "imageReplaceMethod": image_replace_method,
+                }
+            }
+
+            result = self.execute(
+                self.service.documents()
+                .batchUpdate(documentId=document_id, body={"requests": [request]})
+            )
+
+            output_success(
+                operation="docs.replace_image",
+                document_id=document_id,
+                image_object_id=image_object_id,
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.replace_image",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # POSITIONED OBJECTS
+    # =========================================================================
+
+    def delete_positioned_object(
+        self,
+        document_id: str,
+        object_id: str,
+        tab_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Delete a positioned object (floating image, drawing, etc.).
+
+        Args:
+            document_id: The document ID.
+            object_id: The positioned object ID to delete.
+            tab_id: Optional tab ID for multi-tab documents.
+        """
+        try:
+            request: dict[str, Any] = {
+                "deletePositionedObject": {
+                    "objectId": object_id,
+                }
+            }
+
+            if tab_id:
+                request["deletePositionedObject"]["tabId"] = tab_id
+
+            result = self.execute(
+                self.service.documents()
+                .batchUpdate(documentId=document_id, body={"requests": [request]})
+            )
+
+            output_success(
+                operation="docs.delete_positioned_object",
+                document_id=document_id,
+                object_id=object_id,
+            )
+            return result
+        except HttpError as e:
+            if e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="docs.delete_positioned_object",
+                    message=f"Positioned object not found: {object_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.delete_positioned_object",
+                message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)

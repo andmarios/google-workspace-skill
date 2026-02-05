@@ -7,7 +7,10 @@ SCOPES: dict[str, list[str]] = {
     "drive": ["https://www.googleapis.com/auth/drive"],
     "gmail": ["https://www.googleapis.com/auth/gmail.modify"],
     "calendar": ["https://www.googleapis.com/auth/calendar"],
-    "contacts": ["https://www.googleapis.com/auth/contacts"],
+    "contacts": [
+        "https://www.googleapis.com/auth/contacts",
+        "https://www.googleapis.com/auth/directory.readonly",
+    ],
     "convert": [
         "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/documents",
