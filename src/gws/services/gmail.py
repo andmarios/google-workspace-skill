@@ -117,10 +117,13 @@ class GmailService(BaseService):
                 .get(userId="me", id=message_id, format=format_type)
             )
 
-            headers = {
+            # Build case-insensitive header lookup (Gmail API may return lowercase
+            # header names for messages sent via the API)
+            raw_headers = {
                 h["name"]: h["value"]
                 for h in msg.get("payload", {}).get("headers", [])
             }
+            headers = {k.lower(): v for k, v in raw_headers.items()}
 
             # Extract body
             body = self._extract_body(msg.get("payload", {}))
@@ -133,16 +136,16 @@ class GmailService(BaseService):
                 source_type="email",
                 source_id=message_id,
                 content_fields={
-                    "subject": headers.get("Subject", "(no subject)"),
+                    "subject": headers.get("subject", "(no subject)"),
                     "body": body,
                 },
                 message_id=message_id,
                 thread_id=msg["threadId"],
                 history_id=msg.get("historyId"),
-                from_address=headers.get("From", ""),
-                to_address=headers.get("To", ""),
-                cc=headers.get("Cc", ""),
-                date=headers.get("Date", ""),
+                from_address=headers.get("from", ""),
+                to_address=headers.get("to", ""),
+                cc=headers.get("cc", ""),
+                date=headers.get("date", ""),
                 labels=msg.get("labelIds", []),
                 attachments=attachments,
             )
@@ -296,7 +299,7 @@ class GmailService(BaseService):
             original = self.execute(
                 self.service.users()
                 .messages()
-                .get(userId="me", id=message_id, format="metadata")
+                .get(userId="me", id=message_id, format="full")
             )
 
             thread_id = original["threadId"]
@@ -321,13 +324,17 @@ class GmailService(BaseService):
                 if email_address:
                     message["from"] = f'"{from_name}" <{email_address}>'
 
-            # Reply to the sender
-            reply_to = headers.get("Reply-To", headers.get("From", ""))
+            # Reply to the sender — use case-insensitive header lookup
+            # Gmail API may return lowercase header names (from, to) for sent messages
+            ci_headers = {k.lower(): v for k, v in headers.items()}
+            reply_to = ci_headers.get("reply-to", ci_headers.get("from", ""))
+            if not reply_to:
+                reply_to = ci_headers.get("to", "")
             message["to"] = reply_to
-            message["subject"] = f"Re: {headers.get('Subject', '')}"
+            message["subject"] = f"Re: {ci_headers.get('subject', '')}"
 
             # Set references for threading
-            message_id_header = headers.get("Message-ID", "")
+            message_id_header = ci_headers.get("message-id", "")
             if message_id_header:
                 message["In-Reply-To"] = message_id_header
                 message["References"] = message_id_header

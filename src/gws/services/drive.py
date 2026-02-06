@@ -705,20 +705,21 @@ class DriveService(BaseService):
         file_id: str,
         comment_id: str,
     ) -> dict[str, Any]:
-        """Resolve a comment on a file.
+        """Resolve a comment on a file by creating a resolve reply.
 
         Args:
             file_id: The file ID.
             comment_id: The comment ID.
         """
         try:
+            # Google Drive API requires creating a reply with action="resolve" to resolve a comment
             result = self.execute(
-                self.service.comments()
-                .update(
+                self.service.replies()
+                .create(
                     fileId=file_id,
                     commentId=comment_id,
-                    body={"resolved": True},
-                    fields="id,content,resolved",
+                    body={"action": "resolve"},
+                    fields="id,action",
                 )
             )
 
@@ -726,6 +727,7 @@ class DriveService(BaseService):
                 operation="drive.resolve_comment",
                 file_id=file_id,
                 comment_id=comment_id,
+                reply_id=result.get("id"),
             )
             return result
         except HttpError as e:
@@ -827,7 +829,6 @@ class DriveService(BaseService):
                     fileId=file_id,
                     pageSize=max_results,
                     fields="revisions(id,mimeType,modifiedTime,lastModifyingUser,originalFilename,size)",
-                    supportsAllDrives=True,
                 )
             )
 
@@ -874,7 +875,6 @@ class DriveService(BaseService):
                     fileId=file_id,
                     revisionId=revision_id,
                     fields="id,mimeType,modifiedTime,lastModifyingUser,originalFilename,size,keepForever,publishAuto,published",
-                    supportsAllDrives=True,
                 )
             )
 

@@ -244,8 +244,7 @@ class DocsService(BaseService):
             requests = [
                 {
                     "updateDocumentTabProperties": {
-                        "tabId": tab_id,
-                        "tabProperties": {"title": title},
+                        "tabProperties": {"tabId": tab_id, "title": title},
                         "fields": "title",
                     }
                 }
@@ -287,8 +286,7 @@ class DocsService(BaseService):
             requests = [
                 {
                     "updateDocumentTabProperties": {
-                        "tabId": tab_id,
-                        "tabProperties": {"index": new_index},
+                        "tabProperties": {"tabId": tab_id, "index": new_index},
                         "fields": "index",
                     }
                 }
@@ -1721,6 +1719,7 @@ class DocsService(BaseService):
             border_style = {
                 "color": {"color": {"rgbColor": rgb}},
                 "width": {"magnitude": width, "unit": "PT"},
+                "padding": {"magnitude": 6.0, "unit": "PT"},
                 "dashStyle": "SOLID",
             }
 

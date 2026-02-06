@@ -192,6 +192,18 @@ gws auth logout --account work
 - **Diagram rendering**: Uses Kroki API. Mermaid gets `default` theme injected automatically (configurable via `--mermaid-theme`).
 - **Image sizing**: Docs converter limits images to 450pt width, 600pt height
 
+## Live Testing
+
+`LIVE_TESTING.md` tracks manual tests of every CLI command against real Google Workspace APIs.
+
+**When live testing, always update `LIVE_TESTING.md`:**
+- Each test is a row in the flat table with columns: `#`, `Service`, `Command`, `Status`, `Date`, `Notes`
+- Update the row's `Date` to today when re-testing an existing command
+- Add new rows for new commands
+- Keep the `Summary` counts in sync (Total, Pass, Skip)
+- Add an entry to the `Changelog` section at the bottom describing what was tested/fixed
+- Never include account names, emails, or other sensitive information in the file
+
 ## Dependencies
 
 Key packages:

@@ -2143,22 +2143,38 @@ class SlidesService(BaseService):
                 )
                 raise SystemExit(ExitCode.NOT_FOUND)
 
-            # Delete existing text and insert new text
-            requests = [
-                {
-                    "deleteText": {
-                        "objectId": notes_shape_id,
-                        "textRange": {"type": "ALL"},
-                    }
-                },
-                {
-                    "insertText": {
-                        "objectId": notes_shape_id,
-                        "insertionIndex": 0,
-                        "text": notes_text,
-                    }
-                },
-            ]
+            # Build requests: only delete existing text if notes are non-empty
+            requests: list[dict[str, Any]] = []
+
+            # Check if notes shape has existing text content
+            for slide in presentation.get("slides", []):
+                if slide.get("objectId") == slide_id:
+                    notes_page = slide.get("slideProperties", {}).get("notesPage", {})
+                    for element in notes_page.get("pageElements", []):
+                        if element.get("objectId") == notes_shape_id:
+                            text_content = element.get("shape", {}).get("text", {})
+                            text_elements = text_content.get("textElements", [])
+                            has_text = any(
+                                te.get("textRun", {}).get("content", "").strip()
+                                for te in text_elements
+                            )
+                            if has_text:
+                                requests.append({
+                                    "deleteText": {
+                                        "objectId": notes_shape_id,
+                                        "textRange": {"type": "ALL"},
+                                    }
+                                })
+                            break
+                    break
+
+            requests.append({
+                "insertText": {
+                    "objectId": notes_shape_id,
+                    "insertionIndex": 0,
+                    "text": notes_text,
+                }
+            })
 
             result = self.execute(
                 self.service.presentations()
@@ -2383,13 +2399,13 @@ class SlidesService(BaseService):
             apply_mode: 'RELATIVE' (add to current) or 'ABSOLUTE' (replace).
         """
         try:
-            # Build transform matrix
-            transform: dict[str, Any] = {"unit": "EMU"}
-
-            if scale_x is not None:
-                transform["scaleX"] = scale_x
-            if scale_y is not None:
-                transform["scaleY"] = scale_y
+            # Build transform matrix — always set scaleX/scaleY to ensure
+            # the matrix is invertible (determinant != 0)
+            transform: dict[str, Any] = {
+                "unit": "EMU",
+                "scaleX": scale_x if scale_x is not None else 1.0,
+                "scaleY": scale_y if scale_y is not None else 1.0,
+            }
             if translate_x is not None:
                 transform["translateX"] = translate_x
             if translate_y is not None:
