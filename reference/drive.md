@@ -50,9 +50,13 @@ uv run gws drive update <file_id> /path/to/new-content.pdf
 # Delete file (moves to trash)
 uv run gws drive delete <file_id>
 
-# Export Google file format
-uv run gws drive export <file_id> /path/to/output.pdf --format pdf
+# Export Google file format (pass MIME type via --format)
+uv run gws drive export <file_id> /path/to/output.pdf
+uv run gws drive export <file_id> output.docx --format "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+uv run gws drive export <file_id> output.md --format "text/markdown"
 ```
+
+**Tip**: For exporting Google Docs specifically, use `gws docs export` which accepts friendly format names (`markdown`, `pdf`, `docx`, etc.) instead of raw MIME types.
 
 ## Response Structure
 

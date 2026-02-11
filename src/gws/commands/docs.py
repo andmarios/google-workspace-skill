@@ -99,6 +99,29 @@ def get_structure(
     service.structure(document_id=document_id, tab_id=tab_id)
 
 
+@app.command("export")
+def export_document(
+    document_id: Annotated[str, typer.Argument(help="Document ID to export.")],
+    output_path: Annotated[str, typer.Argument(help="Local path to save the exported file.")],
+    fmt: Annotated[
+        str,
+        typer.Option("--format", "-f", help="Export format: markdown, pdf, docx, txt, html, rtf, epub, odt."),
+    ] = "markdown",
+) -> None:
+    """Export a document to markdown, PDF, DOCX, or other formats.
+
+    Formats: markdown (md), pdf, docx, txt (text), html, rtf, epub, odt.
+    You can also pass a raw MIME type (e.g., application/pdf).
+
+    Examples:
+        gws docs export DOC_ID report.md
+        gws docs export DOC_ID report.pdf --format pdf
+        gws docs export DOC_ID report.docx --format docx
+    """
+    service = DocsService()
+    service.export(document_id=document_id, output_path=output_path, fmt=fmt)
+
+
 @app.command("create")
 def create_document(
     title: Annotated[str, typer.Argument(help="Document title.")],

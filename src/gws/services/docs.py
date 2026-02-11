@@ -1,8 +1,11 @@
 """Google Docs service operations."""
 
+import io
+from pathlib import Path
 from typing import Any
 
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseDownload
 
 from gws.services.base import BaseService
 from gws.output import output_success, output_error, output_external_content
@@ -14,6 +17,19 @@ class DocsService(BaseService):
 
     SERVICE_NAME = "docs"
     VERSION = "v1"
+
+    EXPORT_FORMATS: dict[str, str] = {
+        "markdown": "text/markdown",
+        "md": "text/markdown",
+        "pdf": "application/pdf",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "txt": "text/plain",
+        "text": "text/plain",
+        "html": "text/html",
+        "rtf": "application/rtf",
+        "epub": "application/epub+zip",
+        "odt": "application/vnd.oasis.opendocument.text",
+    }
 
     def _extract_text(self, content: list[dict]) -> str:
         """Extract plain text from document content."""
@@ -3653,5 +3669,55 @@ class DocsService(BaseService):
                 error_code="API_ERROR",
                 operation="docs.delete_positioned_object",
                 message=f"Google Docs API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    # =========================================================================
+    # EXPORT OPERATIONS
+    # =========================================================================
+
+    def export(
+        self,
+        document_id: str,
+        output_path: str,
+        fmt: str = "markdown",
+    ) -> dict[str, Any]:
+        """Export a Google Doc to a file.
+
+        Args:
+            document_id: The document ID.
+            output_path: Local path to save the exported file.
+            fmt: Export format name (markdown, pdf, docx, txt, html, rtf, epub, odt)
+                 or a raw MIME type.
+        """
+        # Resolve format name to MIME type
+        mime_type = self.EXPORT_FORMATS.get(fmt.lower(), fmt)
+
+        try:
+            request = self.drive_service.files().export_media(
+                fileId=document_id, mimeType=mime_type
+            )
+            fh = io.BytesIO()
+            downloader = MediaIoBaseDownload(fh, request)
+
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+
+            Path(output_path).write_bytes(fh.getvalue())
+
+            output_success(
+                operation="docs.export",
+                document_id=document_id,
+                output_path=output_path,
+                format=fmt,
+                mime_type=mime_type,
+            )
+            return {"document_id": document_id, "output_path": output_path}
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="docs.export",
+                message=f"Export failed: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)

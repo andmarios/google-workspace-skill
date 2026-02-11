@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from googleapiclient.discovery import build, Resource
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 from googleapiclient.errors import HttpError
 
@@ -21,6 +22,27 @@ class ConvertService(BaseService):
 
     SERVICE_NAME = "drive"
     VERSION = "v3"
+
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+        self._docs_service: Resource | None = None
+        self._slides_service: Resource | None = None
+
+    @property
+    def docs_service(self) -> Resource:
+        """Lazy-load Docs service for document manipulation."""
+        if self._docs_service is None:
+            credentials = self.auth_manager.get_credentials()
+            self._docs_service = build("docs", "v1", credentials=credentials)
+        return self._docs_service
+
+    @property
+    def slides_service(self) -> Resource:
+        """Lazy-load Slides service for presentation creation."""
+        if self._slides_service is None:
+            credentials = self.auth_manager.get_credentials()
+            self._slides_service = build("slides", "v1", credentials=credentials)
+        return self._slides_service
 
     def _create_temp_folder(self) -> str:
         """Create a temporary folder in Drive for diagram images.
@@ -56,13 +78,6 @@ class ConvertService(BaseService):
         Args:
             document_id: The Google Doc ID
         """
-        from googleapiclient.discovery import build
-        from gws.auth.oauth import AuthManager
-
-        auth_manager = AuthManager()
-        credentials = auth_manager.get_credentials()
-        docs_service = build("docs", "v1", credentials=credentials)
-
         requests = [{
             "updateDocumentStyle": {
                 "documentStyle": {
@@ -75,7 +90,7 @@ class ConvertService(BaseService):
         }]
 
         self.execute(
-            docs_service.documents().batchUpdate(
+            self.docs_service.documents().batchUpdate(
                 documentId=document_id, body={"requests": requests}
             )
         )
@@ -136,6 +151,48 @@ class ConvertService(BaseService):
 
         return modified_md, temp_folder_id
 
+    @staticmethod
+    def _preprocess_line_breaks(markdown: str) -> str:
+        """Convert soft line breaks to hard line breaks for Google Docs import.
+
+        Google's markdown import follows strict CommonMark where single newlines
+        within a paragraph are soft wraps (ignored). This adds trailing double-spaces
+        to create hard line breaks, preserving the source file's line structure.
+
+        Skips fenced code blocks and lines that already have hard break markers.
+        """
+        lines = markdown.split("\n")
+        result = []
+        in_code_block = False
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+
+            # Track fenced code blocks
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                in_code_block = not in_code_block
+                result.append(line)
+                continue
+
+            if in_code_block:
+                result.append(line)
+                continue
+
+            is_last = i == len(lines) - 1
+            next_is_blank = is_last or lines[i + 1].strip() == ""
+
+            if (
+                stripped
+                and not next_is_blank
+                and not line.rstrip().endswith("  ")
+                and not line.rstrip().endswith("\\")
+            ):
+                result.append(line.rstrip() + "  ")
+            else:
+                result.append(line)
+
+        return "\n".join(result)
+
     def _prepare_markdown_upload(
         self,
         input_path: str,
@@ -166,25 +223,32 @@ class ConvertService(BaseService):
             )
             raise SystemExit(ExitCode.INVALID_ARGS)
 
+        # Read and preprocess markdown (hard line breaks for Google import)
+        original_content = path.read_text(encoding="utf-8")
+        markdown_content = self._preprocess_line_breaks(original_content)
+
         upload_path = path
         temp_dir = None
         temp_folder_id = None
         diagrams_rendered = 0
 
         if render_diagrams:
-            markdown_content = path.read_text(encoding="utf-8")
-            temp_dir = Path(tempfile.mkdtemp(prefix="gws_diagrams_"))
             blocks = find_diagram_blocks(markdown_content)
             diagrams_rendered = len(blocks)
 
             if blocks:
+                temp_dir = Path(tempfile.mkdtemp(prefix="gws_diagrams_"))
                 markdown_content, temp_folder_id = self._process_diagrams(
                     markdown_content, temp_dir, mermaid_theme=mermaid_theme
                 )
-                # Write modified markdown to temp file
-                temp_md = temp_dir / "converted.md"
-                temp_md.write_text(markdown_content, encoding="utf-8")
-                upload_path = temp_md
+
+        # Write to temp file if content was modified (preprocessing or diagrams)
+        if markdown_content != original_content:
+            if temp_dir is None:
+                temp_dir = Path(tempfile.mkdtemp(prefix="gws_md_"))
+            temp_md = temp_dir / "converted.md"
+            temp_md.write_text(markdown_content, encoding="utf-8")
+            upload_path = temp_md
 
         return path, upload_path, temp_dir, temp_folder_id, diagrams_rendered
 
@@ -223,15 +287,8 @@ class ConvertService(BaseService):
         Returns:
             Number of images resized
         """
-        from googleapiclient.discovery import build
-        from gws.auth.oauth import AuthManager
-
-        auth_manager = AuthManager()
-        credentials = auth_manager.get_credentials()
-        docs_service = build("docs", "v1", credentials=credentials)
-
         # Get document structure
-        doc = self.execute(docs_service.documents().get(documentId=document_id))
+        doc = self.execute(self.docs_service.documents().get(documentId=document_id))
 
         # Find inline objects (images) that need resizing
         inline_objects = doc.get("inlineObjects", {})
@@ -332,7 +389,7 @@ class ConvertService(BaseService):
 
         if requests:
             self.execute(
-                docs_service.documents().batchUpdate(
+                self.docs_service.documents().batchUpdate(
                     documentId=document_id,
                     body={"requests": requests},
                 )
@@ -555,17 +612,9 @@ class ConvertService(BaseService):
             content = path.read_text(encoding="utf-8")
             slides_data = self._parse_markdown_to_slides(content)
 
-            # Create presentation using Slides API
-            from googleapiclient.discovery import build
-            from gws.auth.oauth import AuthManager
-
-            auth_manager = AuthManager()
-            credentials = auth_manager.get_credentials()
-            slides_service = build("slides", "v1", credentials=credentials)
-
             # Create empty presentation
             presentation = self.execute(
-                slides_service.presentations()
+                self.slides_service.presentations()
                 .create(body={"title": pres_title})
             )
             presentation_id = presentation["presentationId"]
@@ -594,7 +643,7 @@ class ConvertService(BaseService):
 
                 if requests:
                     self.execute(
-                        slides_service.presentations().batchUpdate(
+                        self.slides_service.presentations().batchUpdate(
                             presentationId=presentation_id,
                             body={"requests": requests},
                         )

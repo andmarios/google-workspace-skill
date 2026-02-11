@@ -2,6 +2,7 @@
 
 ## Contents
 - [Basic Operations](#basic-operations)
+- [Exporting Documents](#exporting-documents)
 - [Finding Text](#finding-text)
 - [Markdown Insertion](#markdown-insertion)
 - [Page Format (Pageless Mode)](#page-format-pageless-mode)
@@ -56,6 +57,54 @@ uv run gws docs page-break <document_id> 100
 # Insert image from URL
 uv run gws docs insert-image <document_id> "https://example.com/image.png" --width 300
 ```
+
+## Exporting Documents
+
+Export a Google Doc to various file formats. The default format is markdown.
+
+```bash
+# Export as Markdown (default)
+uv run gws docs export <document_id> report.md
+
+# Export as PDF
+uv run gws docs export <document_id> report.pdf --format pdf
+
+# Export as Word document (DOCX)
+uv run gws docs export <document_id> report.docx --format docx
+
+# Export as plain text
+uv run gws docs export <document_id> report.txt --format txt
+
+# Export as HTML
+uv run gws docs export <document_id> report.html --format html
+
+# Export as RTF
+uv run gws docs export <document_id> report.rtf --format rtf
+
+# Export as EPUB (e-book)
+uv run gws docs export <document_id> report.epub --format epub
+
+# Export as ODT (LibreOffice)
+uv run gws docs export <document_id> report.odt --format odt
+
+# You can also pass a raw MIME type
+uv run gws docs export <document_id> output.zip --format "application/zip"
+```
+
+**Supported formats:**
+
+| Format     | Aliases      | MIME Type |
+|------------|-------------|-----------|
+| Markdown   | `markdown`, `md` | `text/markdown` |
+| PDF        | `pdf`       | `application/pdf` |
+| Word       | `docx`      | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| Plain text | `txt`, `text` | `text/plain` |
+| HTML       | `html`      | `text/html` |
+| RTF        | `rtf`       | `application/rtf` |
+| EPUB       | `epub`      | `application/epub+zip` |
+| ODT        | `odt`       | `application/vnd.oasis.opendocument.text` |
+
+**Note**: Markdown export preserves headings, bold, italic, links, and lists. Complex formatting like custom fonts, colors, and images may not convert perfectly. For full-fidelity export, use PDF or DOCX.
 
 ## Finding Text
 

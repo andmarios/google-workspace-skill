@@ -3,7 +3,7 @@ name: google-workspace
 description: Manage Google Workspace with Docs, Sheets, Slides, Drive, Gmail, Calendar, and Contacts. Create professional documents, engaging presentations, reports from markdown. Convert markdown to Google Docs/Slides/PDF. Full editing, formatting, file management, email, and scheduling.
 category: productivity
 version: 1.0.0
-key_capabilities: Docs (read/edit/format/named-ranges), Sheets (read/write/format/manipulate), Slides (create/edit/transform/embed), Drive (files/comments/shared-drives/changes), Gmail (send/search/sync/batch), Calendar (events/calendars/colors), Contacts (manage/groups/directory), Convert (markdown)
+key_capabilities: Docs (read/edit/format/export/named-ranges), Sheets (read/write/format/manipulate), Slides (create/edit/transform/embed), Drive (files/comments/shared-drives/changes), Gmail (send/search/sync/batch), Calendar (events/calendars/colors), Contacts (manage/groups/directory), Convert (markdown)
 when_to_use: Document operations, spreadsheet data, presentations, Drive file management, email, calendar events, contacts
 allowed_tools:
   - Bash(uv run gws:*)
@@ -17,7 +17,7 @@ Manage Google Workspace documents, spreadsheets, presentations, drive files, ema
 
 ## Purpose
 
-**Google Docs:** Read, create, insert/append text, find-replace, format (text, paragraph, extended), tables (insert, style, merge, row/column ops), headers/footers, lists/bullets, page breaks, section breaks, document styling, images, named range replacement
+**Google Docs:** Read, create, export (markdown/pdf/docx/txt/html/rtf/epub/odt), insert/append text, find-replace, format (text, paragraph, extended), tables (insert, style, merge, row/column ops), headers/footers, lists/bullets, page breaks, section breaks, document styling, images, named range replacement
 
 **Google Sheets:** Read, create, write/append data, full cell formatting (fonts, colors, alignment, number formats), borders, merge/unmerge cells, row/column sizing, freeze panes, conditional formatting, move rows/columns, copy-paste, auto-fill, trim whitespace, text-to-columns, chart updates
 
@@ -426,7 +426,7 @@ Read-only mode blocks all write operations (send, create, delete, format, etc.) 
 | Service | Ops | Reference | Description |
 |---------|-----|-----------|-------------|
 | `drive` | 28 | [reference/drive.md](reference/drive.md) | File upload, download, share, organize, comments, revisions, trash, permissions |
-| `docs` | 49 | [reference/docs.md](reference/docs.md) | Full document editing, tables, formatting, headers/footers, lists, named ranges, footnotes, suggestions |
+| `docs` | 50 | [reference/docs.md](reference/docs.md) | Full document editing, export (md/pdf/docx/html/txt/rtf/epub/odt), tables, formatting, headers/footers, lists, named ranges, footnotes, suggestions |
 | `sheets` | 49 | [reference/sheets.md](reference/sheets.md) | Read, write, format, borders, merge, conditional formatting, charts, data validation, sorting, filters, pivot tables |
 | `slides` | 36 | [reference/slides.md](reference/slides.md) | Create, edit, shapes, tables, backgrounds, bullets, lines, cell merging, speaker notes, videos |
 | `gmail` | 35 | [reference/gmail.md](reference/gmail.md) | List, read, send, search, labels, drafts, attachments, threads, vacation, signatures, filters |

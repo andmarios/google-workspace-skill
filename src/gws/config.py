@@ -62,6 +62,7 @@ class Config:
             "list-tabs", "read", "structure", "list-tables",
             "list-headers-footers", "find-text", "list-named-ranges",
             "list-footnotes", "suggestions", "get-page-format", "document-mode",
+            "export",
         ],
         "sheets": [
             "metadata", "read", "batch-get", "list-filter-views",
