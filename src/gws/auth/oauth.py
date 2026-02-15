@@ -13,8 +13,12 @@ from gws.config import Config
 from gws.exceptions import AuthError
 
 
-class AuthManager:
-    """Manages OAuth authentication for all Google services."""
+class LocalAuthProvider:
+    """Local OAuth authentication provider using client_secret.json.
+
+    Handles the loopback OAuth flow for users who manage their own
+    Google OAuth credentials locally.
+    """
 
     CREDENTIALS_PATH = Path.home() / ".claude" / ".google-workspace" / "client_secret.json"
     _LEGACY_TOKEN_PATH = Path.home() / ".claude" / ".google-workspace" / "token.json"
@@ -192,3 +196,7 @@ class AuthManager:
                 return False, f"refresh_failed: {e}", None
 
         return False, "expired_no_refresh", credentials
+
+
+# Backward-compatibility alias — existing code that imports AuthManager keeps working.
+AuthManager = LocalAuthProvider

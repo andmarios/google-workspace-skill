@@ -96,6 +96,10 @@ class Config:
     disabled_security_services: list[str] = field(default_factory=list)  # Services to skip
     disabled_security_operations: dict[str, bool] = field(default_factory=dict)  # e.g., {"gmail.send": True}
 
+    # Auth mode: "local" uses client_secret.json, "server" delegates to oauth-token-relay
+    mode: str = "local"
+    server_url: str | None = None
+
     # Multi-account support (None = legacy single-account mode)
     accounts: AccountsRegistry | None = None
 
@@ -136,9 +140,13 @@ class Config:
         """Save configuration to file."""
         self.CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
         data = asdict(self)
-        # Omit accounts key entirely in legacy mode for clean JSON
+        # Omit defaults for clean JSON
         if self.accounts is None:
             data.pop("accounts", None)
+        if self.server_url is None:
+            data.pop("server_url", None)
+        if self.mode == "local":
+            data.pop("mode", None)
         with open(self.CONFIG_PATH, "w") as f:
             json.dump(data, f, indent=2)
 

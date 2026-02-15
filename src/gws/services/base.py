@@ -5,7 +5,7 @@ from typing import Any
 
 from googleapiclient.discovery import build, Resource
 
-from gws.auth.oauth import AuthManager
+from gws.auth.provider import AuthProvider, resolve_auth_provider
 from gws.context import get_active_account
 from gws.utils.retry import execute_with_retry
 
@@ -16,9 +16,9 @@ class BaseService(ABC):
     SERVICE_NAME: str = ""
     VERSION: str = ""
 
-    def __init__(self, auth_manager: AuthManager | None = None, account: str | None = None):
+    def __init__(self, auth_manager: AuthProvider | None = None, account: str | None = None):
         resolved_account = account or get_active_account()
-        self.auth_manager = auth_manager or AuthManager(account=resolved_account)
+        self.auth_manager = auth_manager or resolve_auth_provider(account=resolved_account)
         self._service: Resource | None = None
         self._drive_service: Resource | None = None
 

@@ -1,10 +1,10 @@
 """Main CLI application for Google Workspace."""
 
 import typer
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 from gws import __version__
-from gws.auth.oauth import AuthManager
+from gws.auth.provider import resolve_auth_provider
 from gws.config import Config
 from gws.output import output_json, output_success, output_error
 from gws.exceptions import ExitCode, AuthError
@@ -64,23 +64,24 @@ def auth_default(
         return
 
     try:
-        auth_manager = AuthManager(account=account)
+        provider = resolve_auth_provider(account=account)
 
         if force:
-            deleted = auth_manager.delete_token()
+            deleted = provider.delete_token()
             if deleted:
                 typer.echo("Deleted existing token. Starting fresh authentication...", err=True)
 
-        credentials = auth_manager.get_credentials(force_refresh=force)
+        credentials = provider.get_credentials(force_refresh=force)
 
         if credentials and credentials.valid:
-            result = {
+            result: dict[str, Any] = {
                 "operation": "auth",
                 "message": "Authentication successful. Token is valid and stored.",
-                "token_path": str(auth_manager.TOKEN_PATH),
             }
-            if auth_manager.account_name:
-                result["account"] = auth_manager.account_name
+            if hasattr(provider, "TOKEN_PATH"):
+                result["token_path"] = str(provider.TOKEN_PATH)
+            if hasattr(provider, "account_name") and provider.account_name:
+                result["account"] = provider.account_name
             output_success(**result)
         else:
             output_error(
@@ -108,28 +109,30 @@ def auth_status(
     ] = None,
 ) -> None:
     """Check authentication status (non-interactive)."""
-    auth_manager = AuthManager(account=account)
+    provider = resolve_auth_provider(account=account)
 
-    is_valid, status_msg, credentials = auth_manager.check_credentials()
+    is_valid, status_msg, credentials = provider.check_credentials()
 
     if is_valid:
-        result = {
+        result: dict[str, Any] = {
             "status": "authenticated",
             "message": f"Token is valid ({status_msg}).",
-            "token_path": str(auth_manager.TOKEN_PATH),
         }
-        if auth_manager.account_name:
-            result["account"] = auth_manager.account_name
+        if hasattr(provider, "TOKEN_PATH"):
+            result["token_path"] = str(provider.TOKEN_PATH)
+        if hasattr(provider, "account_name") and provider.account_name:
+            result["account"] = provider.account_name
         output_json(result)
     else:
         result = {
             "status": "not_authenticated",
             "message": f"Authentication required: {status_msg}",
-            "token_path": str(auth_manager.TOKEN_PATH),
             "hint": "Run 'gws auth' to authenticate.",
         }
-        if auth_manager.account_name:
-            result["account"] = auth_manager.account_name
+        if hasattr(provider, "TOKEN_PATH"):
+            result["token_path"] = str(provider.TOKEN_PATH)
+        if hasattr(provider, "account_name") and provider.account_name:
+            result["account"] = provider.account_name
         output_json(result)
         raise typer.Exit(ExitCode.AUTH_ERROR)
 
@@ -142,15 +145,15 @@ def auth_logout(
     ] = None,
 ) -> None:
     """Remove stored authentication token."""
-    auth_manager = AuthManager(account=account)
+    provider = resolve_auth_provider(account=account)
 
-    if auth_manager.delete_token():
-        result = {
+    if provider.delete_token():
+        result: dict[str, Any] = {
             "operation": "auth.logout",
             "message": "Token deleted successfully.",
         }
-        if auth_manager.account_name:
-            result["account"] = auth_manager.account_name
+        if hasattr(provider, "account_name") and provider.account_name:
+            result["account"] = provider.account_name
         output_success(**result)
     else:
         result = {
@@ -158,9 +161,110 @@ def auth_logout(
             "operation": "auth.logout",
             "message": "No token to delete.",
         }
-        if auth_manager.account_name:
-            result["account"] = auth_manager.account_name
+        if hasattr(provider, "account_name") and provider.account_name:
+            result["account"] = provider.account_name
         output_json(result)
+
+
+@auth_app.command("server-login")
+def auth_server_login(
+    device: Annotated[
+        bool,
+        typer.Option("--device", help="Use device flow (for headless/SSH environments)."),
+    ] = False,
+    account: Annotated[
+        Optional[str],
+        typer.Option("--account", "-a", envvar="GWS_ACCOUNT", help="Named account."),
+    ] = None,
+) -> None:
+    """Authenticate to the oauth-token-relay server.
+
+    Uses OAuth 2.1 PKCE flow by default.
+    Use --device for headless/SSH environments.
+    """
+    from gws.auth.server import ServerAuthProvider
+
+    config = Config.load()
+    server_url = config.server_url
+    if not server_url:
+        output_error(
+            error_code="NOT_CONFIGURED",
+            operation="auth.server-login",
+            message="No server URL configured.",
+            details="Run 'gws config set-mode server --url <url>' first.",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    try:
+        provider = ServerAuthProvider(server_url=server_url, account=account)
+        provider.server_login(device_flow=device)
+        output_success(
+            operation="auth.server-login",
+            message="Server authentication successful.",
+            server_url=server_url,
+        )
+    except AuthError as e:
+        output_error(
+            error_code="AUTH_ERROR",
+            operation="auth.server-login",
+            message=str(e),
+            details=e.details if hasattr(e, "details") else None,
+        )
+        raise typer.Exit(ExitCode.AUTH_ERROR)
+
+
+@auth_app.command("server-status")
+def auth_server_status(
+    account: Annotated[
+        Optional[str],
+        typer.Option("--account", "-a", envvar="GWS_ACCOUNT", help="Named account."),
+    ] = None,
+) -> None:
+    """Check connection and auth status with the relay server."""
+    from gws.auth.server import ServerAuthProvider
+
+    config = Config.load()
+    server_url = config.server_url
+    if not server_url:
+        output_error(
+            error_code="NOT_CONFIGURED",
+            operation="auth.server-status",
+            message="No server URL configured. Mode is 'local'.",
+            details="Run 'gws config set-mode server --url <url>' to switch to server mode.",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    provider = ServerAuthProvider(server_url=server_url, account=account)
+    status = provider.server_status()
+    output_json({"status": "success", "operation": "auth.server-status", **status})
+
+
+@auth_app.command("server-logout")
+def auth_server_logout(
+    account: Annotated[
+        Optional[str],
+        typer.Option("--account", "-a", envvar="GWS_ACCOUNT", help="Named account."),
+    ] = None,
+) -> None:
+    """Revoke server authentication and remove server token."""
+    from gws.auth.server import ServerAuthProvider
+
+    config = Config.load()
+    server_url = config.server_url
+    if not server_url:
+        output_error(
+            error_code="NOT_CONFIGURED",
+            operation="auth.server-logout",
+            message="No server URL configured.",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    provider = ServerAuthProvider(server_url=server_url, account=account)
+    provider.server_logout()
+    output_success(
+        operation="auth.server-logout",
+        message="Server token revoked and removed.",
+    )
 
 
 # ── Account command group ──────────────────────────────────────────────
@@ -205,17 +309,19 @@ def account_add(
 
     # Trigger authentication for the new account
     try:
-        auth_manager = AuthManager(config=config, account=name)
-        credentials = auth_manager.get_credentials()
+        provider = resolve_auth_provider(account=name, config=config)
+        credentials = provider.get_credentials()
 
         if credentials and credentials.valid:
-            output_success(
-                operation="account.add",
-                message=f"Account '{name}' added and authenticated.",
-                account=name,
-                token_path=str(auth_manager.TOKEN_PATH),
-                is_default=config.accounts.default_account == name if config.accounts else False,
-            )
+            result: dict[str, Any] = {
+                "operation": "account.add",
+                "message": f"Account '{name}' added and authenticated.",
+                "account": name,
+                "is_default": config.accounts.default_account == name if config.accounts else False,
+            }
+            if hasattr(provider, "TOKEN_PATH"):
+                result["token_path"] = str(provider.TOKEN_PATH)
+            output_success(**result)
         else:
             # Auth failed — remove the account to avoid ghost entries
             config.remove_account(name)
@@ -543,9 +649,10 @@ def config_default(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
         # Default: show current config
         config = Config.load()
-        result = {
+        result: dict[str, Any] = {
             "status": "success",
             "operation": "config",
+            "mode": config.mode,
             "enabled_services": config.enabled_services,
             "all_services": Config.ALL_SERVICES,
             "kroki_url": config.kroki_url,
@@ -555,6 +662,8 @@ def config_default(ctx: typer.Context) -> None:
             "disabled_security_services": config.disabled_security_services,
             "disabled_security_operations": config.disabled_security_operations,
         }
+        if config.server_url:
+            result["server_url"] = config.server_url
         if config.is_multi_account:
             result["accounts"] = config.list_accounts()
             result["default_account"] = config.accounts.default_account if config.accounts else None
@@ -800,6 +909,54 @@ def config_allowlist_list() -> None:
         allowlisted_emails=config.allowlisted_emails,
         total_count=len(config.allowlisted_documents) + len(config.allowlisted_emails),
     )
+
+
+@config_app.command("set-mode")
+def config_set_mode(
+    mode: Annotated[str, typer.Argument(help="Auth mode: 'local' or 'server'.")],
+    url: Annotated[
+        Optional[str],
+        typer.Option("--url", help="Server URL (required for server mode)."),
+    ] = None,
+) -> None:
+    """Switch authentication mode between local and server.
+
+    Local mode: uses client_secret.json for direct OAuth.
+    Server mode: delegates auth to an oauth-token-relay server.
+
+    Examples:
+        gws config set-mode server --url https://auth.company.com
+        gws config set-mode local
+    """
+    if mode not in ("local", "server"):
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="config.set-mode",
+            message=f"Invalid mode: {mode}. Use 'local' or 'server'.",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    if mode == "server" and not url:
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="config.set-mode",
+            message="Server mode requires --url.",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    config = Config.load()
+    config.mode = mode
+    config.server_url = url.rstrip("/") if url else None
+    config.save()
+
+    result: dict[str, Any] = {
+        "operation": "config.set-mode",
+        "message": f"Auth mode set to '{mode}'.",
+        "mode": mode,
+    }
+    if url:
+        result["server_url"] = config.server_url
+    output_success(**result)
 
 
 # Register service command groups

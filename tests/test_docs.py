@@ -13,15 +13,13 @@ from unittest.mock import MagicMock, patch
 @pytest.fixture
 def docs_service():
     """Create a DocsService with fully mocked API."""
-    with patch("gws.auth.oauth.AuthManager") as mock_auth_class, \
-         patch("gws.services.base.build") as mock_build:
+    mock_auth = MagicMock()
+    mock_creds = MagicMock()
+    mock_creds.valid = True
+    mock_auth.get_credentials.return_value = mock_creds
 
-        # Mock auth manager
-        mock_auth = MagicMock()
-        mock_creds = MagicMock()
-        mock_creds.valid = True
-        mock_auth.get_credentials.return_value = mock_creds
-        mock_auth_class.return_value = mock_auth
+    with patch("gws.auth.provider.resolve_auth_provider", return_value=mock_auth), \
+         patch("gws.services.base.build") as mock_build:
 
         # Create mock APIs
         mock_docs_api = MagicMock()
