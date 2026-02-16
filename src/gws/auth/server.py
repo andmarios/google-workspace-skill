@@ -345,23 +345,21 @@ class ServerAuthProvider:
     # ── Private: Google token relay ───────────────────────────────────
 
     def _run_server_auth_flow(self) -> None:
-        """Initiate Google OAuth via the server relay.
+        """Initiate upstream OAuth via the server relay.
 
-        The CLI is provider-agnostic: just requests scopes, server resolves provider.
+        The CLI sends full scope URLs directly — the server is scope-agnostic
+        and passes them through to the upstream provider as-is.
         """
         from gws.auth.scopes import get_scopes_for_services
 
         server_token = self._ensure_server_token()
         scopes = get_scopes_for_services(self.config.enabled_services)
 
-        # Map full scope URLs to short names for the server
-        scope_names = self._scopes_to_names(scopes)
-
-        # Start the flow
+        # Start the flow — send full scope URLs, server passes them through
         resp = self._server_request(
             "POST",
             "/auth/tokens/start",
-            json_data={"scopes": scope_names},
+            json_data={"scopes": scopes},
             bearer_token=server_token["access_token"],
         )
 
@@ -517,26 +515,3 @@ class ServerAuthProvider:
         # Reload as Credentials object
         self._credentials = Credentials.from_authorized_user_file(str(self.TOKEN_PATH))
 
-    @staticmethod
-    def _scopes_to_names(scopes: list[str]) -> list[str]:
-        """Convert full Google scope URLs to short service names for the server.
-
-        The server's scopes_mapping handles the reverse translation.
-        """
-        from gws.auth.scopes import SCOPES
-
-        url_to_name: dict[str, str] = {}
-        for service_name, service_scopes in SCOPES.items():
-            for scope_url in service_scopes:
-                # Prefer the most specific service name
-                if scope_url not in url_to_name:
-                    url_to_name[scope_url] = service_name
-
-        names: set[str] = set()
-        for scope in scopes:
-            if scope in url_to_name:
-                names.add(url_to_name[scope])
-            else:
-                # Pass unknown scopes through as-is
-                names.add(scope)
-        return sorted(names)
