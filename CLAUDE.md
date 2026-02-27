@@ -18,6 +18,7 @@ This is a **Claude Code skill** that provides Google Workspace integration. The 
 src/gws/
 ├── cli.py              # Main Typer app, auth/config/account commands
 ├── config.py           # Service config + multi-account registry
+├── crypto.py           # Fernet encryption at rest (machine-derived key, HKDF)
 ├── context.py          # Runtime active account state
 ├── output.py           # JSON output formatting (output_success, output_error)
 ├── exceptions.py       # Exit codes (0-4)
@@ -107,10 +108,24 @@ uv run ruff check .
 
 ## Credentials
 
-Stored in `~/.config/gws-cli/`:
-- `client_secret.json` - OAuth client credentials (user provides, shared across accounts)
-- `token.json` - Access token (auto-generated, legacy single-account mode)
-- `gws_config.json` - Configuration (enabled services, Kroki URL, accounts registry)
+Stored in `~/.config/gws-cli/` with encryption at rest:
+- `client_secret.json.enc` - OAuth client credentials (encrypted, imported via `gws-cli auth import-credentials`)
+- `token.json.enc` - Access token (encrypted, auto-generated during OAuth flow)
+- `gws_config.json` - Configuration (plaintext — contains `encryption_salt` + enabled services, Kroki URL, accounts registry)
+
+### Encryption at Rest
+
+Secret files (tokens, credentials) are encrypted using Fernet symmetric encryption. The key is derived at runtime from machine-specific identifiers and never stored on disk.
+
+- **Module**: `src/gws/crypto.py`
+- **Key derivation**: `machine_id + username + app_id` → HKDF-SHA256 → Fernet key
+- **File convention**: `foo.json` → encrypted as `foo.json.enc`
+- **Auto-migration**: plaintext files are automatically encrypted on first load
+- **Opt-out**: Set `GWS_ENCRYPTION=none` to disable encryption entirely
+- **Salt**: Auto-generated, stored in `gws_config.json` (plaintext config stays unencrypted)
+
+CLI commands for managing encrypted credentials:
+- `gws-cli auth import-credentials <path>` - Import and encrypt `client_secret.json` from Google Cloud Console
 
 ### Multi-Account Storage
 

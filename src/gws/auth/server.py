@@ -16,7 +16,8 @@ from urllib.parse import urlencode
 import httpx
 from google.oauth2.credentials import Credentials
 
-from gws.config import Config, _write_secure_file
+from gws.config import Config
+from gws.crypto import save_encrypted, load_encrypted, delete_encrypted
 from gws.exceptions import AuthError
 
 
@@ -104,7 +105,7 @@ class ServerAuthProvider:
             return self._credentials
 
         # Try loading existing Google token (with expiry)
-        if self.TOKEN_PATH.exists() and not force_refresh:
+        if not force_refresh:
             self._credentials = self._load_google_token()
 
         # Refresh if expired
@@ -124,11 +125,8 @@ class ServerAuthProvider:
         return self._credentials  # type: ignore[return-value]
 
     def delete_token(self) -> bool:
-        """Delete the Google API token file."""
-        if self.TOKEN_PATH.exists():
-            self.TOKEN_PATH.unlink()
-            return True
-        return False
+        """Delete the Google API token file (encrypted and/or plaintext)."""
+        return delete_encrypted(self.TOKEN_PATH)
 
     def check_credentials(self) -> tuple[bool, str, Credentials | None]:
         """Check credentials without triggering interactive auth."""
@@ -136,9 +134,6 @@ class ServerAuthProvider:
         server_token = self._load_server_token()
         if not server_token:
             return False, "no_server_token", None
-
-        if not self.TOKEN_PATH.exists():
-            return False, "no_token", None
 
         credentials = self._load_google_token()
         if not credentials:
@@ -183,8 +178,7 @@ class ServerAuthProvider:
             except (httpx.RequestError, httpx.HTTPStatusError, AuthError):
                 pass  # Server might be unreachable; still clean up locally
 
-        if self._server_token_path.exists():
-            self._server_token_path.unlink()
+        delete_encrypted(self._server_token_path)
         self._server_token = None
 
     def server_status(self) -> dict[str, Any]:
@@ -579,25 +573,18 @@ class ServerAuthProvider:
         return new_token_data.get("access_token")
 
     def _load_server_token(self) -> dict[str, Any] | None:
-        """Load the server JWT from disk."""
+        """Load the server JWT from disk (encrypted or plaintext)."""
         if self._server_token:
             return self._server_token
 
-        if not self._server_token_path.exists():
-            return None
-
-        try:
-            with open(self._server_token_path) as f:
-                self._server_token = json.load(f)
-            return self._server_token
-        except (json.JSONDecodeError, TypeError) as e:
-            import sys
-            print(f"[gws-cli] Warning: corrupt server token file, ignoring: {e}", file=sys.stderr)
-            return None
+        self._server_token = load_encrypted(
+            self._server_token_path, self.config.get_encryption_key()
+        )
+        return self._server_token
 
     def _save_server_token(self, token_data: dict[str, Any]) -> None:
-        """Save server JWT to disk."""
-        _write_secure_file(self._server_token_path, json.dumps(token_data, indent=2))
+        """Save server JWT to disk (encrypted if enabled)."""
+        save_encrypted(self._server_token_path, token_data, self.config.get_encryption_key())
         self._server_token = token_data
 
     def _ensure_server_token(self, auto_login: bool = True) -> dict[str, Any]:
@@ -639,15 +626,8 @@ class ServerAuthProvider:
         """
         from datetime import datetime
 
-        if not self.TOKEN_PATH.exists():
-            return None
-
-        try:
-            with open(self.TOKEN_PATH) as f:
-                data = json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            import sys
-            print(f"[gws-cli] Warning: corrupt Google token file, ignoring: {e}", file=sys.stderr)
+        data = load_encrypted(self.TOKEN_PATH, self.config.get_encryption_key())
+        if not data:
             return None
 
         token = data.get("token")
@@ -704,7 +684,7 @@ class ServerAuthProvider:
         # Omit fields that are None (but keep expiry even if token_data had no expires_in)
         cred_data = {k: v for k, v in cred_data.items() if v is not None}
 
-        _write_secure_file(self.TOKEN_PATH, json.dumps(cred_data, indent=2))
+        save_encrypted(self.TOKEN_PATH, cred_data, self.config.get_encryption_key())
 
         self._credentials = Credentials(
             token=token_data["access_token"],

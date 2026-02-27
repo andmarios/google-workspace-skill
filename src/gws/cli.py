@@ -272,6 +272,64 @@ def auth_server_logout(
     )
 
 
+@auth_app.command("import-credentials")
+def auth_import_credentials(
+    path: Annotated[
+        str,
+        typer.Argument(help="Path to client_secret.json from Google Cloud Console."),
+    ],
+    account: Annotated[
+        Optional[str],
+        typer.Option("--account", "-a", envvar="GWS_ACCOUNT", help="Named account."),
+    ] = None,
+) -> None:
+    """Import OAuth client credentials and encrypt them for secure storage."""
+    import json
+    from pathlib import Path
+    from gws.auth.oauth import LocalAuthProvider
+    from gws.crypto import save_encrypted
+
+    source = Path(path).expanduser()
+    if not source.exists():
+        output_error(
+            error_code="NOT_FOUND",
+            operation="auth.import-credentials",
+            message=f"File not found: {source}",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    try:
+        with open(source) as f:
+            client_config = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        output_error(
+            error_code="INVALID_FILE",
+            operation="auth.import-credentials",
+            message=f"Cannot read file: {e}",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    # Validate structure
+    if "installed" not in client_config and "web" not in client_config:
+        output_error(
+            error_code="INVALID_FORMAT",
+            operation="auth.import-credentials",
+            message="File must contain 'installed' or 'web' key (Google OAuth client config).",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    config = Config.load()
+    key = config.get_encryption_key()
+    dest = LocalAuthProvider.CREDENTIALS_PATH
+    save_encrypted(dest, client_config, key)
+
+    output_success(
+        operation="auth.import-credentials",
+        message="Client credentials imported and encrypted.",
+        credentials_path=str(dest.parent / (dest.name + ".enc")) if key else str(dest),
+    )
+
+
 # ── Account command group ──────────────────────────────────────────────
 account_app = typer.Typer(help="Multi-account management.")
 app.add_typer(account_app, name="account")

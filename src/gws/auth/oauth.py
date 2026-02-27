@@ -11,7 +11,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 from gws.auth.scopes import get_scopes_for_services
-from gws.config import Config, _write_secure_file
+from gws.config import Config
+from gws.crypto import save_encrypted, load_encrypted, delete_encrypted
 from gws.exceptions import AuthError
 
 
@@ -69,14 +70,16 @@ class LocalAuthProvider:
 
         scopes = self._get_required_scopes()
 
-        # Try loading existing token
-        if self.TOKEN_PATH.exists() and not force_refresh:
+        # Try loading existing token (encrypted or plaintext)
+        if not force_refresh:
             try:
-                self._credentials = Credentials.from_authorized_user_file(
-                    str(self.TOKEN_PATH),
-                    scopes=scopes,
-                )
-            except (json.JSONDecodeError, ValueError, KeyError, OSError) as e:
+                token_data = load_encrypted(self.TOKEN_PATH, self.config.get_encryption_key())
+                if token_data:
+                    self._credentials = Credentials.from_authorized_user_info(
+                        token_data,
+                        scopes=scopes,
+                    )
+            except (ValueError, KeyError) as e:
                 import sys
                 print(f"[gws-cli] Warning: failed to load token: {e}", file=sys.stderr)
                 self._credentials = None
@@ -117,16 +120,18 @@ class LocalAuthProvider:
         """Run the OAuth loopback authentication flow."""
         import sys
 
-        if not self.CREDENTIALS_PATH.exists():
+        key = self.config.get_encryption_key()
+        client_config = load_encrypted(self.CREDENTIALS_PATH, key)
+        if not client_config:
             raise AuthError(
                 "Credentials file not found",
-                f"Please save your OAuth credentials to {self.CREDENTIALS_PATH}",
+                "Import with: gws-cli auth import-credentials <path-to-client_secret.json>",
             )
 
         port = self._find_available_port()
 
-        flow = InstalledAppFlow.from_client_secrets_file(
-            str(self.CREDENTIALS_PATH),
+        flow = InstalledAppFlow.from_client_config(
+            client_config,
             scopes=scopes,
         )
 
@@ -156,16 +161,14 @@ class LocalAuthProvider:
         self._save_credentials()
 
     def _save_credentials(self) -> None:
-        """Save credentials to token file."""
+        """Save credentials to token file (encrypted if enabled)."""
         if self._credentials:
-            _write_secure_file(self.TOKEN_PATH, self._credentials.to_json())
+            data = json.loads(self._credentials.to_json())
+            save_encrypted(self.TOKEN_PATH, data, self.config.get_encryption_key())
 
     def delete_token(self) -> bool:
-        """Delete the token file for re-authentication."""
-        if self.TOKEN_PATH.exists():
-            self.TOKEN_PATH.unlink()
-            return True
-        return False
+        """Delete the token file (encrypted and/or plaintext)."""
+        return delete_encrypted(self.TOKEN_PATH)
 
     def check_credentials(self) -> tuple[bool, str, Credentials | None]:
         """Check credentials without triggering auth flow.
@@ -173,14 +176,14 @@ class LocalAuthProvider:
         Returns:
             Tuple of (is_valid, status_message, credentials_or_none)
         """
-        if not self.TOKEN_PATH.exists():
-            return False, "no_token", None
-
         scopes = self._get_required_scopes()
 
         try:
-            credentials = Credentials.from_authorized_user_file(
-                str(self.TOKEN_PATH),
+            token_data = load_encrypted(self.TOKEN_PATH, self.config.get_encryption_key())
+            if not token_data:
+                return False, "no_token", None
+            credentials = Credentials.from_authorized_user_info(
+                token_data,
                 scopes=scopes,
             )
         except Exception as e:

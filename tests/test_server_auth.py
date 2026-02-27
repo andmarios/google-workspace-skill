@@ -16,8 +16,11 @@ class TestServerAuthTokenHandling:
     """Tests for server token load/save methods."""
 
     @pytest.fixture
-    def provider(self, tmp_path):
+    def provider(self, tmp_path, monkeypatch):
         """Create a ServerAuthProvider with mocked paths, bypassing __init__."""
+        # Disable encryption for unit tests (encryption tested separately)
+        monkeypatch.setenv("GWS_ENCRYPTION", "none")
+
         with patch.object(ServerAuthProvider, "__init__", lambda self, *a, **kw: None):
             p = ServerAuthProvider("unused")
 

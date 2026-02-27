@@ -33,6 +33,7 @@ dependencies = [
     "google-auth-oauthlib>=1.1.0",
     "httpx>=0.25.0",
     "prompt-security-utils",
+    "cryptography>=46.0.4",
 ]
 
 [tool.uv.sources]

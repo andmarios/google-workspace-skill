@@ -110,6 +110,9 @@ class Config:
     server_url: str | None = None
     server_provider: str | None = None
 
+    # Encryption salt for secret files (auto-generated on first use)
+    encryption_salt: str = ""
+
     # Multi-account support (None = legacy single-account mode)
     accounts: AccountsRegistry | None = None
 
@@ -177,6 +180,34 @@ class Config:
         if self.mode == "local":
             data.pop("mode", None)
         _write_secure_file(self.CONFIG_PATH, json.dumps(data, indent=2))
+
+    _encryption_key_cache: bytes | None = None
+    _encryption_key_resolved: bool = False
+
+    def get_encryption_key(self) -> bytes | None:
+        """Return the Fernet encryption key, or None if encryption is disabled.
+
+        The key is derived at runtime from the machine ID, current username,
+        and a random salt stored in the config file.  Set GWS_ENCRYPTION=none
+        to disable encryption entirely.
+        """
+        if self._encryption_key_resolved:
+            return self._encryption_key_cache
+
+        from gws.crypto import derive_key, generate_salt
+
+        if os.environ.get("GWS_ENCRYPTION", "").lower() == "none":
+            self._encryption_key_cache = None
+            self._encryption_key_resolved = True
+            return None
+
+        if not self.encryption_salt:
+            self.encryption_salt = generate_salt()
+            self.save()
+
+        self._encryption_key_cache = derive_key(self.encryption_salt, "gws-cli")
+        self._encryption_key_resolved = True
+        return self._encryption_key_cache
 
     def is_service_enabled(self, service: str) -> bool:
         """Check if a service is enabled."""
