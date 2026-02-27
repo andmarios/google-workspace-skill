@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 from urllib.parse import urlparse
 
@@ -30,6 +31,16 @@ class AuthProvider(Protocol):
         Returns:
             Tuple of (is_valid, status_message, credentials_or_none)
         """
+        ...
+
+    @property
+    def TOKEN_PATH(self) -> Path:  # noqa: N802
+        """Path to the token file."""
+        ...
+
+    @property
+    def account_name(self) -> str | None:
+        """The resolved account name, or None for legacy mode."""
         ...
 
 

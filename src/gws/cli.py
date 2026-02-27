@@ -80,9 +80,8 @@ def auth_default(
                 "operation": "auth",
                 "message": "Authentication successful. Token is valid and stored.",
             }
-            if hasattr(provider, "TOKEN_PATH"):
-                result["token_path"] = str(provider.TOKEN_PATH)
-            if hasattr(provider, "account_name") and provider.account_name:
+            result["token_path"] = str(provider.TOKEN_PATH)
+            if provider.account_name:
                 result["account"] = provider.account_name
             output_success(**result)
         else:
@@ -120,9 +119,8 @@ def auth_status(
             "status": "authenticated",
             "message": f"Token is valid ({status_msg}).",
         }
-        if hasattr(provider, "TOKEN_PATH"):
-            result["token_path"] = str(provider.TOKEN_PATH)
-        if hasattr(provider, "account_name") and provider.account_name:
+        result["token_path"] = str(provider.TOKEN_PATH)
+        if provider.account_name:
             result["account"] = provider.account_name
         output_json(result)
     else:
@@ -131,9 +129,8 @@ def auth_status(
             "message": f"Authentication required: {status_msg}",
             "hint": "Run 'gws-cli auth' to authenticate.",
         }
-        if hasattr(provider, "TOKEN_PATH"):
-            result["token_path"] = str(provider.TOKEN_PATH)
-        if hasattr(provider, "account_name") and provider.account_name:
+        result["token_path"] = str(provider.TOKEN_PATH)
+        if provider.account_name:
             result["account"] = provider.account_name
         output_json(result)
         raise typer.Exit(ExitCode.AUTH_ERROR)
@@ -154,7 +151,7 @@ def auth_logout(
             "operation": "auth.logout",
             "message": "Token deleted successfully.",
         }
-        if hasattr(provider, "account_name") and provider.account_name:
+        if provider.account_name:
             result["account"] = provider.account_name
         output_success(**result)
     else:
@@ -163,7 +160,7 @@ def auth_logout(
             "operation": "auth.logout",
             "message": "No token to delete.",
         }
-        if hasattr(provider, "account_name") and provider.account_name:
+        if provider.account_name:
             result["account"] = provider.account_name
         output_json(result)
 
@@ -327,8 +324,7 @@ def account_add(
                 "account": name,
                 "is_default": config.accounts.default_account == name if config.accounts else False,
             }
-            if hasattr(provider, "TOKEN_PATH"):
-                result["token_path"] = str(provider.TOKEN_PATH)
+            result["token_path"] = str(provider.TOKEN_PATH)
             output_success(**result)
         else:
             # Auth failed — remove the account to avoid ghost entries

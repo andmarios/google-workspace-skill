@@ -658,10 +658,13 @@ class ConvertService(BaseService):
                     source_file=str(path),
                 )
                 return {"presentation_id": presentation_id}
-            except Exception as e:
-                # Clean up on error
-                self.execute(self.drive_service.files().delete(fileId=presentation_id))
-                raise e
+            except Exception:
+                # Clean up on error — best-effort delete
+                try:
+                    self.execute(self.drive_service.files().delete(fileId=presentation_id))
+                except (HttpError, OSError):
+                    pass
+                raise
 
         except HttpError as e:
             output_error(
