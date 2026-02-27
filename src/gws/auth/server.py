@@ -34,7 +34,7 @@ class ServerAuthProvider:
     - Google API tokens (obtained through the relay, stored locally)
     """
 
-    _LEGACY_TOKEN_PATH = Path.home() / ".claude" / ".google-workspace" / "token.json"
+    _LEGACY_TOKEN_PATH = Path.home() / ".config" / "gws-cli" / "token.json"
     _SERVER_TOKEN_FILENAME = "server_token.json"
 
     def __init__(
@@ -57,7 +57,7 @@ class ServerAuthProvider:
         elif self._account_name and not self.config.accounts:
             raise AuthError(
                 f"Account '{self._account_name}' specified but no accounts are configured",
-                "Use 'gws account add <name>' to set up multi-account mode.",
+                "Use 'gws-cli account add <name>' to set up multi-account mode.",
             )
 
         # Load effective config for this account
@@ -84,7 +84,7 @@ class ServerAuthProvider:
         """Path to the server JWT file."""
         if self._account_name:
             return self.config.get_account_dir(self._account_name) / self._SERVER_TOKEN_FILENAME
-        return Path.home() / ".claude" / ".google-workspace" / self._SERVER_TOKEN_FILENAME
+        return Path.home() / ".config" / "gws-cli" / self._SERVER_TOKEN_FILENAME
 
     # ── AuthProvider protocol methods ─────────────────────────────────
 
@@ -101,12 +101,9 @@ class ServerAuthProvider:
         if self._credentials and self._credentials.valid and not force_refresh:
             return self._credentials
 
-        # Try loading existing Google token
+        # Try loading existing Google token (with expiry)
         if self.TOKEN_PATH.exists() and not force_refresh:
-            try:
-                self._credentials = Credentials.from_authorized_user_file(str(self.TOKEN_PATH))
-            except Exception:
-                self._credentials = None
+            self._credentials = self._load_google_token()
 
         # Refresh if expired
         if self._credentials and self._credentials.expired and self._credentials.refresh_token:
@@ -139,10 +136,9 @@ class ServerAuthProvider:
         if not self.TOKEN_PATH.exists():
             return False, "no_token", None
 
-        try:
-            credentials = Credentials.from_authorized_user_file(str(self.TOKEN_PATH))
-        except Exception as e:
-            return False, f"invalid_token: {e}", None
+        credentials = self._load_google_token()
+        if not credentials:
+            return False, "invalid_token", None
 
         if credentials.valid:
             return True, "valid", credentials
@@ -210,7 +206,7 @@ class ServerAuthProvider:
             result["server_token_path"] = str(self._server_token_path)
         else:
             result["authenticated"] = False
-            result["hint"] = "Run 'gws auth server-login' to authenticate."
+            result["hint"] = "Run 'gws-cli auth server-login' to authenticate."
 
         return result
 
@@ -227,17 +223,19 @@ class ServerAuthProvider:
         state = secrets.token_urlsafe(32)
 
         # Build authorize URL
+        redirect_uri = f"{self.server_url}/oauth/cli-callback"
         params = {
             "response_type": "code",
+            "client_id": "cli",
             "code_challenge": challenge,
             "code_challenge_method": "S256",
             "state": state,
-            "redirect_uri": "http://127.0.0.1:0/callback",  # Server will provide actual redirect
+            "redirect_uri": redirect_uri,
         }
         auth_url = f"{self.server_url}/oauth/authorize?{urlencode(params)}"
 
         print("\n" + "=" * 60, file=sys.stderr)
-        print("Server Authentication Required", file=sys.stderr)
+        print("OAuth Token Relay Server Authentication Required", file=sys.stderr)
         print("=" * 60, file=sys.stderr)
 
         # Try to open browser
@@ -252,12 +250,36 @@ class ServerAuthProvider:
         else:
             print(f"\nOpen this URL in your browser:\n{auth_url}\n", file=sys.stderr)
 
-        # Wait for user to complete browser auth, then exchange code
-        print("Paste the authorization code here: ", file=sys.stderr, end="")
-        code = input().strip()
+        # Poll for authorization code (server stores it when browser callback arrives)
+        print("Waiting for authorization...\n", file=sys.stderr)
+
+        code = None
+        deadline = time.monotonic() + 600  # 10 minute timeout
+        while time.monotonic() < deadline:
+            time.sleep(2)
+
+            try:
+                poll_resp = httpx.get(
+                    f"{self.server_url}/oauth/cli-poll",
+                    params={"state": state},
+                    timeout=10,
+                )
+            except httpx.RequestError:
+                continue  # Network hiccup, retry
+
+            if poll_resp.status_code == 200:
+                code = poll_resp.json().get("code")
+                break
+            elif poll_resp.status_code == 202:
+                continue  # Still pending
+            else:
+                raise AuthError(
+                    "Server authentication failed",
+                    f"Poll error: {poll_resp.status_code} {poll_resp.text}",
+                )
 
         if not code:
-            raise AuthError("No authorization code provided.")
+            raise AuthError("Authorization timed out. Please try again.")
 
         # Exchange code for tokens
         resp = httpx.post(
@@ -265,8 +287,9 @@ class ServerAuthProvider:
             data={
                 "grant_type": "authorization_code",
                 "code": code,
+                "client_id": "cli",
                 "code_verifier": verifier,
-                "redirect_uri": "http://127.0.0.1:0/callback",
+                "redirect_uri": redirect_uri,
             },
             timeout=30,
         )
@@ -355,11 +378,14 @@ class ServerAuthProvider:
         server_token = self._ensure_server_token()
         scopes = get_scopes_for_services(self.config.enabled_services)
 
+        # Discover relay provider from server health endpoint
+        provider = self._discover_relay_provider()
+
         # Start the flow — send full scope URLs, server passes them through
         resp = self._server_request(
             "POST",
             "/auth/tokens/start",
-            json_data={"scopes": scopes},
+            json_data={"scopes": scopes, "provider": provider},
             bearer_token=server_token["access_token"],
         )
 
@@ -375,7 +401,7 @@ class ServerAuthProvider:
 
         print("\n" + "=" * 60, file=sys.stderr)
         account_label = f" (account: {self._account_name})" if self._account_name else ""
-        print(f"Google OAuth Authorization Required{account_label}", file=sys.stderr)
+        print(f"Google OAuth Authorization Required for gws-cli{account_label}", file=sys.stderr)
         print("=" * 60, file=sys.stderr)
 
         try:
@@ -426,7 +452,10 @@ class ServerAuthProvider:
         resp = self._server_request(
             "POST",
             "/auth/tokens/refresh",
-            json_data={"refresh_token": refresh_token},
+            json_data={
+                "refresh_token": refresh_token,
+                "provider": self._discover_relay_provider(),
+            },
             bearer_token=server_token["access_token"],
         )
 
@@ -441,6 +470,41 @@ class ServerAuthProvider:
 
     # ── Private: helpers ──────────────────────────────────────────────
 
+    def _discover_relay_provider(self) -> str:
+        """Resolve which relay provider to use.
+
+        Priority:
+        1. Explicit config (server_provider in gws_config.json)
+        2. Auto-discover from /health if exactly one provider exists
+        3. Error with available options
+        """
+        # Check explicit config first
+        if self.config.server_provider:
+            return self.config.server_provider
+
+        # Auto-discover from server
+        try:
+            resp = httpx.get(f"{self.server_url}/health", timeout=10)
+            health = resp.json()
+            providers = health.get("providers", [])
+        except Exception as e:
+            raise AuthError(
+                "Cannot discover relay providers",
+                f"Server health check failed: {e}",
+            )
+
+        if not providers:
+            raise AuthError("No relay providers configured on the server.")
+
+        if len(providers) == 1:
+            return providers[0]
+
+        raise AuthError(
+            "Multiple relay providers available",
+            f"Available: {', '.join(providers)}. "
+            "Set one with: gws-cli config set-mode server --url <url> --provider <name>",
+        )
+
     def _server_request(
         self,
         method: str,
@@ -448,18 +512,67 @@ class ServerAuthProvider:
         json_data: dict[str, Any] | None = None,
         bearer_token: str | None = None,
     ) -> httpx.Response:
-        """Make an authenticated request to the relay server."""
+        """Make an authenticated request to the relay server.
+
+        Automatically refreshes the server JWT on 401 and retries once.
+        """
         headers: dict[str, str] = {}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
 
-        return httpx.request(
+        resp = httpx.request(
             method,
             f"{self.server_url}{path}",
             json=json_data,
             headers=headers,
             timeout=30,
         )
+
+        if resp.status_code == 401 and bearer_token:
+            new_token = self._refresh_server_token()
+            if new_token:
+                headers["Authorization"] = f"Bearer {new_token}"
+                resp = httpx.request(
+                    method,
+                    f"{self.server_url}{path}",
+                    json=json_data,
+                    headers=headers,
+                    timeout=30,
+                )
+
+        return resp
+
+    def _refresh_server_token(self) -> str | None:
+        """Refresh the server JWT using the refresh_token.
+
+        Returns the new access_token, or None if refresh failed.
+        """
+        server_token = self._load_server_token()
+        if not server_token or not server_token.get("refresh_token"):
+            return None
+
+        try:
+            resp = httpx.post(
+                f"{self.server_url}/oauth/token",
+                data={
+                    "grant_type": "refresh_token",
+                    "refresh_token": server_token["refresh_token"],
+                    "client_id": "cli",
+                },
+                timeout=30,
+            )
+        except httpx.RequestError:
+            return None
+
+        if resp.status_code != 200:
+            return None
+
+        new_token_data = resp.json()
+        # Preserve the refresh_token if the server didn't issue a new one
+        if "refresh_token" not in new_token_data:
+            new_token_data["refresh_token"] = server_token["refresh_token"]
+        self._save_server_token(new_token_data)
+        return new_token_data.get("access_token")
 
     def _load_server_token(self) -> dict[str, Any] | None:
         """Load the server JWT from disk."""
@@ -483,35 +596,118 @@ class ServerAuthProvider:
             json.dump(token_data, f, indent=2)
         self._server_token = token_data
 
-    def _ensure_server_token(self) -> dict[str, Any]:
-        """Load server token or raise if not authenticated."""
+    def _ensure_server_token(self, auto_login: bool = True) -> dict[str, Any]:
+        """Load server token, auto-triggering login if needed.
+
+        When auto_login is True (the default), missing server tokens trigger
+        the PKCE login flow automatically so the user never needs to run
+        'gws-cli auth server-login' as a separate step.
+        """
+        token = self._load_server_token()
+        if token:
+            return token
+
+        if not auto_login:
+            raise AuthError(
+                "Not authenticated to the server",
+                "Run 'gws-cli auth server-login' first.",
+            )
+
+        # Auto-trigger server login — one fewer manual step for the user
+        print("No server token found — starting server authentication...\n", file=sys.stderr)
+        self.server_login()
+
         token = self._load_server_token()
         if not token:
             raise AuthError(
-                "Not authenticated to the server",
-                "Run 'gws auth server-login' first.",
+                "Server login completed but no token was saved.",
+                "Try again with 'gws-cli auth server-login'.",
             )
         return token
+
+    def _load_google_token(self) -> Credentials | None:
+        """Load Google API credentials from disk with expiry support.
+
+        We don't use Credentials.from_authorized_user_file() because it doesn't
+        restore the expiry field, causing tokens to appear perpetually valid even
+        when the access token has actually expired. Instead, we read the JSON
+        directly and construct Credentials with the saved expiry.
+        """
+        from datetime import datetime
+
+        if not self.TOKEN_PATH.exists():
+            return None
+
+        try:
+            with open(self.TOKEN_PATH) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return None
+
+        token = data.get("token")
+        if not token:
+            return None
+
+        expiry = None
+        if data.get("expiry"):
+            try:
+                expiry = datetime.fromisoformat(data["expiry"])
+            except (ValueError, TypeError):
+                pass
+        if expiry is None:
+            # No saved expiry — treat as expired so refresh logic kicks in.
+            # This handles tokens saved before expiry tracking was added.
+            expiry = datetime(2000, 1, 1)
+        # google-auth uses naive UTC datetimes internally (datetime.utcnow()),
+        # so we must strip tzinfo to avoid comparison errors.
+        if expiry.tzinfo is not None:
+            expiry = expiry.replace(tzinfo=None)
+
+        return Credentials(
+            token=token,
+            refresh_token=data.get("refresh_token"),
+            token_uri=data.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=data.get("client_id", ""),
+            client_secret=data.get("client_secret", ""),
+            expiry=expiry,
+        )
 
     def _save_google_token(
         self,
         token_data: dict[str, Any],
         refresh_token: str | None = None,
     ) -> None:
-        """Save Google API tokens as a Credentials-compatible JSON file."""
+        """Save Google API tokens with expiry as a JSON file."""
+        from datetime import datetime, timedelta
+
+        client_id = token_data.get("client_id", "server-managed")
+        resolved_refresh = token_data.get("refresh_token", refresh_token)
+        expires_in = token_data.get("expires_in", 3600)
+        # Use naive UTC to match google-auth's internal convention
+        expiry = datetime.utcnow() + timedelta(seconds=expires_in)
+
         cred_data = {
             "token": token_data["access_token"],
-            "refresh_token": token_data.get("refresh_token", refresh_token),
+            "refresh_token": resolved_refresh,
             "token_uri": "https://oauth2.googleapis.com/token",
+            "client_id": client_id,
+            "client_secret": "",  # Held by relay server, not needed locally
             "scopes": token_data.get("scopes", []),
+            "expiry": expiry.isoformat(),
         }
-        # Omit fields that are None
+        # Omit fields that are None (but keep expiry even if token_data had no expires_in)
         cred_data = {k: v for k, v in cred_data.items() if v is not None}
 
         self.TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(self.TOKEN_PATH, "w") as f:
             json.dump(cred_data, f, indent=2)
 
-        # Reload as Credentials object
-        self._credentials = Credentials.from_authorized_user_file(str(self.TOKEN_PATH))
+        self._credentials = Credentials(
+            token=token_data["access_token"],
+            refresh_token=resolved_refresh,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=client_id,
+            client_secret="",
+            expiry=expiry,
+        )
 

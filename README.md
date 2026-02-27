@@ -41,7 +41,7 @@ git clone https://github.com/your-username/google-workspace ~/.claude/skills/goo
 4. Go to **Credentials** > **Create Credentials** > **OAuth 2.0 Client ID**
 5. Select **Desktop application**
 6. Download the JSON file
-7. Save as `~/.claude/.google-workspace/client_secret.json`
+7. Save as `~/.config/gws-cli/client_secret.json`
 
 ### 3. Authenticate
 
@@ -65,7 +65,7 @@ Claude uses the skill automatically for Google Workspace requests.
 
 ## Configuration
 
-All settings are stored in `~/.claude/.google-workspace/gws_config.json`. The file is created automatically on first use.
+All settings are stored in `~/.config/gws-cli/gws_config.json`. The file is created automatically on first use.
 
 ### Full Configuration Reference
 
@@ -94,16 +94,16 @@ Available services: `docs`, `sheets`, `slides`, `drive`, `gmail`, `calendar`, `c
 
 ```bash
 # Disable a service
-uv run gws config disable gmail
+uv run gws-cli config disable gmail
 
 # Re-enable
-uv run gws config enable gmail
+uv run gws-cli config enable gmail
 
 # List enabled services
-uv run gws config list
+uv run gws-cli config list
 
 # Use a self-hosted Kroki server
-uv run gws config set-kroki http://localhost:8000
+uv run gws-cli config set-kroki http://localhost:8000
 ```
 
 The Kroki URL can also be set via the `GWS_KROKI_URL` environment variable.
@@ -114,7 +114,7 @@ Prompt injection protection uses a two-tier configuration model:
 
 | Layer | Config file | Controls |
 |-------|-------------|----------|
-| **This skill** | `~/.claude/.google-workspace/gws_config.json` | What to protect (toggles, allowlists) |
+| **This skill** | `~/.config/gws-cli/gws_config.json` | What to protect (toggles, allowlists) |
 | **Shared library** | `~/.claude/.prompt-security/config.json` | How to protect (markers, detection, LLM screening) |
 
 #### Skill-level settings (gws_config.json)
@@ -181,22 +181,22 @@ Configure named accounts to use different Google accounts. Multi-account is opt-
 
 ```bash
 # Add accounts (opens browser for OAuth)
-uv run gws account add work
-uv run gws account add personal
+uv run gws-cli account add work
+uv run gws-cli account add personal
 
 # Set display names (used in email From field)
-uv run gws account update work --name "Jane Doe" --email "jane@company.com"
+uv run gws-cli account update work --name "Jane Doe" --email "jane@company.com"
 
 # Use a specific account with any command
-uv run gws gmail --account personal search "is:inbox"
+uv run gws-cli gmail --account personal search "is:inbox"
 
 # Or via environment variable
-GWS_ACCOUNT=personal uv run gws docs read <id>
+GWS_ACCOUNT=personal uv run gws-cli docs read <id>
 
 # Manage accounts
-uv run gws account list          # Show all accounts
-uv run gws account default work  # Change default
-uv run gws account remove work   # Remove account
+uv run gws-cli account list          # Show all accounts
+uv run gws-cli account default work  # Change default
+uv run gws-cli account remove work   # Remove account
 ```
 
 ### Per-Account Configuration
@@ -204,10 +204,10 @@ uv run gws account remove work   # Remove account
 Override global settings per account:
 
 ```bash
-uv run gws account config work             # Show effective config
-uv run gws account config-disable work gmail  # Disable a service
-uv run gws account config-enable work gmail   # Re-enable
-uv run gws account config-reset work          # Reset to global defaults
+uv run gws-cli account config work             # Show effective config
+uv run gws-cli account config-disable work gmail  # Disable a service
+uv run gws-cli account config-enable work gmail   # Re-enable
+uv run gws-cli account config-reset work          # Reset to global defaults
 ```
 
 ### Read-Only Accounts
@@ -215,13 +215,13 @@ uv run gws account config-reset work          # Reset to global defaults
 Restrict an account to read-only operations (blocks send, create, delete, format, etc.):
 
 ```bash
-uv run gws account set-readonly personal
-uv run gws account unset-readonly personal
+uv run gws-cli account set-readonly personal
+uv run gws-cli account unset-readonly personal
 ```
 
 ## Credential Storage
 
-All credentials and configuration are stored in `~/.claude/.google-workspace/`:
+All credentials and configuration are stored in `~/.config/gws-cli/`:
 
 | File | Purpose |
 |------|---------|

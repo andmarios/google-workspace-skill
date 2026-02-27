@@ -20,8 +20,8 @@ class LocalAuthProvider:
     Google OAuth credentials locally.
     """
 
-    CREDENTIALS_PATH = Path.home() / ".claude" / ".google-workspace" / "client_secret.json"
-    _LEGACY_TOKEN_PATH = Path.home() / ".claude" / ".google-workspace" / "token.json"
+    CREDENTIALS_PATH = Path.home() / ".config" / "gws-cli" / "client_secret.json"
+    _LEGACY_TOKEN_PATH = Path.home() / ".config" / "gws-cli" / "token.json"
     LOOPBACK_IP = "127.0.0.1"
     PORT_RANGE = range(8080, 8100)
 
@@ -39,7 +39,7 @@ class LocalAuthProvider:
         elif self._account_name and not self.config.accounts:
             raise AuthError(
                 f"Account '{self._account_name}' specified but no accounts are configured",
-                "Use 'gws account add <name>' to set up multi-account mode.",
+                "Use 'gws-cli account add <name>' to set up multi-account mode.",
             )
 
         # Load effective config for this account
@@ -134,7 +134,7 @@ class LocalAuthProvider:
         # Print header
         print("\n" + "=" * 60, file=sys.stderr)
         account_label = f" (account: {self._account_name})" if self._account_name else ""
-        print(f"Google OAuth Authorization Required{account_label}", file=sys.stderr)
+        print(f"Google OAuth Authorization Required for gws-cli{account_label}", file=sys.stderr)
         print("=" * 60, file=sys.stderr)
 
         # Let run_local_server handle everything including URL generation

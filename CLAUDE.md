@@ -4,7 +4,7 @@ This file provides context for Claude when working on this codebase.
 
 ## Project Overview
 
-This is a **Claude Code skill** that provides Google Workspace integration. The skill exposes a CLI (`gws`) that Claude invokes to interact with Google APIs.
+This is a **Claude Code skill** that provides Google Workspace integration. The skill exposes a CLI (`gws-cli`) that Claude invokes to interact with Google APIs.
 
 **Key distinction:**
 - `SKILL.md` - Instructions for Claude when **using** the skill (overview, navigation)
@@ -92,8 +92,8 @@ def read_document(document_id: Annotated[str, typer.Argument(...)]) -> None:
 
 ```bash
 # Run CLI directly
-uv run gws --help
-uv run gws docs read <doc_id>
+uv run gws-cli --help
+uv run gws-cli docs read <doc_id>
 
 # Run tests
 uv run pytest
@@ -107,7 +107,7 @@ uv run ruff check .
 
 ## Credentials
 
-Stored in `~/.claude/.google-workspace/`:
+Stored in `~/.config/gws-cli/`:
 - `client_secret.json` - OAuth client credentials (user provides, shared across accounts)
 - `token.json` - Access token (auto-generated, legacy single-account mode)
 - `gws_config.json` - Configuration (enabled services, Kroki URL, accounts registry)
@@ -117,7 +117,7 @@ Stored in `~/.claude/.google-workspace/`:
 When multi-account mode is active, per-account data is stored under `accounts/`:
 
 ```
-~/.claude/.google-workspace/
+~/.config/gws-cli/
 ├── client_secret.json              # Shared OAuth client (unchanged)
 ├── token.json                      # Legacy token (kept, used when no accounts)
 ├── gws_config.json                 # Global config + accounts registry
@@ -145,25 +145,25 @@ Multi-account is opt-in. When no accounts are configured, the CLI behaves exactl
 
 ```bash
 # Account management
-gws account add <name> [--force]     # Register + authenticate
-gws account remove <name>            # Delete account + credentials
-gws account list                     # Show all accounts with default marker
-gws account default <name>           # Change default account
+gws-cli account add <name> [--force]     # Register + authenticate
+gws-cli account remove <name>            # Delete account + credentials
+gws-cli account list                     # Show all accounts with default marker
+gws-cli account default <name>           # Change default account
 
 # Per-account config overrides
-gws account config <name>            # Show effective config
-gws account config-enable <name> <service>   # Enable service for account
-gws account config-disable <name> <service>  # Disable service for account
-gws account config-reset <name>      # Remove all overrides (inherit global)
+gws-cli account config <name>            # Show effective config
+gws-cli account config-enable <name> <service>   # Enable service for account
+gws-cli account config-disable <name> <service>  # Disable service for account
+gws-cli account config-reset <name>      # Remove all overrides (inherit global)
 
 # Using accounts with any command
-gws docs read <id> --account personal
-GWS_ACCOUNT=personal gws docs read <id>
+gws-cli docs read <id> --account personal
+GWS_ACCOUNT=personal gws-cli docs read <id>
 
 # Auth commands support --account
-gws auth --account work
-gws auth status --account work
-gws auth logout --account work
+gws-cli auth --account work
+gws-cli auth status --account work
+gws-cli auth logout --account work
 ```
 
 ## Common Tasks

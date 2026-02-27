@@ -19,11 +19,11 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 
 | # | Service | Command | Status | Date | Notes |
 |---|---------|---------|--------|------|-------|
-| 1 | Infra |`gws --version`|PASS| 2026-02-05 |Returns `{"version": "1.0.0"}`|
-| 2 | Infra |`gws --help`|PASS| 2026-02-05 |Lists all 8 services|
-| 3 | Infra |`gws auth status`|PASS| 2026-02-05 |Token valid|
-| 4 | Infra |`gws config`|PASS| 2026-02-05 |Shows all config including multi-account|
-| 5 | Infra |`gws config list`|PASS| 2026-02-05 |8/8 services enabled|
+| 1 | Infra |`gws-cli --version`|PASS| 2026-02-05 |Returns `{"version": "1.0.0"}`|
+| 2 | Infra |`gws-cli --help`|PASS| 2026-02-05 |Lists all 8 services|
+| 3 | Infra |`gws-cli auth status`|PASS| 2026-02-05 |Token valid|
+| 4 | Infra |`gws-cli config`|PASS| 2026-02-05 |Shows all config including multi-account|
+| 5 | Infra |`gws-cli config list`|PASS| 2026-02-05 |8/8 services enabled|
 | 6 | Drive |`drive list --max 5`|PASS| 2026-02-05 |Pagination works|
 | 7 | Drive |`drive search "name contains 'GWS-Test'"`|PASS| 2026-02-05 |Query works|
 | 8 | Drive |`drive get <file_id>`|PASS| 2026-02-05 |Full metadata|

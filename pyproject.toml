@@ -50,7 +50,7 @@ dev = [
 ]
 
 [project.scripts]
-gws = "gws.cli:app"
+gws-cli = "gws.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/andmarios/google-workspace-skill"

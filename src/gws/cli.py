@@ -1,5 +1,7 @@
 """Main CLI application for Google Workspace."""
 
+import os
+
 import typer
 from typing import Annotated, Any, Optional
 
@@ -11,7 +13,7 @@ from gws.exceptions import ExitCode, AuthError
 
 # Main app
 app = typer.Typer(
-    name="gws",
+    name="gws-cli",
     help="Google Workspace CLI - Unified management for Google services.",
     no_args_is_help=True,
     add_completion=False,
@@ -127,7 +129,7 @@ def auth_status(
         result = {
             "status": "not_authenticated",
             "message": f"Authentication required: {status_msg}",
-            "hint": "Run 'gws auth' to authenticate.",
+            "hint": "Run 'gws-cli auth' to authenticate.",
         }
         if hasattr(provider, "TOKEN_PATH"):
             result["token_path"] = str(provider.TOKEN_PATH)
@@ -185,18 +187,20 @@ def auth_server_login(
     from gws.auth.server import ServerAuthProvider
 
     config = Config.load()
-    server_url = config.server_url
+    resolved_account = config.resolve_account(account)
+    effective = config.load_effective_config(resolved_account)
+    server_url = os.environ.get("GWS_SERVER_URL") or effective.server_url
     if not server_url:
         output_error(
             error_code="NOT_CONFIGURED",
             operation="auth.server-login",
             message="No server URL configured.",
-            details="Run 'gws config set-mode server --url <url>' first.",
+            details="Run 'gws-cli config set-mode server --url <url>' first.",
         )
         raise typer.Exit(ExitCode.INVALID_ARGS)
 
     try:
-        provider = ServerAuthProvider(server_url=server_url, account=account)
+        provider = ServerAuthProvider(server_url=server_url, account=resolved_account, config=effective)
         provider.server_login(device_flow=device)
         output_success(
             operation="auth.server-login",
@@ -224,17 +228,19 @@ def auth_server_status(
     from gws.auth.server import ServerAuthProvider
 
     config = Config.load()
-    server_url = config.server_url
+    resolved_account = config.resolve_account(account)
+    effective = config.load_effective_config(resolved_account)
+    server_url = os.environ.get("GWS_SERVER_URL") or effective.server_url
     if not server_url:
         output_error(
             error_code="NOT_CONFIGURED",
             operation="auth.server-status",
             message="No server URL configured. Mode is 'local'.",
-            details="Run 'gws config set-mode server --url <url>' to switch to server mode.",
+            details="Run 'gws-cli config set-mode server --url <url>' to switch to server mode.",
         )
         raise typer.Exit(ExitCode.INVALID_ARGS)
 
-    provider = ServerAuthProvider(server_url=server_url, account=account)
+    provider = ServerAuthProvider(server_url=server_url, account=resolved_account, config=effective)
     status = provider.server_status()
     output_json({"status": "success", "operation": "auth.server-status", **status})
 
@@ -250,7 +256,9 @@ def auth_server_logout(
     from gws.auth.server import ServerAuthProvider
 
     config = Config.load()
-    server_url = config.server_url
+    resolved_account = config.resolve_account(account)
+    effective = config.load_effective_config(resolved_account)
+    server_url = os.environ.get("GWS_SERVER_URL") or effective.server_url
     if not server_url:
         output_error(
             error_code="NOT_CONFIGURED",
@@ -259,7 +267,7 @@ def auth_server_logout(
         )
         raise typer.Exit(ExitCode.INVALID_ARGS)
 
-    provider = ServerAuthProvider(server_url=server_url, account=account)
+    provider = ServerAuthProvider(server_url=server_url, account=resolved_account, config=effective)
     provider.server_logout()
     output_success(
         operation="auth.server-logout",
@@ -795,8 +803,8 @@ def config_allowlist_add(
     Allowlisted documents and emails skip security wrapping.
 
     Examples:
-        gws config allowlist-add docs 1abc2def3ghi
-        gws config allowlist-add email 18fd9a8b2c3d4e5f
+        gws-cli config allowlist-add docs 1abc2def3ghi
+        gws-cli config allowlist-add email 18fd9a8b2c3d4e5f
     """
     config = Config.load()
 
@@ -851,8 +859,8 @@ def config_allowlist_remove(
     """Remove an ID from the security allowlist.
 
     Examples:
-        gws config allowlist-remove docs 1abc2def3ghi
-        gws config allowlist-remove email 18fd9a8b2c3d4e5f
+        gws-cli config allowlist-remove docs 1abc2def3ghi
+        gws-cli config allowlist-remove email 18fd9a8b2c3d4e5f
     """
     config = Config.load()
 
@@ -918,15 +926,27 @@ def config_set_mode(
         Optional[str],
         typer.Option("--url", help="Server URL (required for server mode)."),
     ] = None,
+    provider: Annotated[
+        Optional[str],
+        typer.Option("--provider", help="Relay provider name (e.g. 'google-workspace'). Required when server has multiple providers."),
+    ] = None,
+    account: Annotated[
+        Optional[str],
+        typer.Option("--account", "-a", help="Set mode for a specific account only."),
+    ] = None,
 ) -> None:
     """Switch authentication mode between local and server.
 
     Local mode: uses client_secret.json for direct OAuth.
     Server mode: delegates auth to an oauth-token-relay server.
 
+    When --account is specified, the mode is stored as a per-account override.
+    Without --account, it sets the global default for all accounts.
+
     Examples:
-        gws config set-mode server --url https://auth.company.com
-        gws config set-mode local
+        gws-cli config set-mode server --url https://auth.company.com
+        gws-cli config set-mode server --url https://auth.company.com -a work --provider google-work
+        gws-cli config set-mode local -a personal
     """
     if mode not in ("local", "server"):
         output_error(
@@ -937,25 +957,60 @@ def config_set_mode(
         raise typer.Exit(ExitCode.INVALID_ARGS)
 
     if mode == "server" and not url:
-        output_error(
-            error_code="INVALID_ARGS",
-            operation="config.set-mode",
-            message="Server mode requires --url.",
-        )
-        raise typer.Exit(ExitCode.INVALID_ARGS)
+        # Check if there's already a global server_url to inherit
+        config = Config.load()
+        if not config.server_url:
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="config.set-mode",
+                message="Server mode requires --url (no global server_url to inherit).",
+            )
+            raise typer.Exit(ExitCode.INVALID_ARGS)
 
     config = Config.load()
-    config.mode = mode
-    config.server_url = url.rstrip("/") if url else None
-    config.save()
+
+    if account:
+        # Per-account override
+        if account not in (config.accounts.entries if config.accounts else {}):
+            output_error(
+                error_code="NOT_FOUND",
+                operation="config.set-mode",
+                message=f"Account '{account}' not found.",
+            )
+            raise typer.Exit(ExitCode.NOT_FOUND)
+
+        overrides = config.load_account_config(account)
+        overrides["mode"] = mode
+        if url:
+            overrides["server_url"] = url.rstrip("/")
+        elif mode == "local":
+            overrides.pop("server_url", None)
+        if provider is not None:
+            overrides["server_provider"] = provider
+        elif mode == "local":
+            overrides.pop("server_provider", None)
+        config.save_account_config(account, overrides)
+    else:
+        # Global config
+        config.mode = mode
+        config.server_url = url.rstrip("/") if url else None
+        config.server_provider = provider
+        config.save()
 
     result: dict[str, Any] = {
         "operation": "config.set-mode",
         "message": f"Auth mode set to '{mode}'.",
         "mode": mode,
     }
+    if account:
+        result["account"] = account
+        result["scope"] = "per-account"
+    else:
+        result["scope"] = "global"
     if url:
-        result["server_url"] = config.server_url
+        result["server_url"] = url.rstrip("/") if url else None
+    if provider:
+        result["server_provider"] = provider
     output_success(**result)
 
 

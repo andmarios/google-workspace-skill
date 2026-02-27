@@ -34,8 +34,9 @@ class AccountsRegistry:
 class Config:
     """CLI configuration with enabled services and security settings."""
 
-    BASE_DIR: ClassVar[Path] = Path.home() / ".claude" / ".google-workspace"
+    BASE_DIR: ClassVar[Path] = Path.home() / ".config" / "gws-cli"
     CONFIG_PATH: ClassVar[Path] = BASE_DIR / "gws_config.json"
+    _LEGACY_BASE_DIR: ClassVar[Path] = Path.home() / ".claude" / ".google-workspace"
 
     ALL_SERVICES: ClassVar[list[str]] = [
         "docs",
@@ -99,13 +100,30 @@ class Config:
     # Auth mode: "local" uses client_secret.json, "server" delegates to oauth-token-relay
     mode: str = "local"
     server_url: str | None = None
+    server_provider: str | None = None
 
     # Multi-account support (None = legacy single-account mode)
     accounts: AccountsRegistry | None = None
 
     @classmethod
+    def _migrate_config_dir(cls) -> None:
+        """Migrate config from old ~/.claude/.google-workspace/ to new location."""
+        if cls._LEGACY_BASE_DIR.exists() and not cls.BASE_DIR.exists():
+            import sys
+
+            try:
+                shutil.copytree(cls._LEGACY_BASE_DIR, cls.BASE_DIR)
+                print(
+                    f"[gws-cli] Migrated config from {cls._LEGACY_BASE_DIR} to {cls.BASE_DIR}",
+                    file=sys.stderr,
+                )
+            except OSError as e:
+                print(f"[gws-cli] Warning: failed to migrate config: {e}", file=sys.stderr)
+
+    @classmethod
     def load(cls) -> "Config":
         """Load configuration from file or create default."""
+        cls._migrate_config_dir()
         if cls.CONFIG_PATH.exists():
             try:
                 with open(cls.CONFIG_PATH) as f:
@@ -145,6 +163,8 @@ class Config:
             data.pop("accounts", None)
         if self.server_url is None:
             data.pop("server_url", None)
+        if self.server_provider is None:
+            data.pop("server_provider", None)
         if self.mode == "local":
             data.pop("mode", None)
         with open(self.CONFIG_PATH, "w") as f:
@@ -246,6 +266,12 @@ class Config:
             effective.disabled_security_services = overrides["disabled_security_services"]
         if "disabled_security_operations" in overrides:
             effective.disabled_security_operations = overrides["disabled_security_operations"]
+        if "server_provider" in overrides:
+            effective.server_provider = overrides["server_provider"]
+        if "mode" in overrides:
+            effective.mode = overrides["mode"]
+        if "server_url" in overrides:
+            effective.server_url = overrides["server_url"]
         return effective
 
     def add_account(self, name: str, display_name: str = "", email: str = "") -> None:

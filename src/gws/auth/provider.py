@@ -38,23 +38,33 @@ def resolve_auth_provider(
 ) -> AuthProvider:
     """Factory: return the appropriate auth provider based on config.
 
-    Resolution order for server mode:
-        1. GWS_SERVER_URL environment variable
-        2. config.server_url from gws_config.json
-    Falls back to LocalAuthProvider when no server URL is set.
+    Each account can have its own auth mode (local or server) via per-account
+    config overrides. Resolution:
+        1. Load global config
+        2. Resolve account name (explicit > env > default)
+        3. Apply per-account overrides (mode, server_url, server_provider)
+        4. GWS_SERVER_URL env var overrides per-account server_url
+        5. Create the appropriate provider
     """
     import os
 
     from gws.config import Config
 
     cfg = config or Config.load()
-    server_url = os.environ.get("GWS_SERVER_URL") or cfg.server_url
+    resolved_account = account or cfg.resolve_account()
 
-    if server_url:
+    # Apply per-account overrides (mode, server_url, server_provider, etc.)
+    effective = cfg.load_effective_config(resolved_account)
+
+    server_url = os.environ.get("GWS_SERVER_URL") or effective.server_url
+
+    if effective.mode == "server" and server_url:
         from gws.auth.server import ServerAuthProvider
 
-        return ServerAuthProvider(server_url=server_url, account=account)
+        return ServerAuthProvider(
+            server_url=server_url, account=resolved_account, config=effective,
+        )
 
     from gws.auth.oauth import LocalAuthProvider
 
-    return LocalAuthProvider(config=cfg, account=account)
+    return LocalAuthProvider(config=effective, account=resolved_account)

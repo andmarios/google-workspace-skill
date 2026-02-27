@@ -62,7 +62,7 @@ Speaker notes are essential, especially for investor/executive presentations. Th
 
 Always add speaker notes after creating slides:
 ```bash
-uv run gws slides set-speaker-notes $PRES_ID $SLIDE_ID "Key talking points..."
+uv run gws-cli slides set-speaker-notes $PRES_ID $SLIDE_ID "Key talking points..."
 ```
 
 ---
@@ -234,7 +234,7 @@ When building custom integrations, always specify `fields` in your API requests.
 **Always prefer PATCH** for updates to avoid accidentally clearing fields:
 ```bash
 # GOOD: Only updates the name
-uv run gws drive update $FILE_ID --name "New Name"
+uv run gws-cli drive update $FILE_ID --name "New Name"
 
 # BAD (conceptually): PUT would clear description, starred, etc.
 ```
@@ -251,8 +251,8 @@ This is critical because:
 
 ```bash
 # GOOD: Read first, then modify
-uv run gws docs read <doc_id>        # Understand structure
-uv run gws docs insert <doc_id> "New text" --index 50  # Informed decision
+uv run gws-cli docs read <doc_id>        # Understand structure
+uv run gws-cli docs insert <doc_id> "New text" --index 50  # Informed decision
 ```
 
 ### Compression
@@ -276,9 +276,9 @@ The `gws` CLI handles this automatically.
 # Problem: Inserting at index 10 shifts everything after it
 
 # SOLUTION: Work backwards
-uv run gws docs insert <doc_id> "Section 3" --index 150  # Last position first
-uv run gws docs insert <doc_id> "Section 2" --index 100  # Second last
-uv run gws docs insert <doc_id> "Section 1" --index 50   # First position last
+uv run gws-cli docs insert <doc_id> "Section 3" --index 150  # Last position first
+uv run gws-cli docs insert <doc_id> "Section 2" --index 100  # Second last
+uv run gws-cli docs insert <doc_id> "Section 1" --index 50   # First position last
 ```
 
 **WriteControl for Concurrent Edits:**
@@ -287,7 +287,7 @@ uv run gws docs insert <doc_id> "Section 1" --index 50   # First position last
 
 ```bash
 # Read document and capture revision
-RESULT=$(uv run gws docs read $DOC_ID)
+RESULT=$(uv run gws-cli docs read $DOC_ID)
 REVISION=$(echo "$RESULT" | jq -r '.revision_id')
 
 # Use revision to detect conflicts (handled internally by gws)
@@ -303,32 +303,32 @@ REVISION=$(echo "$RESULT" | jq -r '.revision_id')
 
 ```bash
 # INEFFICIENT: Reads entire sheet
-uv run gws sheets read <id> "Sheet1"
+uv run gws-cli sheets read <id> "Sheet1"
 
 # EFFICIENT: Reads only needed range
-uv run gws sheets read <id> "Sheet1!A1:D100"
+uv run gws-cli sheets read <id> "Sheet1!A1:D100"
 ```
 
 **Batch Reads:**
 ```bash
 # INEFFICIENT: 3 API calls
-uv run gws sheets read <id> "A1:B10"
-uv run gws sheets read <id> "C1:D10"
-uv run gws sheets read <id> "E1:F10"
+uv run gws-cli sheets read <id> "A1:B10"
+uv run gws-cli sheets read <id> "C1:D10"
+uv run gws-cli sheets read <id> "E1:F10"
 
 # EFFICIENT: 1 API call
-uv run gws sheets batch-get <id> "A1:B10,C1:D10,E1:F10"
+uv run gws-cli sheets batch-get <id> "A1:B10,C1:D10,E1:F10"
 ```
 
 **Write Once Pattern:**
 ```bash
 # INEFFICIENT: 5 API calls (one per row)
-uv run gws sheets write <id> "A1:C1" --values '[["Header1","Header2","Header3"]]'
-uv run gws sheets write <id> "A2:C2" --values '[["Row1","Data","Here"]]'
+uv run gws-cli sheets write <id> "A1:C1" --values '[["Header1","Header2","Header3"]]'
+uv run gws-cli sheets write <id> "A2:C2" --values '[["Row1","Data","Here"]]'
 # ... and so on
 
 # EFFICIENT: 1 API call (all data at once)
-uv run gws sheets write <id> "A1:C4" --values '[
+uv run gws-cli sheets write <id> "A1:C4" --values '[
   ["Header1","Header2","Header3"],
   ["Row1","Data","Here"],
   ["Row2","More","Data"]
@@ -338,12 +338,12 @@ uv run gws sheets write <id> "A1:C4" --values '[
 **Avoid Write-Read-Write Cycles:**
 ```bash
 # BAD: Write, read back, write more
-uv run gws sheets write <id> "A1:B2" --values '[...]'
-uv run gws sheets read <id> "A1:B2"  # Unnecessary
-uv run gws sheets write <id> "A3:B4" --values '[...]'
+uv run gws-cli sheets write <id> "A1:B2" --values '[...]'
+uv run gws-cli sheets read <id> "A1:B2"  # Unnecessary
+uv run gws-cli sheets write <id> "A3:B4" --values '[...]'
 
 # GOOD: Plan all writes, execute once
-uv run gws sheets write <id> "A1:B4" --values '[all data]'
+uv run gws-cli sheets write <id> "A1:B4" --values '[all data]'
 ```
 
 ### Google Slides: Two-Pass Building
@@ -352,17 +352,17 @@ Build presentations in two passes:
 
 ```bash
 # Pass 1: Create all slides first
-uv run gws slides add-slide <pres_id> --layout TITLE
-uv run gws slides add-slide <pres_id> --layout TITLE_AND_BODY
-uv run gws slides add-slide <pres_id> --layout TITLE_AND_BODY
+uv run gws-cli slides add-slide <pres_id> --layout TITLE
+uv run gws-cli slides add-slide <pres_id> --layout TITLE_AND_BODY
+uv run gws-cli slides add-slide <pres_id> --layout TITLE_AND_BODY
 
 # Pass 2: Read to get all slide IDs
-RESULT=$(uv run gws slides read <pres_id>)
+RESULT=$(uv run gws-cli slides read <pres_id>)
 SLIDE_IDS=$(echo "$RESULT" | jq -r '.slides[].object_id')
 
 # Pass 3: Populate content using IDs from pass 2
 for SLIDE_ID in $SLIDE_IDS; do
-  uv run gws slides replace-text <pres_id> "{{TITLE}}" "Actual Title"
+  uv run gws-cli slides replace-text <pres_id> "{{TITLE}}" "Actual Title"
 done
 ```
 
@@ -383,7 +383,7 @@ done
 
 ```bash
 # For bulk operations, use search + iteration
-uv run gws drive search "name contains 'report'"
+uv run gws-cli drive search "name contains 'report'"
 ```
 
 ### Gmail: Batch Recommendations
@@ -398,7 +398,7 @@ uv run gws drive search "name contains 'report'"
 ```bash
 # For bulk email operations, process in batches of 50
 # The gws CLI handles batching internally for list operations
-uv run gws gmail list --max-results 100  # Internally batched
+uv run gws-cli gmail list --max-results 100  # Internally batched
 ```
 
 ### Google Calendar: Event ID Strategy
@@ -409,7 +409,7 @@ At the API level, providing an event ID prevents duplicate events if a network r
 
 ```bash
 # Standard event creation with gws
-uv run gws calendar create "Team Standup" \
+uv run gws-cli calendar create "Team Standup" \
   "2025-01-15T09:00:00" "2025-01-15T09:30:00" \
   --calendar primary
 ```
@@ -433,16 +433,16 @@ uv run gws calendar create "Team Standup" \
 
 ```bash
 # BAD: Parallel mutations to same contact
-uv run gws contacts update $RESOURCE_NAME --email "new@example.com" &
-uv run gws contacts update $RESOURCE_NAME --phone "+1234567890" &
+uv run gws-cli contacts update $RESOURCE_NAME --email "new@example.com" &
+uv run gws-cli contacts update $RESOURCE_NAME --phone "+1234567890" &
 wait  # Race condition!
 
 # GOOD: Sequential mutations
-uv run gws contacts update $RESOURCE_NAME --email "new@example.com"
-uv run gws contacts update $RESOURCE_NAME --phone "+1234567890"
+uv run gws-cli contacts update $RESOURCE_NAME --email "new@example.com"
+uv run gws-cli contacts update $RESOURCE_NAME --phone "+1234567890"
 
 # BEST: Single mutation with all changes
-uv run gws contacts update $RESOURCE_NAME \
+uv run gws-cli contacts update $RESOURCE_NAME \
   --email "new@example.com" \
   --phone "+1234567890"
 ```
@@ -451,7 +451,7 @@ uv run gws contacts update $RESOURCE_NAME \
 Always use the `etag` from the previous response to avoid conflicts:
 ```bash
 # Read contact to get current etag
-RESULT=$(uv run gws contacts get $RESOURCE_NAME)
+RESULT=$(uv run gws-cli contacts get $RESOURCE_NAME)
 # gws internally uses etag for subsequent updates
 ```
 
@@ -568,13 +568,13 @@ The `gws` CLI implements exponential backoff with jitter automatically via `Base
 
 ```bash
 # GOOD: Use batch operations
-uv run gws sheets batch-get <id> "A1:B10,C1:D10,E1:F10"  # 1 call
+uv run gws-cli sheets batch-get <id> "A1:B10,C1:D10,E1:F10"  # 1 call
 
 # GOOD: Use search instead of list + filter
-uv run gws drive search "mimeType='application/pdf'"  # Server-side filter
+uv run gws-cli drive search "mimeType='application/pdf'"  # Server-side filter
 
 # GOOD: Specify explicit ranges
-uv run gws sheets read <id> "Sheet1!A1:D100"  # Not entire sheet
+uv run gws-cli sheets read <id> "Sheet1!A1:D100"  # Not entire sheet
 ```
 
 ---
@@ -638,12 +638,12 @@ The most efficient approach is to **start from a template** rather than building
 
 ```bash
 # Copy template to create new document (1 API call)
-RESULT=$(uv run gws drive copy "$TEMPLATE_DOC_ID" --name "Q4 Analysis Report")
+RESULT=$(uv run gws-cli drive copy "$TEMPLATE_DOC_ID" --name "Q4 Analysis Report")
 NEW_DOC_ID=$(echo "$RESULT" | jq -r '.file_id')
 
 # Replace placeholder content
-uv run gws docs replace "$NEW_DOC_ID" "{{TITLE}}" "Q4 Analysis Report"
-uv run gws docs replace "$NEW_DOC_ID" "{{DATE}}" "January 2025"
+uv run gws-cli docs replace "$NEW_DOC_ID" "{{TITLE}}" "Q4 Analysis Report"
+uv run gws-cli docs replace "$NEW_DOC_ID" "{{DATE}}" "January 2025"
 ```
 
 **Template placeholders:**

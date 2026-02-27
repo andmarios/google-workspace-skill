@@ -711,7 +711,7 @@ def create_filter(
     """Create a mail filter.
 
     Example: Create filter to archive newsletters:
-        gws gmail create-filter --from newsletter@example.com --archive --add-labels Label_123
+        gws-cli gmail create-filter --from newsletter@example.com --archive --add-labels Label_123
     """
     add_label_ids = [label.strip() for label in add_labels.split(",")] if add_labels else None
     remove_label_ids = [label.strip() for label in remove_labels.split(",")] if remove_labels else None

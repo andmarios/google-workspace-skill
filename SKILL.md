@@ -6,9 +6,9 @@ version: 1.0.0
 key_capabilities: Docs (read/edit/format/export/named-ranges), Sheets (read/write/format/manipulate), Slides (create/edit/transform/embed), Drive (files/comments/shared-drives/changes), Gmail (send/search/sync/batch), Calendar (events/calendars/colors), Contacts (manage/groups/directory), Convert (markdown)
 when_to_use: Document operations, spreadsheet data, presentations, Drive file management, email, calendar events, contacts
 allowed_tools:
-  - Bash(uv run gws:*)
-  - Bash(cd * && uv run gws:*)
-  - Read(/home/piper/.claude/.google-workspace/**)
+  - Bash(uv run gws-cli:*)
+  - Bash(cd * && uv run gws-cli:*)
+  - Read(/home/piper/.config/gws-cli/**)
 ---
 
 # Google Workspace Skill
@@ -47,7 +47,7 @@ Manage Google Workspace documents, spreadsheets, presentations, drive files, ema
 
 ### Create a professional document from markdown
 ```bash
-uv run gws convert md-to-doc /path/to/file.md -t "Document Title"
+uv run gws-cli convert md-to-doc /path/to/file.md -t "Document Title"
 ```
 
 ### Create or enhance documents with rich content
@@ -59,29 +59,29 @@ When creating documents from scratch or enhancing converted documents, use all a
 
 ```bash
 # Insert image into document
-uv run gws docs insert-image $DOC_ID "https://example.com/image.png" --index 50
+uv run gws-cli docs insert-image $DOC_ID "https://example.com/image.png" --index 50
 
 # Or use diagram rendering during conversion
-uv run gws convert md-to-doc report.md -t "Report" --render-diagrams
+uv run gws-cli convert md-to-doc report.md -t "Report" --render-diagrams
 ```
 
 ### Create an engaging presentation (manual approach recommended)
 ```bash
 # 1. Create presentation
-uv run gws slides create "Presentation Title"
+uv run gws-cli slides create "Presentation Title"
 
 # 2. Add slides with layouts (TITLE, TITLE_AND_BODY, SECTION_HEADER, etc.)
-uv run gws slides add-slide $PRES_ID --layout TITLE_AND_BODY
+uv run gws-cli slides add-slide $PRES_ID --layout TITLE_AND_BODY
 
 # 3. Read to get element IDs
-uv run gws slides read $PRES_ID
+uv run gws-cli slides read $PRES_ID
 
 # 4. Insert text into elements
-uv run gws slides insert-text $PRES_ID $ELEMENT_ID "Your content"
+uv run gws-cli slides insert-text $PRES_ID $ELEMENT_ID "Your content"
 
 # 5. Apply styling
-uv run gws slides set-background $PRES_ID $SLIDE_ID --color "#1A365D"
-uv run gws slides format-text $PRES_ID $ELEMENT_ID --bold --font-size 24
+uv run gws-cli slides set-background $PRES_ID $SLIDE_ID --color "#1A365D"
+uv run gws-cli slides format-text $PRES_ID $ELEMENT_ID --bold --font-size 24
 ```
 
 ### Slide content limits (see [SKILL-advanced.md](SKILL-advanced.md) for design best practices)
@@ -99,17 +99,17 @@ Great presentations use **images, diagrams, charts, and infographics** to commun
 
 Insert visuals with:
 ```bash
-uv run gws slides insert-image $PRES_ID $SLIDE_ID "https://example.com/image.png" \
+uv run gws-cli slides insert-image $PRES_ID $SLIDE_ID "https://example.com/image.png" \
     --x 100 --y 100 --width 400 --height 300
 ```
 
 ### Send professional emails
 ```bash
 # Simple email (short body as argument)
-uv run gws gmail send "recipient@example.com" "Subject" "Short message body"
+uv run gws-cli gmail send "recipient@example.com" "Subject" "Short message body"
 
 # Multi-line email with heredoc (--stdin reads from pipe)
-cat <<'EOF' | uv run gws gmail send "recipient@example.com" "Meeting Follow-up" --stdin
+cat <<'EOF' | uv run gws-cli gmail send "recipient@example.com" "Meeting Follow-up" --stdin
 Hi Team,
 
 Following up on today's meeting. Key action items:
@@ -122,7 +122,7 @@ Best regards
 EOF
 
 # Plain text email (use --plain)
-cat <<'EOF' | uv run gws gmail send "recipient@example.com" "Status Update" --plain --stdin
+cat <<'EOF' | uv run gws-cli gmail send "recipient@example.com" "Status Update" --plain --stdin
 Plain text only - no HTML rendering.
 Good for code snippets or when simplicity matters.
 EOF
@@ -136,7 +136,7 @@ EOF
 
 **HTML formatted email** (default mode):
 ```bash
-cat <<'EOF' | uv run gws gmail send "recipient@example.com" "Project Update" --stdin
+cat <<'EOF' | uv run gws-cli gmail send "recipient@example.com" "Project Update" --stdin
 <h2>Project Status</h2>
 <p>Here's the latest update on our progress:</p>
 <ul>
@@ -156,17 +156,17 @@ EOF
 ### Search and filter emails
 ```bash
 # Search with limit (--max or -n, default is 10)
-uv run gws gmail search "from:user@example.com" --max 5
-uv run gws gmail search "subject:invoice after:2025/01/01" -n 20
+uv run gws-cli gmail search "from:user@example.com" --max 5
+uv run gws-cli gmail search "subject:invoice after:2025/01/01" -n 20
 
 # Common search operators
-uv run gws gmail search "is:unread"                    # Unread messages
-uv run gws gmail search "has:attachment"               # Messages with attachments
-uv run gws gmail search "from:boss@company.com"        # From specific sender
-uv run gws gmail search "subject:urgent"               # Subject contains word
-uv run gws gmail search "after:2025/01/01"             # After date
-uv run gws gmail search "before:2025/02/01"            # Before date
-uv run gws gmail search "is:starred is:important"      # Combine operators
+uv run gws-cli gmail search "is:unread"                    # Unread messages
+uv run gws-cli gmail search "has:attachment"               # Messages with attachments
+uv run gws-cli gmail search "from:boss@company.com"        # From specific sender
+uv run gws-cli gmail search "subject:urgent"               # Subject contains word
+uv run gws-cli gmail search "after:2025/01/01"             # After date
+uv run gws-cli gmail search "before:2025/02/01"            # Before date
+uv run gws-cli gmail search "is:starred is:important"      # Combine operators
 ```
 
 **Key options:**
@@ -176,37 +176,37 @@ uv run gws gmail search "is:starred is:important"      # Combine operators
 ### Manage Drive files
 ```bash
 # Upload a file
-uv run gws drive upload /path/to/file.pdf --name "Report Q1"
+uv run gws-cli drive upload /path/to/file.pdf --name "Report Q1"
 
 # Share with specific user
-uv run gws drive share <file_id> --email "colleague@company.com" --role writer
+uv run gws-cli drive share <file_id> --email "colleague@company.com" --role writer
 
 # Share with anyone who has link
-uv run gws drive share <file_id> --anyone --role reader
+uv run gws-cli drive share <file_id> --anyone --role reader
 
 # Search for files
-uv run gws drive search "name contains 'Report'" --max 10
+uv run gws-cli drive search "name contains 'Report'" --max 10
 
 # Download a file
-uv run gws drive download <file_id> /path/to/output.pdf
+uv run gws-cli drive download <file_id> /path/to/output.pdf
 ```
 
 ### Schedule calendar events
 ```bash
 # Create a simple event
-uv run gws calendar create "Team Meeting" "2025-01-15T10:00:00" "2025-01-15T11:00:00"
+uv run gws-cli calendar create "Team Meeting" "2025-01-15T10:00:00" "2025-01-15T11:00:00"
 
 # Event with details and attendees
-uv run gws calendar create "Project Review" "2025-01-20T14:00:00" "2025-01-20T15:00:00" \
+uv run gws-cli calendar create "Project Review" "2025-01-20T14:00:00" "2025-01-20T15:00:00" \
     --description "Quarterly review of project milestones" \
     --location "Conference Room A" \
     --attendees "alice@company.com,bob@company.com"
 
 # All-day event
-uv run gws calendar create "Company Holiday" "2025-12-25" "2025-12-26" --all-day
+uv run gws-cli calendar create "Company Holiday" "2025-12-25" "2025-12-26" --all-day
 
 # Recurring weekly meeting
-uv run gws calendar create-recurring "Standup" "2025-01-06T09:00:00" "2025-01-06T09:15:00" \
+uv run gws-cli calendar create-recurring "Standup" "2025-01-06T09:00:00" "2025-01-06T09:15:00" \
     "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR" --count 52
 ```
 
@@ -218,13 +218,13 @@ uv run gws calendar create-recurring "Standup" "2025-01-06T09:00:00" "2025-01-06
 ### Work with spreadsheet data
 ```bash
 # Create a spreadsheet
-uv run gws sheets create "Sales Report"
+uv run gws-cli sheets create "Sales Report"
 
 # Write data (simple)
-uv run gws sheets write <spreadsheet_id> "A1:C1" --values '[["Name","Amount","Date"]]'
+uv run gws-cli sheets write <spreadsheet_id> "A1:C1" --values '[["Name","Amount","Date"]]'
 
 # Write complex data via stdin (avoids shell escaping)
-cat <<'EOF' | uv run gws sheets write <spreadsheet_id> "A1:C4" --stdin
+cat <<'EOF' | uv run gws-cli sheets write <spreadsheet_id> "A1:C4" --stdin
 [
   ["Product", "Revenue", "Units"],
   ["Widget A", 15000, 500],
@@ -234,10 +234,10 @@ cat <<'EOF' | uv run gws sheets write <spreadsheet_id> "A1:C4" --stdin
 EOF
 
 # Read data back
-uv run gws sheets read <spreadsheet_id> "A1:C10"
+uv run gws-cli sheets read <spreadsheet_id> "A1:C10"
 
 # Append new rows
-uv run gws sheets append <spreadsheet_id> "A:C" --values '[["Widget D", 12000, 300]]'
+uv run gws-cli sheets append <spreadsheet_id> "A:C" --values '[["Widget D", 12000, 300]]'
 ```
 
 **Sheets tips:**
@@ -279,13 +279,13 @@ uv run gws sheets append <spreadsheet_id> "A:C" --values '[["Widget D", 12000, 3
 
 3. **Read before modify**: ALWAYS read the document first before making changes to understand structure and indices.
 
-4. **Use metadata for sheets**: When working with spreadsheets that have multiple tabs, use `uv run gws sheets metadata <spreadsheet_id>` FIRST to discover all sheet names and IDs. This avoids trial-and-error when reading specific sheets.
+4. **Use metadata for sheets**: When working with spreadsheets that have multiple tabs, use `uv run gws-cli sheets metadata <spreadsheet_id>` FIRST to discover all sheet names and IDs. This avoids trial-and-error when reading specific sheets.
    ```bash
    # Get all sheet names in a spreadsheet
-   uv run gws sheets metadata <spreadsheet_id>
+   uv run gws-cli sheets metadata <spreadsheet_id>
    # Then read a specific sheet
    # IMPORTANT: Use single quotes for the range to prevent bash history expansion
-   uv run gws sheets read <spreadsheet_id> 'Sheet Name!A1:Z100'
+   uv run gws-cli sheets read <spreadsheet_id> 'Sheet Name!A1:Z100'
    ```
 
 5. **Never rewrite user content**: When creating or converting documents:
@@ -317,32 +317,32 @@ uv run gws sheets append <spreadsheet_id> "A:C" --values '[["Widget D", 12000, 3
 
 ## Quick Reference
 
-All commands use `uv run gws <service> <command>`. Authentication is automatic on first use.
+All commands use `uv run gws-cli <service> <command>`. Authentication is automatic on first use.
 
 ## Authentication
 
-> **Important**: `gws auth` and `gws auth --force` open a browser for Google OAuth. These commands must be run by the user directly in their terminal — they cannot be run from within Claude Code.
+> **Important**: `gws-cli auth` and `gws-cli auth --force` open a browser for Google OAuth. These commands must be run by the user directly in their terminal — they cannot be run from within Claude Code.
 
 ```bash
 # Authenticate (opens browser — run in user's terminal)
-uv run gws auth
+uv run gws-cli auth
 
 # Check auth status
-uv run gws auth status
+uv run gws-cli auth status
 
 # Force re-authentication (opens browser — run in user's terminal)
-uv run gws auth --force
+uv run gws-cli auth --force
 
 # Logout
-uv run gws auth logout
+uv run gws-cli auth logout
 
 # Auth commands support --account for multi-account
-uv run gws auth --account work
-uv run gws auth status --account personal
-uv run gws auth logout --account work
+uv run gws-cli auth --account work
+uv run gws-cli auth status --account personal
+uv run gws-cli auth logout --account work
 ```
 
-**Credential files** are stored in `~/.claude/.google-workspace/`:
+**Credential files** are stored in `~/.config/gws-cli/`:
 - `client_secret.json` - OAuth client credentials (required, shared across accounts)
 - `token.json` - User access token (auto-generated, legacy single-account mode)
 - `gws_config.json` - Service enable/disable config + accounts registry
@@ -353,30 +353,30 @@ Configure named accounts (e.g., "work", "personal") to use different Google acco
 
 ### Account Management
 
-> **Important**: `gws account add` opens a browser for Google OAuth authentication. This command must be run by the user directly in their terminal — it cannot be run from within Claude Code because the OAuth flow requires browser interaction.
+> **Important**: `gws-cli account add` opens a browser for Google OAuth authentication. This command must be run by the user directly in their terminal — it cannot be run from within Claude Code because the OAuth flow requires browser interaction.
 
 ```bash
 # Add and authenticate a new account (run in user's terminal)
-uv run gws account add work
+uv run gws-cli account add work
 
 # Add a second account (run in user's terminal)
-uv run gws account add personal
+uv run gws-cli account add personal
 
 # Set display name and email (used in email From field)
-uv run gws account update work --name "Jane Doe" --email "jane@company.com"
-uv run gws account update personal --name "Jane Doe" --email "jane@gmail.com"
+uv run gws-cli account update work --name "Jane Doe" --email "jane@company.com"
+uv run gws-cli account update personal --name "Jane Doe" --email "jane@gmail.com"
 
 # List all accounts (shows default)
-uv run gws account list
+uv run gws-cli account list
 
 # Change default account
-uv run gws account default personal
+uv run gws-cli account default personal
 
 # Remove an account
-uv run gws account remove work
+uv run gws-cli account remove work
 ```
 
-> **Tip**: After adding an account, always set the display name with `gws account update <name> --name "Full Name"`. This ensures emails sent from this account show the proper sender name in the From field instead of just the email address.
+> **Tip**: After adding an account, always set the display name with `gws-cli account update <name> --name "Full Name"`. This ensures emails sent from this account show the proper sender name in the From field instead of just the email address.
 
 ### Using Accounts with Commands
 
@@ -386,11 +386,11 @@ All service commands support `--account` / `-a` and the `GWS_ACCOUNT` env var.
 
 ```bash
 # Use a specific account (--account BEFORE the subcommand)
-uv run gws docs --account personal read <id>
-uv run gws gmail -a work list
+uv run gws-cli docs --account personal read <id>
+uv run gws-cli gmail -a work list
 
 # Via environment variable (no flag placement concern)
-GWS_ACCOUNT=personal uv run gws docs read <id>
+GWS_ACCOUNT=personal uv run gws-cli docs read <id>
 ```
 
 **Resolution priority:** `--account` flag > `GWS_ACCOUNT` env var > default account > legacy mode
@@ -401,22 +401,22 @@ Override global service config per account:
 
 ```bash
 # Show effective config for an account
-uv run gws account config work
+uv run gws-cli account config work
 
 # Disable a service for one account
-uv run gws account config-disable work gmail
+uv run gws-cli account config-disable work gmail
 
 # Enable a service for one account
-uv run gws account config-enable work gmail
+uv run gws-cli account config-enable work gmail
 
 # Reset to global defaults
-uv run gws account config-reset work
+uv run gws-cli account config-reset work
 
 # Restrict account to read-only operations
-uv run gws account set-readonly work
+uv run gws-cli account set-readonly work
 
 # Remove read-only restriction
-uv run gws account unset-readonly work
+uv run gws-cli account unset-readonly work
 ```
 
 Read-only mode blocks all write operations (send, create, delete, format, etc.) while allowing reads, searches, and downloads across all services.
@@ -444,76 +444,76 @@ Read-only mode blocks all write operations (send, create, delete, format, etc.) 
 
 ```bash
 # List contacts
-uv run gws contacts list --max 20
+uv run gws-cli contacts list --max 20
 
 # Get contact details
-uv run gws contacts get <resource_name>
+uv run gws-cli contacts get <resource_name>
 
 # Create contact
-uv run gws contacts create "John Doe" --email "john@example.com" --phone "+1234567890"
+uv run gws-cli contacts create "John Doe" --email "john@example.com" --phone "+1234567890"
 
 # Update contact
-uv run gws contacts update <resource_name> --email "newemail@example.com"
+uv run gws-cli contacts update <resource_name> --email "newemail@example.com"
 
 # Delete contact
-uv run gws contacts delete <resource_name>
+uv run gws-cli contacts delete <resource_name>
 ```
 
 ### Contact Groups
 
 ```bash
 # List all contact groups
-uv run gws contacts groups
+uv run gws-cli contacts groups
 
 # Get a group with its members
-uv run gws contacts get-group <group_resource_name>
+uv run gws-cli contacts get-group <group_resource_name>
 
 # Get group without member list
-uv run gws contacts get-group <group_resource_name> --no-members
+uv run gws-cli contacts get-group <group_resource_name> --no-members
 
 # Create a new group
-uv run gws contacts create-group "Work Colleagues"
+uv run gws-cli contacts create-group "Work Colleagues"
 
 # Rename a group
-uv run gws contacts update-group <group_resource_name> "New Group Name"
+uv run gws-cli contacts update-group <group_resource_name> "New Group Name"
 
 # Delete a group (keeps contacts)
-uv run gws contacts delete-group <group_resource_name>
+uv run gws-cli contacts delete-group <group_resource_name>
 
 # Delete group AND its contacts
-uv run gws contacts delete-group <group_resource_name> --delete-contacts
+uv run gws-cli contacts delete-group <group_resource_name> --delete-contacts
 
 # Add contacts to a group
-uv run gws contacts add-to-group <group_resource_name> "people/c123,people/c456"
+uv run gws-cli contacts add-to-group <group_resource_name> "people/c123,people/c456"
 
 # Remove contacts from a group
-uv run gws contacts remove-from-group <group_resource_name> "people/c123"
+uv run gws-cli contacts remove-from-group <group_resource_name> "people/c123"
 ```
 
 ### Contact Photos
 
 ```bash
 # Get a contact's photo URL
-uv run gws contacts get-photo <resource_name>
+uv run gws-cli contacts get-photo <resource_name>
 
 # Set a contact's photo from a local file (JPEG or PNG, max 2MB)
-uv run gws contacts set-photo <resource_name> /path/to/photo.jpg
+uv run gws-cli contacts set-photo <resource_name> /path/to/photo.jpg
 
 # Delete a contact's photo
-uv run gws contacts delete-photo <resource_name>
+uv run gws-cli contacts delete-photo <resource_name>
 ```
 
 ## Document Conversion
 
 ```bash
 # Markdown to Google Doc (uses Google's native MD import)
-uv run gws convert md-to-doc /path/to/document.md --title "My Document"
+uv run gws-cli convert md-to-doc /path/to/document.md --title "My Document"
 
 # Markdown to Google Slides (simple presentations only)
-uv run gws convert md-to-slides /path/to/presentation.md --title "My Presentation"
+uv run gws-cli convert md-to-slides /path/to/presentation.md --title "My Presentation"
 
 # Markdown to PDF (via temp Google Doc)
-uv run gws convert md-to-pdf /path/to/document.md /path/to/output.pdf
+uv run gws-cli convert md-to-pdf /path/to/document.md /path/to/output.pdf
 ```
 
 > **⚠️ Limitation**: `md-to-slides` creates slides without proper element ID mapping, which prevents applying themes, backgrounds, and text formatting afterward. For professional presentations requiring styling, use the manual approach shown in "Quick Start" above.
@@ -527,13 +527,13 @@ uv run gws convert md-to-pdf /path/to/document.md /path/to/output.pdf
 **Pageless mode** (default for `md-to-doc`):
 Documents are created in pageless (continuous) mode by default for better web viewing. Use `--no-pageless` for traditional page-based documents with page breaks:
 ```bash
-uv run gws convert md-to-doc report.md --no-pageless
+uv run gws-cli convert md-to-doc report.md --no-pageless
 ```
 
 **Diagram rendering** (with `--render-diagrams` / `-d` flag):
 ```bash
-uv run gws convert md-to-doc report.md --render-diagrams
-uv run gws convert md-to-pdf report.md output.pdf -d
+uv run gws-cli convert md-to-doc report.md --render-diagrams
+uv run gws-cli convert md-to-pdf report.md output.pdf -d
 ```
 
 When using `--render-diagrams`, the conversion automatically:
@@ -558,7 +558,7 @@ When using `--render-diagrams`, the conversion automatically:
 - `forest` - Green/nature-inspired palette
 
 ```bash
-uv run gws convert md-to-doc report.md -d --mermaid-theme neutral
+uv run gws-cli convert md-to-doc report.md -d --mermaid-theme neutral
 ```
 
 **Troubleshooting diagram rendering**:
@@ -584,33 +584,33 @@ uv run gws convert md-to-doc report.md -d --mermaid-theme neutral
 
 1. **Create the presentation**:
 ```bash
-uv run gws slides create "My Presentation"
+uv run gws-cli slides create "My Presentation"
 # Returns: presentation_id
 ```
 
 2. **Add slides with appropriate layouts**:
 ```bash
 # Title slide is created automatically. Add content slides:
-uv run gws slides add-slide $PRES_ID --layout TITLE_AND_BODY --index 1
-uv run gws slides add-slide $PRES_ID --layout TITLE_AND_BODY --index 2
-uv run gws slides add-slide $PRES_ID --layout SECTION_HEADER --index 3
+uv run gws-cli slides add-slide $PRES_ID --layout TITLE_AND_BODY --index 1
+uv run gws-cli slides add-slide $PRES_ID --layout TITLE_AND_BODY --index 2
+uv run gws-cli slides add-slide $PRES_ID --layout SECTION_HEADER --index 3
 ```
 
 3. **Read to get element IDs**:
 ```bash
-uv run gws slides read $PRES_ID
+uv run gws-cli slides read $PRES_ID
 # Returns slide IDs and element IDs (title box, body box, etc.)
 ```
 
 4. **Insert content** (keep it minimal - 6×6 rule):
 ```bash
 # Title slide
-uv run gws slides insert-text $PRES_ID "i0" "Presentation Title"
-uv run gws slides insert-text $PRES_ID "i1" "Your subtitle here"
+uv run gws-cli slides insert-text $PRES_ID "i0" "Presentation Title"
+uv run gws-cli slides insert-text $PRES_ID "i1" "Your subtitle here"
 
 # Content slide (use element IDs from step 3)
-uv run gws slides insert-text $PRES_ID $TITLE_ELEMENT "First Topic"
-uv run gws slides insert-text $PRES_ID $BODY_ELEMENT "Key point one
+uv run gws-cli slides insert-text $PRES_ID $TITLE_ELEMENT "First Topic"
+uv run gws-cli slides insert-text $PRES_ID $BODY_ELEMENT "Key point one
 Key point two
 Key point three"
 ```
@@ -618,19 +618,19 @@ Key point three"
 5. **Apply professional styling** (see [reference/slides.md](reference/slides.md)):
 ```bash
 # Set dark background for title slide
-uv run gws slides set-background $PRES_ID $SLIDE_ID --color "#1A365D"
+uv run gws-cli slides set-background $PRES_ID $SLIDE_ID --color "#1A365D"
 
 # Format title text (white on dark background)
-uv run gws slides format-text $PRES_ID $TITLE_ELEMENT --bold --font-size 44 --color "#FFFFFF"
+uv run gws-cli slides format-text $PRES_ID $TITLE_ELEMENT --bold --font-size 44 --color "#FFFFFF"
 
 # Create proper bullet lists
-uv run gws slides create-bullets $PRES_ID $BODY_ELEMENT --preset BULLET_DISC_CIRCLE_SQUARE
+uv run gws-cli slides create-bullets $PRES_ID $BODY_ELEMENT --preset BULLET_DISC_CIRCLE_SQUARE
 ```
 
 6. **Add visuals** - Use all tools at your disposal:
 ```bash
 # Generate an image with DALL-E or other image tools, then insert it
-uv run gws slides insert-image $PRES_ID $SLIDE_ID "https://generated-image-url.png" \
+uv run gws-cli slides insert-image $PRES_ID $SLIDE_ID "https://generated-image-url.png" \
     --x 350 --y 150 --width 300 --height 250
 
 # Or render a diagram via Kroki and insert it
@@ -639,26 +639,26 @@ uv run gws slides insert-image $PRES_ID $SLIDE_ID "https://generated-image-url.p
 
 7. **Add speaker notes** for presentation guidance:
 ```bash
-uv run gws slides set-speaker-notes $PRES_ID $SLIDE_ID "Key talking points for this slide..."
+uv run gws-cli slides set-speaker-notes $PRES_ID $SLIDE_ID "Key talking points for this slide..."
 ```
 
 ## Configuration
 
 ```bash
 # Show current config
-uv run gws config
+uv run gws-cli config
 
 # List all services with status
-uv run gws config list
+uv run gws-cli config list
 
 # Disable a service
-uv run gws config disable gmail
+uv run gws-cli config disable gmail
 
 # Enable a service
-uv run gws config enable gmail
+uv run gws-cli config enable gmail
 
 # Reset to defaults
-uv run gws config reset
+uv run gws-cli config reset
 ```
 
 ### Kroki Server Configuration
@@ -667,10 +667,10 @@ By default, diagrams are rendered using the public Kroki server at `https://krok
 
 ```bash
 # Set custom Kroki server URL
-uv run gws config set-kroki http://localhost:8000
+uv run gws-cli config set-kroki http://localhost:8000
 
 # View current Kroki URL
-uv run gws config
+uv run gws-cli config
 ```
 
 To run a local Kroki server with Docker:
@@ -716,24 +716,24 @@ Error format:
 ### Read and Process Document
 ```bash
 # Get document content and pipe to another command
-uv run gws docs read <doc_id> | jq -r '.content'
+uv run gws-cli docs read <doc_id> | jq -r '.content'
 ```
 
 ### Batch Operations
 ```bash
 # List files and process each
-uv run gws drive list --max 100 | jq -r '.files[].id' | while read id; do
-  uv run gws drive get "$id"
+uv run gws-cli drive list --max 100 | jq -r '.files[].id' | while read id; do
+  uv run gws-cli drive get "$id"
 done
 ```
 
 ### Create and Populate Spreadsheet
 ```bash
 # Create spreadsheet and get ID
-ID=$(uv run gws sheets create "Report" | jq -r '.spreadsheet_id')
+ID=$(uv run gws-cli sheets create "Report" | jq -r '.spreadsheet_id')
 
 # Write data
-uv run gws sheets write "$ID" "A1:C1" --values '[["Name","Value","Date"]]'
+uv run gws-cli sheets write "$ID" "A1:C1" --values '[["Name","Value","Date"]]'
 ```
 
 ## Known Limitations
@@ -754,7 +754,7 @@ lsof -ti:8080 | xargs kill -9
 **Token expired**:
 ```bash
 # Force re-authentication
-uv run gws auth --force
+uv run gws-cli auth --force
 ```
 
 **API not enabled**:

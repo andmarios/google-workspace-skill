@@ -1069,7 +1069,7 @@ def create_pivot_table(
     """Create a pivot table from source data.
 
     Example:
-        gws sheets create-pivot-table SPREADSHEET_ID 0 0 100 0 5 0 0 0 "0" "2,3" -f "SUM,AVERAGE"
+        gws-cli sheets create-pivot-table SPREADSHEET_ID 0 0 100 0 5 0 0 0 "0" "2,3" -f "SUM,AVERAGE"
     """
     row_cols = [int(c.strip()) for c in row_columns.split(",")]
     val_cols = [int(c.strip()) for c in value_columns.split(",")]

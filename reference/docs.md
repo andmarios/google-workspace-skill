@@ -23,22 +23,22 @@
 
 ```bash
 # Read document content (plain text)
-uv run gws docs read <document_id>
+uv run gws-cli docs read <document_id>
 
 # Get document structure (headings)
-uv run gws docs structure <document_id>
+uv run gws-cli docs structure <document_id>
 
 # Create new document
-uv run gws docs create "Document Title" --content "Initial content"
+uv run gws-cli docs create "Document Title" --content "Initial content"
 
 # Insert text at index
-uv run gws docs insert <document_id> "Text to insert" --index 10
+uv run gws-cli docs insert <document_id> "Text to insert" --index 10
 
 # Append text to end
-uv run gws docs append <document_id> "Text to append"
+uv run gws-cli docs append <document_id> "Text to append"
 
 # Append multi-line content via stdin
-cat <<'EOF' | uv run gws docs append <document_id> --stdin
+cat <<'EOF' | uv run gws-cli docs append <document_id> --stdin
 This is a multi-paragraph addition.
 
 It preserves line breaks and formatting.
@@ -46,16 +46,16 @@ Useful for templates or boilerplate content.
 EOF
 
 # Replace all occurrences
-uv run gws docs replace <document_id> "old text" "new text"
+uv run gws-cli docs replace <document_id> "old text" "new text"
 
 # Delete content range
-uv run gws docs delete <document_id> 10 50
+uv run gws-cli docs delete <document_id> 10 50
 
 # Insert page break
-uv run gws docs page-break <document_id> 100
+uv run gws-cli docs page-break <document_id> 100
 
 # Insert image from URL
-uv run gws docs insert-image <document_id> "https://example.com/image.png" --width 300
+uv run gws-cli docs insert-image <document_id> "https://example.com/image.png" --width 300
 ```
 
 ## Exporting Documents
@@ -64,31 +64,31 @@ Export a Google Doc to various file formats. The default format is markdown.
 
 ```bash
 # Export as Markdown (default)
-uv run gws docs export <document_id> report.md
+uv run gws-cli docs export <document_id> report.md
 
 # Export as PDF
-uv run gws docs export <document_id> report.pdf --format pdf
+uv run gws-cli docs export <document_id> report.pdf --format pdf
 
 # Export as Word document (DOCX)
-uv run gws docs export <document_id> report.docx --format docx
+uv run gws-cli docs export <document_id> report.docx --format docx
 
 # Export as plain text
-uv run gws docs export <document_id> report.txt --format txt
+uv run gws-cli docs export <document_id> report.txt --format txt
 
 # Export as HTML
-uv run gws docs export <document_id> report.html --format html
+uv run gws-cli docs export <document_id> report.html --format html
 
 # Export as RTF
-uv run gws docs export <document_id> report.rtf --format rtf
+uv run gws-cli docs export <document_id> report.rtf --format rtf
 
 # Export as EPUB (e-book)
-uv run gws docs export <document_id> report.epub --format epub
+uv run gws-cli docs export <document_id> report.epub --format epub
 
 # Export as ODT (LibreOffice)
-uv run gws docs export <document_id> report.odt --format odt
+uv run gws-cli docs export <document_id> report.odt --format odt
 
 # You can also pass a raw MIME type
-uv run gws docs export <document_id> output.zip --format "application/zip"
+uv run gws-cli docs export <document_id> output.zip --format "application/zip"
 ```
 
 **Supported formats:**
@@ -112,24 +112,24 @@ Find text positions for precise insertions and insert images at specific text lo
 
 ```bash
 # Find text and get its character index
-uv run gws docs find-text <document_id> "Section Title"
+uv run gws-cli docs find-text <document_id> "Section Title"
 # Returns: {"index": 3067, "end_index": 3080, "length": 13, ...}
 
 # Find a specific occurrence (if text appears multiple times)
-uv run gws docs find-text <document_id> "Summary" --occurrence 2
+uv run gws-cli docs find-text <document_id> "Summary" --occurrence 2
 
 # Find text in a specific tab
-uv run gws docs find-text <document_id> "Introduction" --tab <tab_id>
+uv run gws-cli docs find-text <document_id> "Introduction" --tab <tab_id>
 
 # Insert image directly after specific text (avoids index calculation)
-uv run gws docs insert-image-at-text <document_id> "https://example.com/diagram.png" "Flowchart:"
+uv run gws-cli docs insert-image-at-text <document_id> "https://example.com/diagram.png" "Flowchart:"
 
 # With sizing
-uv run gws docs insert-image-at-text <document_id> "https://example.com/chart.png" "Figure 1:" \
+uv run gws-cli docs insert-image-at-text <document_id> "https://example.com/chart.png" "Figure 1:" \
     --width 400 --height 300
 
 # After a specific occurrence
-uv run gws docs insert-image-at-text <document_id> "https://..." "Data Analysis" --occurrence 2
+uv run gws-cli docs insert-image-at-text <document_id> "https://..." "Data Analysis" --occurrence 2
 ```
 
 **Response structure for find-text:**
@@ -153,19 +153,19 @@ Insert markdown content into an existing document with automatic formatting conv
 
 ```bash
 # Insert markdown at the beginning of the document
-uv run gws docs insert-markdown <document_id> "# New Section\n\n**Bold** and *italic* text"
+uv run gws-cli docs insert-markdown <document_id> "# New Section\n\n**Bold** and *italic* text"
 
 # Insert at a specific position
-uv run gws docs insert-markdown <document_id> "## Subheading" --index 50
+uv run gws-cli docs insert-markdown <document_id> "## Subheading" --index 50
 
 # Insert from a markdown file
-uv run gws docs insert-markdown <document_id> --file notes.md
+uv run gws-cli docs insert-markdown <document_id> --file notes.md
 
 # Insert from stdin (piping from file)
-cat notes.md | uv run gws docs insert-markdown <document_id> --stdin
+cat notes.md | uv run gws-cli docs insert-markdown <document_id> --stdin
 
 # Insert markdown via heredoc
-cat <<'EOF' | uv run gws docs insert-markdown <document_id> --stdin
+cat <<'EOF' | uv run gws-cli docs insert-markdown <document_id> --stdin
 ## New Section
 
 This content will be **formatted** with:
@@ -175,10 +175,10 @@ This content will be **formatted** with:
 EOF
 
 # Insert at specific position from stdin
-cat notes.md | uv run gws docs insert-markdown <document_id> --stdin --index 50
+cat notes.md | uv run gws-cli docs insert-markdown <document_id> --stdin --index 50
 
 # Insert into a specific tab
-uv run gws docs insert-markdown <document_id> --file content.md --tab <tab_id>
+uv run gws-cli docs insert-markdown <document_id> --file content.md --tab <tab_id>
 ```
 
 **Supported Markdown Features**: Headers, bold, italic, links, code blocks, lists, and other standard markdown formatting.
@@ -191,13 +191,13 @@ Google Docs supports two page formats:
 
 ```bash
 # Get current page format
-uv run gws docs get-page-format <document_id>
+uv run gws-cli docs get-page-format <document_id>
 
 # Switch to pageless mode
-uv run gws docs set-page-format <document_id> pageless
+uv run gws-cli docs set-page-format <document_id> pageless
 
 # Switch back to pages mode
-uv run gws docs set-page-format <document_id> pages
+uv run gws-cli docs set-page-format <document_id> pages
 ```
 
 **Note**: Switching to PAGELESS mode hides headers, footers, page numbers, and other page-specific elements. Content remains but these features become invisible.
@@ -210,13 +210,13 @@ Google Docs supports multiple tabs within a single document. All reading and edi
 
 ```bash
 # List all tabs in a document
-uv run gws docs list-tabs <document_id>
+uv run gws-cli docs list-tabs <document_id>
 
 # Read content from a specific tab
-uv run gws docs read <document_id> --tab <tab_id>
+uv run gws-cli docs read <document_id> --tab <tab_id>
 
 # Get structure of a specific tab
-uv run gws docs structure <document_id> --tab <tab_id>
+uv run gws-cli docs structure <document_id> --tab <tab_id>
 ```
 
 ### Editing Within Tabs
@@ -225,44 +225,44 @@ All editing commands support the `--tab` option:
 
 ```bash
 # Insert text into a specific tab
-uv run gws docs insert <document_id> "Text" --index 10 --tab <tab_id>
+uv run gws-cli docs insert <document_id> "Text" --index 10 --tab <tab_id>
 
 # Append to a specific tab
-uv run gws docs append <document_id> "Text" --tab <tab_id>
+uv run gws-cli docs append <document_id> "Text" --tab <tab_id>
 
 # Replace text in a specific tab
-uv run gws docs replace <document_id> "old" "new" --tab <tab_id>
+uv run gws-cli docs replace <document_id> "old" "new" --tab <tab_id>
 
 # Format text in a specific tab
-uv run gws docs format <document_id> 1 50 --bold --tab <tab_id>
+uv run gws-cli docs format <document_id> 1 50 --bold --tab <tab_id>
 
 # Delete content in a specific tab
-uv run gws docs delete <document_id> 10 50 --tab <tab_id>
+uv run gws-cli docs delete <document_id> 10 50 --tab <tab_id>
 
 # Insert page break in a specific tab
-uv run gws docs page-break <document_id> 100 --tab <tab_id>
+uv run gws-cli docs page-break <document_id> 100 --tab <tab_id>
 
 # Insert image in a specific tab
-uv run gws docs insert-image <document_id> "https://..." --tab <tab_id>
+uv run gws-cli docs insert-image <document_id> "https://..." --tab <tab_id>
 ```
 
 ### Tab Management
 
 ```bash
 # Create a new tab
-uv run gws docs create-tab <document_id> "Tab Title"
+uv run gws-cli docs create-tab <document_id> "Tab Title"
 
 # Create tab at specific position (0-indexed)
-uv run gws docs create-tab <document_id> "Tab Title" --index 0
+uv run gws-cli docs create-tab <document_id> "Tab Title" --index 0
 
 # Rename a tab
-uv run gws docs rename-tab <document_id> <tab_id> "New Title"
+uv run gws-cli docs rename-tab <document_id> <tab_id> "New Title"
 
 # Move tab to a new position
-uv run gws docs reorder-tab <document_id> <tab_id> 2
+uv run gws-cli docs reorder-tab <document_id> <tab_id> 2
 
 # Delete a tab
-uv run gws docs delete-tab <document_id> <tab_id>
+uv run gws-cli docs delete-tab <document_id> <tab_id>
 ```
 
 **Note**: Tab IDs are returned by the `list-tabs` command. When no `--tab` is specified, operations target the first (default) tab.
@@ -271,39 +271,39 @@ uv run gws docs delete-tab <document_id> <tab_id>
 
 ```bash
 # Basic formatting (bold, italic, underline)
-uv run gws docs format <document_id> 1 50 --bold --italic --underline
+uv run gws-cli docs format <document_id> 1 50 --bold --italic --underline
 
 # Extended formatting (fonts, colors, effects)
-uv run gws docs format-text-extended <document_id> 1 50 \
+uv run gws-cli docs format-text-extended <document_id> 1 50 \
     --font "Arial" --size 14 --color "#FF0000" \
     --bg-color "#FFFF00" --strikethrough --small-caps
 
 # Superscript/subscript
-uv run gws docs format-text-extended <document_id> 10 12 --superscript
-uv run gws docs format-text-extended <document_id> 20 22 --subscript
+uv run gws-cli docs format-text-extended <document_id> 10 12 --superscript
+uv run gws-cli docs format-text-extended <document_id> 20 22 --subscript
 
 # Add hyperlink to text
-uv run gws docs insert-link <document_id> 5 15 "https://example.com"
+uv run gws-cli docs insert-link <document_id> 5 15 "https://example.com"
 ```
 
 ## Paragraph Formatting
 
 ```bash
 # Alignment and named styles
-uv run gws docs format-paragraph <document_id> 1 100 --align CENTER
-uv run gws docs format-paragraph <document_id> 1 50 --style HEADING_1
+uv run gws-cli docs format-paragraph <document_id> 1 100 --align CENTER
+uv run gws-cli docs format-paragraph <document_id> 1 50 --style HEADING_1
 
 # Spacing and indentation
-uv run gws docs format-paragraph <document_id> 1 100 \
+uv run gws-cli docs format-paragraph <document_id> 1 100 \
     --space-above 12 --space-below 6 --line-spacing 150 \
     --indent-first 36 --indent-left 18
 
 # Paragraph borders
-uv run gws docs paragraph-border <document_id> 1 100 \
+uv run gws-cli docs paragraph-border <document_id> 1 100 \
     --all --color "#0000FF" --width 2
 
 # Keep lines together
-uv run gws docs format-paragraph <document_id> 1 100 --keep-together --keep-with-next
+uv run gws-cli docs format-paragraph <document_id> 1 100 --keep-together --keep-with-next
 ```
 
 **Named styles**: TITLE, SUBTITLE, HEADING_1 through HEADING_6, NORMAL_TEXT
@@ -312,46 +312,46 @@ uv run gws docs format-paragraph <document_id> 1 100 --keep-together --keep-with
 
 ```bash
 # List tables in document
-uv run gws docs list-tables <document_id>
+uv run gws-cli docs list-tables <document_id>
 
 # Insert table (rows, columns)
-uv run gws docs insert-table <document_id> 3 4 --index 50
+uv run gws-cli docs insert-table <document_id> 3 4 --index 50
 
 # Row and column operations
-uv run gws docs insert-table-row <document_id> 0 1 --above
-uv run gws docs insert-table-column <document_id> 0 2 --left
-uv run gws docs delete-table-row <document_id> 0 2
-uv run gws docs delete-table-column <document_id> 0 1
+uv run gws-cli docs insert-table-row <document_id> 0 1 --above
+uv run gws-cli docs insert-table-column <document_id> 0 2 --left
+uv run gws-cli docs delete-table-row <document_id> 0 2
+uv run gws-cli docs delete-table-column <document_id> 0 1
 
 # Merge/unmerge cells
-uv run gws docs merge-cells <document_id> 0 0 0 1 2    # start_row, start_col, end_row, end_col
-uv run gws docs unmerge-cells <document_id> 0 0 0 1 2
+uv run gws-cli docs merge-cells <document_id> 0 0 0 1 2    # start_row, start_col, end_row, end_col
+uv run gws-cli docs unmerge-cells <document_id> 0 0 0 1 2
 
 # Style table cells
-uv run gws docs style-table-cell <document_id> 0 0 0 \
+uv run gws-cli docs style-table-cell <document_id> 0 0 0 \
     --bg-color "#FFFF00" --border-color "#000000" --border-width 1 --padding 5
 
 # Set column width (points)
-uv run gws docs set-column-width <document_id> 0 1 150
+uv run gws-cli docs set-column-width <document_id> 0 1 150
 
 # Set multiple column widths in one API call (more efficient)
-uv run gws docs set-table-column-widths <document_id> 0 '{"0":70,"1":90,"2":170,"3":50}'
+uv run gws-cli docs set-table-column-widths <document_id> 0 '{"0":70,"1":90,"2":170,"3":50}'
 
 # Pin header rows
-uv run gws docs pin-table-header <document_id> 0 --rows 2
+uv run gws-cli docs pin-table-header <document_id> 0 --rows 2
 ```
 
 ## Lists and Bullets
 
 ```bash
 # Create bulleted list
-uv run gws docs create-bullets <document_id> 1 100 --preset BULLET_DISC_CIRCLE_SQUARE
+uv run gws-cli docs create-bullets <document_id> 1 100 --preset BULLET_DISC_CIRCLE_SQUARE
 
 # Create numbered list
-uv run gws docs create-numbered <document_id> 1 100 --preset NUMBERED_DECIMAL_NESTED
+uv run gws-cli docs create-numbered <document_id> 1 100 --preset NUMBERED_DECIMAL_NESTED
 
 # Remove bullets/numbering
-uv run gws docs remove-bullets <document_id> 1 100
+uv run gws-cli docs remove-bullets <document_id> 1 100
 ```
 
 **Bullet presets**: BULLET_DISC_CIRCLE_SQUARE, BULLET_CHECKBOX, BULLET_DIAMONDX_ARROW3D_SQUARE
@@ -362,18 +362,18 @@ uv run gws docs remove-bullets <document_id> 1 100
 
 ```bash
 # List headers/footers
-uv run gws docs list-headers-footers <document_id>
+uv run gws-cli docs list-headers-footers <document_id>
 
 # Create header/footer
-uv run gws docs create-header <document_id> --type DEFAULT
-uv run gws docs create-footer <document_id> --type FIRST_PAGE_FOOTER
+uv run gws-cli docs create-header <document_id> --type DEFAULT
+uv run gws-cli docs create-footer <document_id> --type FIRST_PAGE_FOOTER
 
 # Insert text into header/footer
-uv run gws docs insert-segment-text <document_id> <header_id> "Company Name" --index 0
+uv run gws-cli docs insert-segment-text <document_id> <header_id> "Company Name" --index 0
 
 # Delete header/footer
-uv run gws docs delete-header <document_id> <header_id>
-uv run gws docs delete-footer <document_id> <footer_id>
+uv run gws-cli docs delete-header <document_id> <header_id>
+uv run gws-cli docs delete-footer <document_id> <footer_id>
 ```
 
 **Header/footer types**: DEFAULT, FIRST_PAGE_HEADER, FIRST_PAGE_FOOTER
@@ -382,17 +382,17 @@ uv run gws docs delete-footer <document_id> <footer_id>
 
 ```bash
 # Insert section break
-uv run gws docs insert-section-break <document_id> 100 --type NEXT_PAGE
+uv run gws-cli docs insert-section-break <document_id> 100 --type NEXT_PAGE
 
 # Update document margins and page size (points, 72pt = 1 inch)
-uv run gws docs document-style <document_id> \
+uv run gws-cli docs document-style <document_id> \
     --margin-top 72 --margin-bottom 72 --margin-left 72 --margin-right 72
 
 # Change page size (612x792 = Letter, 595x842 = A4)
-uv run gws docs document-style <document_id> --page-width 595 --page-height 842
+uv run gws-cli docs document-style <document_id> --page-width 595 --page-height 842
 
 # Different first page header/footer
-uv run gws docs document-style <document_id> --first-page-diff
+uv run gws-cli docs document-style <document_id> --first-page-diff
 ```
 
 **Section break types**: NEXT_PAGE, CONTINUOUS
@@ -401,22 +401,22 @@ uv run gws docs document-style <document_id> --first-page-diff
 
 ```bash
 # Create a named range
-uv run gws docs create-named-range <document_id> "Section1" 1 100
+uv run gws-cli docs create-named-range <document_id> "Section1" 1 100
 
 # List all named ranges
-uv run gws docs list-named-ranges <document_id>
+uv run gws-cli docs list-named-ranges <document_id>
 
 # Delete named range by name
-uv run gws docs delete-named-range <document_id> --name "Section1"
+uv run gws-cli docs delete-named-range <document_id> --name "Section1"
 
 # Delete named range by ID
-uv run gws docs delete-named-range <document_id> --id "kix.abc123"
+uv run gws-cli docs delete-named-range <document_id> --id "kix.abc123"
 
 # Replace content within a named range (useful for templates)
-uv run gws docs replace-named-range <document_id> "New content" --name "Section1"
+uv run gws-cli docs replace-named-range <document_id> "New content" --name "Section1"
 
 # Replace by named range ID
-uv run gws docs replace-named-range <document_id> "Updated text" --id "kix.abc123"
+uv run gws-cli docs replace-named-range <document_id> "Updated text" --id "kix.abc123"
 ```
 
 **Template workflow**: Create a document template with named ranges as placeholders (e.g., `{{NAME}}`, `{{DATE}}`), then use `replace-named-range` to fill in values programmatically.
@@ -425,16 +425,16 @@ uv run gws docs replace-named-range <document_id> "Updated text" --id "kix.abc12
 
 ```bash
 # Insert image from URL (see Basic Operations)
-uv run gws docs insert-image <document_id> "https://example.com/image.png" --width 300
+uv run gws-cli docs insert-image <document_id> "https://example.com/image.png" --width 300
 
 # Insert image after specific text (see Finding Text)
-uv run gws docs insert-image-at-text <document_id> "https://example.com/chart.png" "Figure 1:"
+uv run gws-cli docs insert-image-at-text <document_id> "https://example.com/chart.png" "Figure 1:"
 
 # Replace an existing image with a new one
-uv run gws docs replace-image <document_id> <image_object_id> "https://example.com/new-image.png"
+uv run gws-cli docs replace-image <document_id> <image_object_id> "https://example.com/new-image.png"
 
 # Replace image with specific method (CENTER_CROP is default)
-uv run gws docs replace-image <document_id> <image_object_id> "https://example.com/new-image.png" --method CENTER_CROP
+uv run gws-cli docs replace-image <document_id> <image_object_id> "https://example.com/new-image.png" --method CENTER_CROP
 ```
 
 **Note**: The `image_object_id` can be found in the document structure. Use `replace-image` to update charts, diagrams, or photos without changing their position or size in the document.
@@ -445,10 +445,10 @@ Positioned objects are floating elements that can be placed anywhere on a page, 
 
 ```bash
 # Delete a positioned object (floating image, drawing, etc.)
-uv run gws docs delete-positioned-object <document_id> <object_id>
+uv run gws-cli docs delete-positioned-object <document_id> <object_id>
 
 # Delete positioned object in a specific tab
-uv run gws docs delete-positioned-object <document_id> <object_id> --tab <tab_id>
+uv run gws-cli docs delete-positioned-object <document_id> <object_id> --tab <tab_id>
 ```
 
 **Note**: Object IDs for positioned objects can be found in the document structure. Inline images are deleted using the standard `delete` command with their index range.
@@ -457,35 +457,35 @@ uv run gws docs delete-positioned-object <document_id> <object_id> --tab <tab_id
 
 ```bash
 # Insert a footnote reference at a position
-uv run gws docs insert-footnote <document_id> 50
+uv run gws-cli docs insert-footnote <document_id> 50
 
 # List all footnotes in document
-uv run gws docs list-footnotes <document_id>
+uv run gws-cli docs list-footnotes <document_id>
 
 # Add content to a footnote (use insert-segment-text with footnote ID)
-uv run gws docs insert-segment-text <document_id> <footnote_id> "Footnote text here" --index 0
+uv run gws-cli docs insert-segment-text <document_id> <footnote_id> "Footnote text here" --index 0
 ```
 
 ## Suggestions (Tracked Changes)
 
 ```bash
 # Get all pending suggestions in a document
-uv run gws docs suggestions <document_id>
+uv run gws-cli docs suggestions <document_id>
 
 # Check if document has pending suggestions
-uv run gws docs document-mode <document_id>
+uv run gws-cli docs document-mode <document_id>
 
 # Accept a specific suggestion
-uv run gws docs accept-suggestion <document_id> <suggestion_id>
+uv run gws-cli docs accept-suggestion <document_id> <suggestion_id>
 
 # Reject a specific suggestion
-uv run gws docs reject-suggestion <document_id> <suggestion_id>
+uv run gws-cli docs reject-suggestion <document_id> <suggestion_id>
 
 # Accept all pending suggestions
-uv run gws docs accept-all-suggestions <document_id>
+uv run gws-cli docs accept-all-suggestions <document_id>
 
 # Reject all pending suggestions
-uv run gws docs reject-all-suggestions <document_id>
+uv run gws-cli docs reject-all-suggestions <document_id>
 ```
 
 **Note**: Suggestion IDs can be obtained from the `suggestions` command output.

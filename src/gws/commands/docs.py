@@ -114,9 +114,9 @@ def export_document(
     You can also pass a raw MIME type (e.g., application/pdf).
 
     Examples:
-        gws docs export DOC_ID report.md
-        gws docs export DOC_ID report.pdf --format pdf
-        gws docs export DOC_ID report.docx --format docx
+        gws-cli docs export DOC_ID report.md
+        gws-cli docs export DOC_ID report.pdf --format pdf
+        gws-cli docs export DOC_ID report.docx --format docx
     """
     service = DocsService()
     service.export(document_id=document_id, output_path=output_path, fmt=fmt)
@@ -220,9 +220,9 @@ def insert_markdown(
     Google converts the markdown to formatted text (bold, italic, links, etc.).
 
     Examples:
-        gws docs insert-markdown DOC_ID "# Heading\\n\\n**Bold** text"
-        gws docs insert-markdown DOC_ID --file notes.md
-        cat notes.md | gws docs insert-markdown DOC_ID --stdin
+        gws-cli docs insert-markdown DOC_ID "# Heading\\n\\n**Bold** text"
+        gws-cli docs insert-markdown DOC_ID --file notes.md
+        cat notes.md | gws-cli docs insert-markdown DOC_ID --stdin
     """
     # Determine the source of markdown content
     if stdin:
@@ -1298,7 +1298,7 @@ def find_text(
     Returns the character index where the text starts, useful for
     precise insertions. Use --occurrence to target specific matches.
 
-    Example: uv run gws docs find-text DOC_ID "Section Title"
+    Example: uv run gws-cli docs find-text DOC_ID "Section Title"
     """
     service = DocsService()
     service.find_text(
@@ -1337,7 +1337,7 @@ def insert_image_at_text(
     after it, avoiding manual index calculation and paragraph
     boundary issues.
 
-    Example: uv run gws docs insert-image-at-text DOC_ID "https://..." "Section Title"
+    Example: uv run gws-cli docs insert-image-at-text DOC_ID "https://..." "Section Title"
     """
     service = DocsService()
     service.insert_image_at_text(

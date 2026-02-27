@@ -481,10 +481,10 @@ def set_event_reminders(
 
     Examples:
         Set a popup 10 minutes before and email 1 hour before:
-            gws calendar set-reminders EVENT_ID --reminders "popup:10,email:60"
+            gws-cli calendar set-reminders EVENT_ID --reminders "popup:10,email:60"
 
         Use calendar's default reminders:
-            gws calendar set-reminders EVENT_ID --use-default
+            gws-cli calendar set-reminders EVENT_ID --use-default
     """
     reminder_list = None
     if reminders and not use_default:
@@ -547,7 +547,7 @@ def set_default_reminders(
 
     Example:
         Set popup 10 minutes and email 30 minutes before as defaults:
-            gws calendar set-default-reminders "popup:10,email:30"
+            gws-cli calendar set-default-reminders "popup:10,email:30"
     """
     reminder_list = []
     for r in reminders.split(","):
