@@ -9,7 +9,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 from gws.auth.scopes import get_scopes_for_services
-from gws.config import Config
+from gws.config import Config, _write_secure_file
 from gws.exceptions import AuthError
 
 
@@ -153,9 +153,7 @@ class LocalAuthProvider:
     def _save_credentials(self) -> None:
         """Save credentials to token file."""
         if self._credentials:
-            self.TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.TOKEN_PATH, "w") as f:
-                f.write(self._credentials.to_json())
+            _write_secure_file(self.TOKEN_PATH, self._credentials.to_json())
 
     def delete_token(self) -> bool:
         """Delete the token file for re-authentication."""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable
+from urllib.parse import urlparse
 
 from google.oauth2.credentials import Credentials
 
@@ -32,6 +33,20 @@ class AuthProvider(Protocol):
         ...
 
 
+def _validate_server_url(url: str) -> None:
+    """Require HTTPS for non-localhost relay server URLs."""
+    from gws.exceptions import AuthError
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise AuthError(f"Invalid server URL scheme: {parsed.scheme!r}")
+    if parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
+        raise AuthError(
+            f"Insecure server URL: {url!r}",
+            "Use HTTPS for non-localhost relay servers.",
+        )
+
+
 def resolve_auth_provider(
     account: str | None = None,
     config: Any | None = None,
@@ -59,6 +74,7 @@ def resolve_auth_provider(
     server_url = os.environ.get("GWS_SERVER_URL") or effective.server_url
 
     if effective.mode == "server" and server_url:
+        _validate_server_url(server_url)
         from gws.auth.server import ServerAuthProvider
 
         return ServerAuthProvider(

@@ -6,7 +6,7 @@ import typer
 
 from gws.config import Config
 from gws.context import set_active_account
-from gws.exceptions import ExitCode
+from gws.exceptions import AuthError, ExitCode
 from gws.output import output_error
 
 
@@ -24,7 +24,15 @@ def account_callback(
 ) -> None:
     """Resolve and set the active account for this command invocation."""
     config = Config.load()
-    resolved = config.resolve_account(account)
+    try:
+        resolved = config.resolve_account(account)
+    except AuthError as e:
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="account",
+            message=str(e),
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
     set_active_account(resolved)
 
     # Enforce allowed_operations from per-account config
@@ -34,13 +42,14 @@ def account_callback(
         if allowed is not None:
             service = ctx.info_name
             command = ctx.invoked_subcommand
-            if command and service in allowed and command not in allowed[service]:
+            if command and (service not in allowed or command not in allowed[service]):
+                allowed_cmds = allowed.get(service, [])
                 output_error(
                     error_code="OPERATION_NOT_ALLOWED",
                     operation=f"{service}.{command}",
                     message=(
-                        f"Operation '{command}' is not allowed for account '{resolved}'. "
-                        f"Allowed: {', '.join(allowed[service])}"
+                        f"Operation '{command}' is not allowed for account '{resolved}'."
+                        + (f" Allowed: {', '.join(allowed_cmds)}" if allowed_cmds else "")
                     ),
                 )
                 raise typer.Exit(ExitCode.INVALID_ARGS)

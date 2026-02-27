@@ -16,7 +16,7 @@ from urllib.parse import urlencode
 import httpx
 from google.oauth2.credentials import Credentials
 
-from gws.config import Config
+from gws.config import Config, _write_secure_file
 from gws.exceptions import AuthError
 
 
@@ -44,6 +44,8 @@ class ServerAuthProvider:
         config: Config | None = None,
     ):
         self.server_url = server_url.rstrip("/")
+        from gws.auth.provider import _validate_server_url
+        _validate_server_url(self.server_url)
         self.config = config or Config.load()
         self._account_name = self.config.resolve_account(account)
 
@@ -591,9 +593,7 @@ class ServerAuthProvider:
 
     def _save_server_token(self, token_data: dict[str, Any]) -> None:
         """Save server JWT to disk."""
-        self._server_token_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._server_token_path, "w") as f:
-            json.dump(token_data, f, indent=2)
+        _write_secure_file(self._server_token_path, json.dumps(token_data, indent=2))
         self._server_token = token_data
 
     def _ensure_server_token(self, auto_login: bool = True) -> dict[str, Any]:
@@ -698,9 +698,7 @@ class ServerAuthProvider:
         # Omit fields that are None (but keep expiry even if token_data had no expires_in)
         cred_data = {k: v for k, v in cred_data.items() if v is not None}
 
-        self.TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.TOKEN_PATH, "w") as f:
-            json.dump(cred_data, f, indent=2)
+        _write_secure_file(self.TOKEN_PATH, json.dumps(cred_data, indent=2))
 
         self._credentials = Credentials(
             token=token_data["access_token"],

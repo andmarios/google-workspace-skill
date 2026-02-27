@@ -9,6 +9,14 @@ from dataclasses import dataclass, field, asdict, fields
 from pathlib import Path
 from typing import Any, ClassVar
 
+def _write_secure_file(path: Path, content: str) -> None:
+    """Write content to path with 0o600 permissions (owner read/write only)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(content)
+
+
 # Account names must be alphanumeric, hyphens, or underscores
 _VALID_ACCOUNT_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
 
@@ -167,8 +175,7 @@ class Config:
             data.pop("server_provider", None)
         if self.mode == "local":
             data.pop("mode", None)
-        with open(self.CONFIG_PATH, "w") as f:
-            json.dump(data, f, indent=2)
+        _write_secure_file(self.CONFIG_PATH, json.dumps(data, indent=2))
 
     def is_service_enabled(self, service: str) -> bool:
         """Check if a service is enabled."""
@@ -234,15 +241,24 @@ class Config:
         """Resolve which account to use.
 
         Priority: explicit arg > GWS_ACCOUNT env > default > None (legacy).
+        Validates the resolved name to prevent path traversal.
         """
+        from gws.exceptions import AuthError
+
+        resolved: str | None = None
         if account:
-            return account
-        env_account = os.environ.get("GWS_ACCOUNT")
-        if env_account:
-            return env_account
-        if self.accounts and self.accounts.default_account:
-            return self.accounts.default_account
-        return None
+            resolved = account
+        elif (env_account := os.environ.get("GWS_ACCOUNT")):
+            resolved = env_account
+        elif self.accounts and self.accounts.default_account:
+            resolved = self.accounts.default_account
+
+        if resolved is not None:
+            try:
+                self.validate_account_name(resolved)
+            except ValueError as e:
+                raise AuthError(str(e)) from e
+        return resolved
 
     def load_effective_config(self, account: str | None) -> "Config":
         """Return a config with per-account overrides applied.
@@ -373,8 +389,7 @@ class Config:
         account_dir = self.get_account_dir(name)
         account_dir.mkdir(parents=True, exist_ok=True)
         config_path = account_dir / "config.json"
-        with open(config_path, "w") as f:
-            json.dump(overrides, f, indent=2)
+        _write_secure_file(config_path, json.dumps(overrides, indent=2))
 
     def load_account_config(self, name: str) -> dict[str, Any]:
         """Load per-account config overrides."""
