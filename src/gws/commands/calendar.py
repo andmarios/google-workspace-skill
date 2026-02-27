@@ -4,6 +4,8 @@ import typer
 from typing import Annotated, Optional
 
 from gws.commands._account import account_callback
+from gws.exceptions import ExitCode
+from gws.output import output_error
 from gws.services.calendar import CalendarService
 
 app = typer.Typer(
@@ -491,12 +493,27 @@ def set_event_reminders(
         reminder_list = []
         for r in reminders.split(","):
             parts = r.strip().split(":")
-            if len(parts) == 2:
-                method, minutes = parts
-                reminder_list.append({
-                    "method": method.strip(),
-                    "minutes": int(minutes.strip()),
-                })
+            if len(parts) != 2:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="calendar.set_reminders",
+                    message=f"Invalid reminder format: {r.strip()!r}. Expected 'method:minutes' (e.g., 'popup:10').",
+                )
+                raise typer.Exit(ExitCode.INVALID_ARGS)
+            method, minutes = parts
+            try:
+                minutes_int = int(minutes.strip())
+            except ValueError:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="calendar.set_reminders",
+                    message=f"Invalid minutes value: {minutes.strip()!r}. Must be an integer.",
+                )
+                raise typer.Exit(ExitCode.INVALID_ARGS)
+            reminder_list.append({
+                "method": method.strip(),
+                "minutes": minutes_int,
+            })
 
     service = CalendarService()
     service.set_event_reminders(
@@ -552,12 +569,27 @@ def set_default_reminders(
     reminder_list = []
     for r in reminders.split(","):
         parts = r.strip().split(":")
-        if len(parts) == 2:
-            method, minutes = parts
-            reminder_list.append({
-                "method": method.strip(),
-                "minutes": int(minutes.strip()),
-            })
+        if len(parts) != 2:
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="calendar.set_default_reminders",
+                message=f"Invalid reminder format: {r.strip()!r}. Expected 'method:minutes' (e.g., 'popup:10').",
+            )
+            raise typer.Exit(ExitCode.INVALID_ARGS)
+        method, minutes = parts
+        try:
+            minutes_int = int(minutes.strip())
+        except ValueError:
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="calendar.set_default_reminders",
+                message=f"Invalid minutes value: {minutes.strip()!r}. Must be an integer.",
+            )
+            raise typer.Exit(ExitCode.INVALID_ARGS)
+        reminder_list.append({
+            "method": method.strip(),
+            "minutes": minutes_int,
+        })
 
     service = CalendarService()
     service.set_default_reminders(reminders=reminder_list, calendar_id=calendar_id)

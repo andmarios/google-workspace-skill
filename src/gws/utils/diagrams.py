@@ -207,6 +207,8 @@ def render_diagrams_in_markdown(
                 markdown[block["end"]:]
             )
         except Exception as e:
+            import sys
+            print(f"[gws-cli] Warning: diagram rendering failed: {e}", file=sys.stderr)
             # Keep original code block on error, add error comment
             error_msg = f"\n\n<!-- Diagram rendering failed: {e} -->\n\n"
             markdown = (

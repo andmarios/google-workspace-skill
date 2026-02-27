@@ -86,13 +86,29 @@ def write_values(
     Values should be a JSON array of arrays, e.g., '[["A1", "B1"], ["A2", "B2"]]'
     """
     if stdin:
-        data = json.loads(sys.stdin.read())
+        try:
+            data = json.loads(sys.stdin.read())
+        except json.JSONDecodeError as e:
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="sheets.write",
+                message=f"Invalid JSON input: {e}",
+            )
+            raise typer.Exit(ExitCode.INVALID_ARGS)
         if isinstance(data, list):
             values_list = data
         else:
             values_list = data.get("values", [])
     elif values:
-        values_list = json.loads(values)
+        try:
+            values_list = json.loads(values)
+        except json.JSONDecodeError as e:
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="sheets.write",
+                message=f"Invalid JSON input: {e}",
+            )
+            raise typer.Exit(ExitCode.INVALID_ARGS)
     else:
         output_error(
             error_code="INVALID_ARGS",
@@ -124,13 +140,29 @@ def append_values(
 ) -> None:
     """Append values to a spreadsheet."""
     if stdin:
-        data = json.loads(sys.stdin.read())
+        try:
+            data = json.loads(sys.stdin.read())
+        except json.JSONDecodeError as e:
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="sheets.append",
+                message=f"Invalid JSON input: {e}",
+            )
+            raise typer.Exit(ExitCode.INVALID_ARGS)
         if isinstance(data, list):
             values_list = data
         else:
             values_list = data.get("values", [])
     elif values:
-        values_list = json.loads(values)
+        try:
+            values_list = json.loads(values)
+        except json.JSONDecodeError as e:
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="sheets.append",
+                message=f"Invalid JSON input: {e}",
+            )
+            raise typer.Exit(ExitCode.INVALID_ARGS)
     else:
         output_error(
             error_code="INVALID_ARGS",

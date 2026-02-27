@@ -1164,19 +1164,33 @@ class TestColorParsing:
         rgb = parse_hex_color("#808080")
         assert abs(rgb["red"] - 0.502) < 0.01
 
-    def test_parse_hex_color_invalid(self):
-        """Test fallback for invalid/short colors returns black."""
+    def test_parse_hex_color_short(self):
+        """Test 3-character hex color expansion."""
         from gws.utils.colors import parse_hex_color
 
-        # Short color returns black (fallback)
+        # 3-char hex expands to 6-char (FFF -> FFFFFF = white)
         rgb = parse_hex_color("#FFF")
-        assert rgb["red"] == 0.0
+        assert rgb["red"] == 1.0
+        assert rgb["green"] == 1.0
+        assert rgb["blue"] == 1.0
+
+        rgb = parse_hex_color("#F00")
+        assert rgb["red"] == 1.0
         assert rgb["green"] == 0.0
         assert rgb["blue"] == 0.0
 
-        # Invalid hex characters raise ValueError when parsed
+    def test_parse_hex_color_invalid(self):
+        """Test that invalid hex colors raise ValueError."""
+        from gws.utils.colors import parse_hex_color
+
         with pytest.raises(ValueError):
             parse_hex_color("#GGGGGG")
+
+        with pytest.raises(ValueError):
+            parse_hex_color("#AB")
+
+        with pytest.raises(ValueError):
+            parse_hex_color("")
 
 
 # =============================================================================

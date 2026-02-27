@@ -182,17 +182,21 @@ class SlidesService(BaseService):
 
             # Move to folder if specified
             if folder_id:
-                file = self.drive_service.files().get(
-                    fileId=presentation_id, fields="parents"
-                ).execute()
+                file = self.execute(
+                    self.drive_service.files().get(
+                        fileId=presentation_id, fields="parents"
+                    )
+                )
                 previous_parents = ",".join(file.get("parents", []))
 
-                self.drive_service.files().update(
-                    fileId=presentation_id,
-                    addParents=folder_id,
-                    removeParents=previous_parents,
-                    fields="id, parents",
-                ).execute()
+                self.execute(
+                    self.drive_service.files().update(
+                        fileId=presentation_id,
+                        addParents=folder_id,
+                        removeParents=previous_parents,
+                        fields="id, parents",
+                    )
+                )
 
             output_success(
                 operation="slides.create",

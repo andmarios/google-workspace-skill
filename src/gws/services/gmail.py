@@ -43,6 +43,7 @@ class GmailService(BaseService):
             result = self.execute(self.service.users().messages().list(**params))
 
             messages: list[dict[str, Any]] = []
+            batch_errors: dict[str, str] = {}
             msg_refs = result.get("messages", [])
 
             if msg_refs:
@@ -52,6 +53,8 @@ class GmailService(BaseService):
                 def handle_response(request_id: str, response: Any, exception: Any) -> None:
                     if exception is None:
                         batch_results[request_id] = response
+                    else:
+                        batch_errors[request_id] = str(exception)
 
                 batch = self.service.new_batch_http_request(callback=handle_response)
                 for msg_ref in msg_refs:
@@ -89,12 +92,15 @@ class GmailService(BaseService):
                         "snippet": msg.get("snippet", "")[:100],
                     })
 
-            output_success(
-                operation="gmail.list",
-                message_count=len(messages),
-                messages=messages,
-                next_page_token=result.get("nextPageToken"),
-            )
+            output_kwargs: dict[str, Any] = {
+                "operation": "gmail.list",
+                "message_count": len(messages),
+                "messages": messages,
+                "next_page_token": result.get("nextPageToken"),
+            }
+            if batch_errors:
+                output_kwargs["failed_ids"] = batch_errors
+            output_success(**output_kwargs)
             return result
         except HttpError as e:
             output_error(
@@ -649,27 +655,43 @@ class GmailService(BaseService):
             )
 
             drafts = []
-            for draft_ref in result.get("drafts", []):
-                # Get draft details
-                draft = self.execute(
-                    self.service.users()
-                    .drafts()
-                    .get(userId="me", id=draft_ref["id"], format="metadata")
-                )
+            draft_refs = result.get("drafts", [])
 
-                msg = draft.get("message", {})
-                headers = {
-                    h["name"]: h["value"]
-                    for h in msg.get("payload", {}).get("headers", [])
-                }
+            if draft_refs:
+                batch_results: dict[str, Any] = {}
 
-                drafts.append({
-                    "id": draft["id"],
-                    "message_id": msg.get("id"),
-                    "subject": headers.get("Subject", "(no subject)"),
-                    "to": headers.get("To", ""),
-                    "snippet": msg.get("snippet", "")[:100],
-                })
+                def handle_draft_response(request_id: str, response: Any, exception: Any) -> None:
+                    if exception is None:
+                        batch_results[request_id] = response
+
+                batch = self.service.new_batch_http_request(callback=handle_draft_response)
+                for draft_ref in draft_refs:
+                    batch.add(
+                        self.service.users()
+                        .drafts()
+                        .get(userId="me", id=draft_ref["id"], format="metadata"),
+                        request_id=draft_ref["id"],
+                    )
+                batch.execute()
+
+                for draft_ref in draft_refs:
+                    draft = batch_results.get(draft_ref["id"])
+                    if not draft:
+                        continue
+
+                    msg = draft.get("message", {})
+                    headers = {
+                        h["name"]: h["value"]
+                        for h in msg.get("payload", {}).get("headers", [])
+                    }
+
+                    drafts.append({
+                        "id": draft["id"],
+                        "message_id": msg.get("id"),
+                        "subject": headers.get("Subject", "(no subject)"),
+                        "to": headers.get("To", ""),
+                        "snippet": msg.get("snippet", "")[:100],
+                    })
 
             output_success(
                 operation="gmail.list_drafts",
