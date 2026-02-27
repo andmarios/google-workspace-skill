@@ -229,7 +229,7 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 208 | Contacts |`contacts list --max 5`|PASS| 2026-02-06 |Lists contacts|
 | 209 | Contacts |`contacts get <resource_name>`|PASS| 2026-02-06 |Gets contact|
 | 210 | Contacts |`contacts batch-get <res1>,<res2>`|PASS| 2026-02-06 |Batch retrieves contacts|
-| 211 | Contacts |`contacts search-directory "marios"`|PASS| 2026-02-06 |Searches Workspace directory|
+| 211 | Contacts |`contacts search-directory "testuser"`|PASS| 2026-02-06 |Searches Workspace directory|
 | 212 | Contacts |`contacts list-directory --max 5`|PASS| 2026-02-06 |Lists directory with pagination|
 | 213 | Contacts |`contacts update <resource_name> -e "new@x.com"`|PASS| 2026-02-06 |Contact updated|
 | 214 | Contacts |`contacts delete <resource_name>`|PASS| 2026-02-06 |Contact deleted|

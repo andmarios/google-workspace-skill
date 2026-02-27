@@ -57,3 +57,5 @@ Thumbs.db
 
 # Project specific
 *.log
+*.png
+.claude/
