@@ -112,7 +112,9 @@ class ServerAuthProvider:
             try:
                 self._refresh_via_server(self._credentials.refresh_token)
                 return self._credentials  # Set by _refresh_via_server
-            except Exception:
+            except (httpx.RequestError, httpx.HTTPStatusError, AuthError, json.JSONDecodeError, KeyError) as e:
+                import sys
+                print(f"[gws-cli] Warning: server token refresh failed: {e}", file=sys.stderr)
                 self._credentials = None
 
         # Full flow: start → browser → complete
@@ -178,7 +180,7 @@ class ServerAuthProvider:
                     "/oauth/revoke",
                     json_data={"token": server_token.get("refresh_token", "")},
                 )
-            except Exception:
+            except (httpx.RequestError, httpx.HTTPStatusError, AuthError):
                 pass  # Server might be unreachable; still clean up locally
 
         if self._server_token_path.exists():
@@ -588,7 +590,9 @@ class ServerAuthProvider:
             with open(self._server_token_path) as f:
                 self._server_token = json.load(f)
             return self._server_token
-        except (json.JSONDecodeError, TypeError):
+        except (json.JSONDecodeError, TypeError) as e:
+            import sys
+            print(f"[gws-cli] Warning: corrupt server token file, ignoring: {e}", file=sys.stderr)
             return None
 
     def _save_server_token(self, token_data: dict[str, Any]) -> None:
@@ -641,7 +645,9 @@ class ServerAuthProvider:
         try:
             with open(self.TOKEN_PATH) as f:
                 data = json.load(f)
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError) as e:
+            import sys
+            print(f"[gws-cli] Warning: corrupt Google token file, ignoring: {e}", file=sys.stderr)
             return None
 
         token = data.get("token")
@@ -678,13 +684,13 @@ class ServerAuthProvider:
         refresh_token: str | None = None,
     ) -> None:
         """Save Google API tokens with expiry as a JSON file."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         client_id = token_data.get("client_id", "server-managed")
         resolved_refresh = token_data.get("refresh_token", refresh_token)
         expires_in = token_data.get("expires_in", 3600)
         # Use naive UTC to match google-auth's internal convention
-        expiry = datetime.utcnow() + timedelta(seconds=expires_in)
+        expiry = (datetime.now(timezone.utc) + timedelta(seconds=expires_in)).replace(tzinfo=None)
 
         cred_data = {
             "token": token_data["access_token"],

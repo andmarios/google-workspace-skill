@@ -1,9 +1,11 @@
 """OAuth authentication with loopback redirect flow."""
 
+import json
 import socket
 import webbrowser
 from pathlib import Path
 
+import google.auth.exceptions
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -74,7 +76,9 @@ class LocalAuthProvider:
                     str(self.TOKEN_PATH),
                     scopes=scopes,
                 )
-            except Exception:
+            except (json.JSONDecodeError, ValueError, KeyError, OSError) as e:
+                import sys
+                print(f"[gws-cli] Warning: failed to load token: {e}", file=sys.stderr)
                 self._credentials = None
 
         # Refresh if expired
@@ -83,8 +87,9 @@ class LocalAuthProvider:
                 self._credentials.refresh(Request())
                 self._save_credentials()
                 return self._credentials
-            except Exception:
-                # Refresh failed, need new auth
+            except (google.auth.exceptions.RefreshError, google.auth.exceptions.TransportError, OSError) as e:
+                import sys
+                print(f"[gws-cli] Warning: token refresh failed: {e}", file=sys.stderr)
                 self._credentials = None
 
         # Run auth flow if no valid credentials

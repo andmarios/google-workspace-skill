@@ -137,8 +137,9 @@ class Config:
                 with open(cls.CONFIG_PATH) as f:
                     data = json.load(f)
                 return cls._from_dict(data)
-            except (json.JSONDecodeError, TypeError):
-                # Invalid config, return default
+            except (json.JSONDecodeError, TypeError) as e:
+                import sys
+                print(f"[gws-cli] Warning: corrupt config file, using defaults: {e}", file=sys.stderr)
                 return cls()
         return cls()
 
@@ -399,7 +400,9 @@ class Config:
                 with open(config_path) as f:
                     data: dict[str, Any] = json.load(f)
                     return data
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError) as e:
+                import sys
+                print(f"[gws-cli] Warning: corrupt account config for '{name}', ignoring: {e}", file=sys.stderr)
                 return {}
         return {}
 

@@ -194,7 +194,11 @@ class GmailService(BaseService):
         return attachments
 
     def get_profile(self) -> dict[str, Any]:
-        """Get the current user's Gmail profile."""
+        """Get the current user's Gmail profile.
+
+        Best-effort: returns empty dict on API errors since profile data
+        (display name for email sender) is non-critical.
+        """
         try:
             profile = self.execute(self.service.users().getProfile(userId="me"))
             return profile
