@@ -5,6 +5,8 @@ import typer
 from typing import Annotated, Optional
 
 from gws.commands._account import account_callback
+from gws.exceptions import ExitCode
+from gws.output import output_error
 from gws.services.docs import DocsService
 
 app = typer.Typer(
@@ -184,8 +186,12 @@ def append_text(
     if stdin:
         text = sys.stdin.read()
     elif text is None:
-        typer.echo("Error: Either provide text argument or use --stdin", err=True)
-        raise typer.Exit(1)
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="docs.append",
+            message="Either provide text argument or use --stdin",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
 
     service = DocsService()
     service.append(document_id=document_id, text=text, tab_id=tab_id)
@@ -231,14 +237,22 @@ def insert_markdown(
         from pathlib import Path
         path = Path(file)
         if not path.exists():
-            typer.echo(f"Error: File not found: {file}", err=True)
-            raise typer.Exit(1)
+            output_error(
+                error_code="INVALID_ARGS",
+                operation="docs.insert_markdown",
+                message=f"File not found: {file}",
+            )
+            raise typer.Exit(ExitCode.INVALID_ARGS)
         markdown_content = path.read_text(encoding="utf-8")
     elif markdown:
         markdown_content = markdown
     else:
-        typer.echo("Error: Provide markdown argument, --file, or --stdin", err=True)
-        raise typer.Exit(1)
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="docs.insert_markdown",
+            message="Provide markdown argument, --file, or --stdin",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
 
     service = DocsService()
     service.insert_markdown(
@@ -613,9 +627,6 @@ def set_table_column_widths(
     """Set widths for multiple table columns in a single API call."""
     import json
 
-    from gws.exceptions import ExitCode
-    from gws.output import output_error
-
     try:
         widths_dict = json.loads(column_widths)
         # Convert string keys to int (JSON keys are always strings)
@@ -626,7 +637,7 @@ def set_table_column_widths(
             operation="docs.set_table_column_widths",
             message=f"Invalid JSON for column_widths: {e}",
         )
-        raise SystemExit(ExitCode.INVALID_ARGS)
+        raise typer.Exit(ExitCode.INVALID_ARGS)
 
     service = DocsService()
     service.set_table_column_widths(

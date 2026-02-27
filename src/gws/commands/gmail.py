@@ -5,6 +5,8 @@ import typer
 from typing import Annotated, Optional
 
 from gws.commands._account import account_callback
+from gws.exceptions import ExitCode
+from gws.output import output_error
 from gws.services.gmail import GmailService
 
 app = typer.Typer(
@@ -93,8 +95,12 @@ def send_message(
     if stdin:
         body = sys.stdin.read()
     elif body is None:
-        typer.echo("Error: Either provide body argument or use --stdin", err=True)
-        raise typer.Exit(1)
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="gmail.send",
+            message="Either provide body argument or use --stdin",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
 
     service = GmailService()
     service.send_message(
@@ -137,8 +143,12 @@ def reply_to_message(
     if stdin:
         body = sys.stdin.read()
     elif body is None:
-        typer.echo("Error: Either provide body argument or use --stdin", err=True)
-        raise typer.Exit(1)
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="gmail.reply",
+            message="Either provide body argument or use --stdin",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
 
     service = GmailService()
     service.reply_to_message(
@@ -321,8 +331,12 @@ def create_draft(
     if stdin:
         body = sys.stdin.read()
     elif body is None:
-        typer.echo("Error: Either provide body argument or use --stdin", err=True)
-        raise typer.Exit(1)
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="gmail.create_draft",
+            message="Either provide body argument or use --stdin",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
 
     service = GmailService()
     service.create_draft(

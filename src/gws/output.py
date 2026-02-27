@@ -25,7 +25,7 @@ def output_error(
     error_code: str,
     operation: str,
     message: str,
-    details: str | None = None,
+    details: Any = None,
 ) -> None:
     """Output error response to stdout."""
     response: dict[str, Any] = {
@@ -34,7 +34,7 @@ def output_error(
         "operation": operation,
         "message": message,
     }
-    if details:
+    if details is not None:
         response["details"] = details
     output_json(response)
 
@@ -102,8 +102,10 @@ def output_external_content(
 
 def read_json_stdin() -> dict[str, Any]:
     """Read JSON from stdin."""
+    from gws.exceptions import ExitCode
+
     try:
         return json.load(sys.stdin)
     except json.JSONDecodeError as e:
         output_error("INVALID_JSON", "stdin", f"Invalid JSON input: {e}")
-        sys.exit(4)
+        raise SystemExit(ExitCode.INVALID_ARGS)
