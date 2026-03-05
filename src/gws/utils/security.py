@@ -1,6 +1,8 @@
 """Security utilities for GWS - thin wrapper around prompt-security-utils."""
 
 from prompt_security import (
+    generate_markers,
+    security_instructions,
     wrap_untrusted_content,
     wrap_field,
     wrap_fields,
@@ -12,6 +14,8 @@ from prompt_security import (
 )
 
 __all__ = [
+    "generate_markers",
+    "security_instructions",
     "wrap_untrusted_content",
     "wrap_field",
     "wrap_fields",

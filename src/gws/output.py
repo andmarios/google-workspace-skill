@@ -6,8 +6,18 @@ from typing import Any
 
 from prompt_security import output_external_content as _output_external_content
 from prompt_security import load_config as load_security_config
+from prompt_security import generate_markers
 
 from gws.config import Config
+
+# Session-scoped security markers — generated once at import time.
+# For CLI tools the human controls the pipeline, so these are defense-in-depth.
+_SESSION_START, _SESSION_END = generate_markers()
+
+
+def _get_session_markers() -> tuple[str, str]:
+    """Return the module-level session markers."""
+    return _SESSION_START, _SESSION_END
 
 
 def output_json(data: dict[str, Any]) -> None:
@@ -87,13 +97,16 @@ def output_external_content(
         output_json(response)
         return
 
-    # Security enabled - wrap content with markers
+    # Security enabled - wrap content with session markers
+    start, end = _get_session_markers()
     security_config = load_security_config()
     response = _output_external_content(
         operation=operation,
         source_type=source_type,
         source_id=source_id,
         content_fields=content_fields,
+        start_marker=start,
+        end_marker=end,
         config=security_config,
         **kwargs,
     )
