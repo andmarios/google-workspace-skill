@@ -1074,12 +1074,18 @@ def config_set_mode(
         elif mode == "local":
             overrides.pop("server_provider", None)
         config.save_account_config(account, overrides)
+
+        # Clear Google token so next API call re-authenticates via the new mode
+        from gws.crypto import delete_encrypted
+        token_path = config.get_account_dir(account) / "token.json"
+        token_cleared = delete_encrypted(token_path)
     else:
         # Global config
         config.mode = mode
         config.server_url = url.rstrip("/") if url else None
         config.server_provider = provider
         config.save()
+        token_cleared = False
 
     result: dict[str, Any] = {
         "operation": "config.set-mode",
@@ -1095,6 +1101,8 @@ def config_set_mode(
         result["server_url"] = url.rstrip("/") if url else None
     if provider:
         result["server_provider"] = provider
+    if token_cleared:
+        result["note"] = "Token cleared — next API call will re-authenticate via the new mode."
     output_success(**result)
 
 
