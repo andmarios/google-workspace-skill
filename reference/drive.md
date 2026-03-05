@@ -16,44 +16,44 @@
 
 ```bash
 # List files (default: 10)
-uv run gws-cli drive list --max 20
+uvx gws-cli drive list --max 20
 
 # Search files
-uv run gws-cli drive search "name contains 'report'"
+uvx gws-cli drive search "name contains 'report'"
 
 # Get file metadata
-uv run gws-cli drive get <file_id>
+uvx gws-cli drive get <file_id>
 
 # Download file
-uv run gws-cli drive download <file_id> /path/to/output.pdf
+uvx gws-cli drive download <file_id> /path/to/output.pdf
 
 # Upload file
-uv run gws-cli drive upload /path/to/file.pdf --folder <folder_id>
+uvx gws-cli drive upload /path/to/file.pdf --folder <folder_id>
 
 # Create folder
-uv run gws-cli drive create-folder "New Folder" --parent <parent_id>
+uvx gws-cli drive create-folder "New Folder" --parent <parent_id>
 
 # Copy file
-uv run gws-cli drive copy <file_id> --name "Copy of File"
+uvx gws-cli drive copy <file_id> --name "Copy of File"
 
 # Move file
-uv run gws-cli drive move <file_id> <target_folder_id>
+uvx gws-cli drive move <file_id> <target_folder_id>
 
 # Share file
-uv run gws-cli drive share <file_id> --role reader  # anyone with link
-uv run gws-cli drive share <file_id> --email user@example.com --role writer
-uv run gws-cli drive share <file_id> --domain company.com --role reader  # anyone at domain
+uvx gws-cli drive share <file_id> --role reader  # anyone with link
+uvx gws-cli drive share <file_id> --email user@example.com --role writer
+uvx gws-cli drive share <file_id> --domain company.com --role reader  # anyone at domain
 
 # Update file content
-uv run gws-cli drive update <file_id> /path/to/new-content.pdf
+uvx gws-cli drive update <file_id> /path/to/new-content.pdf
 
 # Delete file (moves to trash)
-uv run gws-cli drive delete <file_id>
+uvx gws-cli drive delete <file_id>
 
 # Export Google file format (pass MIME type via --format)
-uv run gws-cli drive export <file_id> /path/to/output.pdf
-uv run gws-cli drive export <file_id> output.docx --format "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-uv run gws-cli drive export <file_id> output.md --format "text/markdown"
+uvx gws-cli drive export <file_id> /path/to/output.pdf
+uvx gws-cli drive export <file_id> output.docx --format "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+uvx gws-cli drive export <file_id> output.md --format "text/markdown"
 ```
 
 **Tip**: For exporting Google Docs specifically, use `gws-cli docs export` which accepts friendly format names (`markdown`, `pdf`, `docx`, etc.) instead of raw MIME types.
@@ -91,22 +91,22 @@ Commands return JSON with different structures depending on the operation:
 
 ```bash
 # List comments on a file
-uv run gws-cli drive list-comments <file_id> --max 20
+uvx gws-cli drive list-comments <file_id> --max 20
 
 # Include deleted comments
-uv run gws-cli drive list-comments <file_id> --include-deleted
+uvx gws-cli drive list-comments <file_id> --include-deleted
 
 # Add a comment
-uv run gws-cli drive add-comment <file_id> "This needs review"
+uvx gws-cli drive add-comment <file_id> "This needs review"
 
 # Reply to a comment
-uv run gws-cli drive reply-to-comment <file_id> <comment_id> "Good point, fixed."
+uvx gws-cli drive reply-to-comment <file_id> <comment_id> "Good point, fixed."
 
 # Resolve a comment
-uv run gws-cli drive resolve-comment <file_id> <comment_id>
+uvx gws-cli drive resolve-comment <file_id> <comment_id>
 
 # Delete a comment
-uv run gws-cli drive delete-comment <file_id> <comment_id>
+uvx gws-cli drive delete-comment <file_id> <comment_id>
 ```
 
 ## Replies
@@ -115,38 +115,38 @@ Replies are responses to comments on a file.
 
 ```bash
 # List replies to a comment
-uv run gws-cli drive list-replies <file_id> <comment_id> --max 20
+uvx gws-cli drive list-replies <file_id> <comment_id> --max 20
 
 # Get a specific reply
-uv run gws-cli drive get-reply <file_id> <comment_id> <reply_id>
+uvx gws-cli drive get-reply <file_id> <comment_id> <reply_id>
 
 # Update a reply's content
-uv run gws-cli drive update-reply <file_id> <comment_id> <reply_id> "Updated reply text"
+uvx gws-cli drive update-reply <file_id> <comment_id> <reply_id> "Updated reply text"
 
 # Delete a reply
-uv run gws-cli drive delete-reply <file_id> <comment_id> <reply_id>
+uvx gws-cli drive delete-reply <file_id> <comment_id> <reply_id>
 ```
 
 ## Revisions
 
 ```bash
 # List file revisions
-uv run gws-cli drive list-revisions <file_id> --max 20
+uvx gws-cli drive list-revisions <file_id> --max 20
 
 # Get revision metadata
-uv run gws-cli drive get-revision <file_id> <revision_id>
+uvx gws-cli drive get-revision <file_id> <revision_id>
 
 # Delete a revision (cannot delete the last remaining revision)
-uv run gws-cli drive delete-revision <file_id> <revision_id>
+uvx gws-cli drive delete-revision <file_id> <revision_id>
 
 # Update revision metadata
-uv run gws-cli drive update-revision <file_id> <revision_id> --keep-forever
+uvx gws-cli drive update-revision <file_id> <revision_id> --keep-forever
 
 # Publish a revision (for web-published files)
-uv run gws-cli drive update-revision <file_id> <revision_id> --published
+uvx gws-cli drive update-revision <file_id> <revision_id> --published
 
 # Enable auto-publish for future revisions
-uv run gws-cli drive update-revision <file_id> <revision_id> --publish-auto
+uvx gws-cli drive update-revision <file_id> <revision_id> --publish-auto
 ```
 
 ## Changes API
@@ -155,13 +155,13 @@ Track changes to files over time. Useful for syncing or monitoring file activity
 
 ```bash
 # Get a start token for tracking future changes
-uv run gws-cli drive changes-token
+uvx gws-cli drive changes-token
 
 # List changes since a token
-uv run gws-cli drive list-changes <page_token> --max 100
+uvx gws-cli drive list-changes <page_token> --max 100
 
 # Exclude removed files from results
-uv run gws-cli drive list-changes <page_token> --no-removed
+uvx gws-cli drive list-changes <page_token> --no-removed
 ```
 
 **Workflow**: First call `changes-token` to get a starting point. Store the returned token. Later, call `list-changes` with that token to get all changes since then. The response includes a new token for the next poll.
@@ -172,16 +172,16 @@ Shared drives (formerly Team Drives) are shared spaces where teams can store fil
 
 ```bash
 # List shared drives you have access to
-uv run gws-cli drive list-shared-drives --max 100
+uvx gws-cli drive list-shared-drives --max 100
 
 # Get shared drive metadata
-uv run gws-cli drive get-shared-drive <drive_id>
+uvx gws-cli drive get-shared-drive <drive_id>
 
 # Create a new shared drive
-uv run gws-cli drive create-shared-drive "Team Projects"
+uvx gws-cli drive create-shared-drive "Team Projects"
 
 # Delete a shared drive (must be empty)
-uv run gws-cli drive delete-shared-drive <drive_id>
+uvx gws-cli drive delete-shared-drive <drive_id>
 ```
 
 **Note**: To work with files in a shared drive, use the standard file commands (list, upload, etc.) with the shared drive ID as the folder.
@@ -190,36 +190,36 @@ uv run gws-cli drive delete-shared-drive <drive_id>
 
 ```bash
 # List files in trash
-uv run gws-cli drive list-trash --max 20
+uvx gws-cli drive list-trash --max 20
 
 # Restore a file from trash
-uv run gws-cli drive restore <file_id>
+uvx gws-cli drive restore <file_id>
 
 # Permanently delete all files in trash
-uv run gws-cli drive empty-trash
+uvx gws-cli drive empty-trash
 ```
 
 ## Permissions
 
 ```bash
 # List all permissions on a file (who has access)
-uv run gws-cli drive list-permissions <file_id>
+uvx gws-cli drive list-permissions <file_id>
 
 # Get details of a specific permission
-uv run gws-cli drive get-permission <file_id> <permission_id>
+uvx gws-cli drive get-permission <file_id> <permission_id>
 
 # Update a permission's role
-uv run gws-cli drive update-permission <file_id> <permission_id> writer
+uvx gws-cli drive update-permission <file_id> <permission_id> writer
 
 # Set permission with expiration
-uv run gws-cli drive update-permission <file_id> <permission_id> reader \
+uvx gws-cli drive update-permission <file_id> <permission_id> reader \
     --expiration "2025-12-31T23:59:59Z"
 
 # Remove a permission (unshare)
-uv run gws-cli drive delete-permission <file_id> <permission_id>
+uvx gws-cli drive delete-permission <file_id> <permission_id>
 
 # Transfer file ownership to another user
-uv run gws-cli drive transfer-ownership <file_id> "newowner@example.com"
+uvx gws-cli drive transfer-ownership <file_id> "newowner@example.com"
 ```
 
 **Roles**: reader, commenter, writer, organizer (shared drives only), owner
@@ -228,16 +228,16 @@ uv run gws-cli drive transfer-ownership <file_id> "newowner@example.com"
 
 ```bash
 # Share with anyone (public link)
-uv run gws-cli drive share <file_id> --role reader
+uvx gws-cli drive share <file_id> --role reader
 
 # Share with specific user
-uv run gws-cli drive share <file_id> --email user@example.com --role writer
+uvx gws-cli drive share <file_id> --email user@example.com --role writer
 
 # Share with anyone at a domain (domain-restricted)
-uv run gws-cli drive share <file_id> --domain company.com --role reader
+uvx gws-cli drive share <file_id> --domain company.com --role reader
 
 # Share with a group
-uv run gws-cli drive share <file_id> --email group@example.com --type group --role reader
+uvx gws-cli drive share <file_id> --email group@example.com --type group --role reader
 ```
 
 **Share types**: user, group, domain, anyone (auto-detected from options)
@@ -246,10 +246,10 @@ uv run gws-cli drive share <file_id> --email group@example.com --type group --ro
 
 ```bash
 # Pre-generate file IDs for use with create operations
-uv run gws-cli drive generate-ids --count 10
+uvx gws-cli drive generate-ids --count 10
 
 # Generate IDs for appDataFolder space
-uv run gws-cli drive generate-ids --count 5 --space appDataFolder
+uvx gws-cli drive generate-ids --count 5 --space appDataFolder
 ```
 
 **Use case**: Pre-generating IDs allows you to know a file's ID before creating it, useful for setting up references between files or for resumable uploads.

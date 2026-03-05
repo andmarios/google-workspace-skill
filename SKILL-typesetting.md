@@ -121,8 +121,8 @@ This is background text...
 **CORRECT:**
 Use proper heading styles:
 ```bash
-uv run gws-cli docs format-paragraph <doc_id> <start> <end> --style HEADING_1
-uv run gws-cli docs format-paragraph <doc_id> <start> <end> --style HEADING_2
+uvx gws-cli docs format-paragraph <doc_id> <start> <end> --style HEADING_1
+uvx gws-cli docs format-paragraph <doc_id> <start> <end> --style HEADING_2
 ```
 
 **Why this matters:**
@@ -171,19 +171,19 @@ Always use named paragraph styles:
 **Implementation:**
 ```bash
 # Create header
-uv run gws-cli docs create-header <doc_id> --type DEFAULT
-uv run gws-cli docs insert-segment-text <doc_id> <header_id> "Document Title" --index 0
+uvx gws-cli docs create-header <doc_id> --type DEFAULT
+uvx gws-cli docs insert-segment-text <doc_id> <header_id> "Document Title" --index 0
 
 # Create footer with page number
-uv run gws-cli docs create-footer <doc_id> --type DEFAULT
-uv run gws-cli docs insert-segment-text <doc_id> <footer_id> "Page " --index 0
+uvx gws-cli docs create-footer <doc_id> --type DEFAULT
+uvx gws-cli docs insert-segment-text <doc_id> <footer_id> "Page " --index 0
 ```
 
 **First page different:**
 Some documents have a title page without header/footer:
 ```bash
-uv run gws-cli docs document-style <doc_id> --first-page-diff
-uv run gws-cli docs create-header <doc_id> --type FIRST_PAGE_HEADER
+uvx gws-cli docs document-style <doc_id> --first-page-diff
+uvx gws-cli docs create-header <doc_id> --type FIRST_PAGE_HEADER
 ```
 
 ### 3.2 Margins
@@ -191,7 +191,7 @@ uv run gws-cli docs create-header <doc_id> --type FIRST_PAGE_HEADER
 **Standard margins: 1 inch (72pt) on all sides**
 
 ```bash
-uv run gws-cli docs document-style <doc_id> \
+uvx gws-cli docs document-style <doc_id> \
     --margin-top 72 --margin-bottom 72 \
     --margin-left 72 --margin-right 72
 ```
@@ -207,7 +207,7 @@ uv run gws-cli docs document-style <doc_id> \
 
 ```bash
 # Insert page break before a new section
-uv run gws-cli docs page-break <doc_id> <index>
+uvx gws-cli docs page-break <doc_id> <index>
 ```
 
 **When to use page breaks:**
@@ -225,7 +225,7 @@ Section breaks allow different formatting in different parts of the document:
 
 ```bash
 # Insert section break (starts new page)
-uv run gws-cli docs insert-section-break <doc_id> <index> --type NEXT_PAGE
+uvx gws-cli docs insert-section-break <doc_id> <index> --type NEXT_PAGE
 ```
 
 **Use section breaks when:**
@@ -243,7 +243,7 @@ uv run gws-cli docs insert-section-break <doc_id> <index> --type NEXT_PAGE
 **Body text: Left-aligned (recommended)**
 
 ```bash
-uv run gws-cli docs format-paragraph <doc_id> <start> <end> --align START
+uvx gws-cli docs format-paragraph <doc_id> <start> <end> --align START
 ```
 
 **Why left-aligned (ragged right) is preferred:**
@@ -275,7 +275,7 @@ uv run gws-cli docs format-paragraph <doc_id> <start> <end> --align START
 **Body text: 1.15 to 1.5 line spacing**
 
 ```bash
-uv run gws-cli docs format-paragraph <doc_id> <start> <end> --line-spacing 115
+uvx gws-cli docs format-paragraph <doc_id> <start> <end> --line-spacing 115
 ```
 
 | Document Type | Line Spacing |
@@ -290,7 +290,7 @@ uv run gws-cli docs format-paragraph <doc_id> <start> <end> --line-spacing 115
 **Space between paragraphs: 6-12pt**
 
 ```bash
-uv run gws-cli docs format-paragraph <doc_id> <start> <end> \
+uvx gws-cli docs format-paragraph <doc_id> <start> <end> \
     --space-above 0 --space-below 8
 ```
 
@@ -324,14 +324,14 @@ Before creating any table, define ONE table style and apply it to every table:
 
 ```bash
 # Insert table
-uv run gws-cli docs insert-table <doc_id> <rows> <cols> --index <position>
+uvx gws-cli docs insert-table <doc_id> <rows> <cols> --index <position>
 
 # Style header row
-uv run gws-cli docs style-table-cell <doc_id> 0 0 0 \
+uvx gws-cli docs style-table-cell <doc_id> 0 0 0 \
     --bg-color "#F5F5F5" --border-color "#E0E0E0" --border-width 1 --padding 5
 
 # Pin header row for long tables
-uv run gws-cli docs pin-table-header <doc_id> 0 --rows 1
+uvx gws-cli docs pin-table-header <doc_id> 0 --rows 1
 ```
 
 ### 5.3 Alignment Rules
@@ -420,7 +420,7 @@ Figure 1: Description of image
 - Height: 500pt (about 7 inches)
 
 ```bash
-uv run gws-cli docs insert-image <doc_id> "https://..." --width 400
+uvx gws-cli docs insert-image <doc_id> "https://..." --width 400
 ```
 
 ### 6.3 Figure Numbering and Captions
@@ -451,7 +451,7 @@ Figure 3: Sales growth by quarter, showing 15% increase in Q4
 
 ```bash
 # Keep image with caption
-uv run gws-cli docs format-paragraph <doc_id> <caption_start> <caption_end> --keep-with-next
+uvx gws-cli docs format-paragraph <doc_id> <caption_start> <caption_end> --keep-with-next
 ```
 
 ### 6.5 Referencing Images
@@ -474,7 +474,7 @@ Always reference by number because:
 
 ```bash
 # Apply to entire list
-uv run gws-cli docs format-paragraph <doc_id> <list_start> <list_end> --keep-together
+uvx gws-cli docs format-paragraph <doc_id> <list_start> <list_end> --keep-together
 ```
 
 If a list is too long to fit on one page, consider:
@@ -487,7 +487,7 @@ If a list is too long to fit on one page, consider:
 
 ```bash
 # Keep heading with following paragraph
-uv run gws-cli docs format-paragraph <doc_id> <heading_start> <heading_end> --keep-with-next
+uvx gws-cli docs format-paragraph <doc_id> <heading_start> <heading_end> --keep-with-next
 ```
 
 ### 7.3 Widow and Orphan Control
@@ -499,7 +499,7 @@ uv run gws-cli docs format-paragraph <doc_id> <heading_start> <heading_end> --ke
 Both look unprofessional. Enable widow/orphan control:
 
 ```bash
-uv run gws-cli docs format-paragraph <doc_id> <start> <end> --keep-together
+uvx gws-cli docs format-paragraph <doc_id> <start> <end> --keep-together
 ```
 
 ### 7.4 List Best Practices
@@ -552,10 +552,10 @@ Do NOT use footnotes for:
 
 ```bash
 # Insert footnote at position
-uv run gws-cli docs insert-footnote <doc_id> <position>
+uvx gws-cli docs insert-footnote <doc_id> <position>
 
 # Add text to footnote
-uv run gws-cli docs insert-segment-text <doc_id> <footnote_id> "Footnote text" --index 0
+uvx gws-cli docs insert-segment-text <doc_id> <footnote_id> "Footnote text" --index 0
 ```
 
 **Formatting rules:**

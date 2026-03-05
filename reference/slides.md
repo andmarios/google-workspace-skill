@@ -23,22 +23,22 @@
 
 ```bash
 # Get presentation metadata
-uv run gws-cli slides metadata <presentation_id>
+uvx gws-cli slides metadata <presentation_id>
 
 # Read all slides with elements
-uv run gws-cli slides read <presentation_id>
+uvx gws-cli slides read <presentation_id>
 
 # Create new presentation
-uv run gws-cli slides create "Presentation Title"
+uvx gws-cli slides create "Presentation Title"
 
 # Add slide
-uv run gws-cli slides add-slide <presentation_id> --layout TITLE_AND_BODY
+uvx gws-cli slides add-slide <presentation_id> --layout TITLE_AND_BODY
 
 # Delete slide
-uv run gws-cli slides delete-slide <presentation_id> <slide_id>
+uvx gws-cli slides delete-slide <presentation_id> <slide_id>
 
 # Duplicate slide
-uv run gws-cli slides duplicate-slide <presentation_id> <slide_id>
+uvx gws-cli slides duplicate-slide <presentation_id> <slide_id>
 ```
 
 **Slide layouts**: BLANK, TITLE, TITLE_AND_BODY, TITLE_AND_TWO_COLUMNS, TITLE_ONLY, SECTION_HEADER, CAPTION_ONLY, BIG_NUMBER
@@ -47,51 +47,51 @@ uv run gws-cli slides duplicate-slide <presentation_id> <slide_id>
 
 ```bash
 # Create textbox
-uv run gws-cli slides create-textbox <presentation_id> <slide_id> "Text content" \
+uvx gws-cli slides create-textbox <presentation_id> <slide_id> "Text content" \
     --x 100 --y 100 --width 400 --height 50
 
 # Insert text into element
-uv run gws-cli slides insert-text <presentation_id> <element_id> "Text to insert" --index 0
+uvx gws-cli slides insert-text <presentation_id> <element_id> "Text to insert" --index 0
 
 # Replace text in presentation
-uv run gws-cli slides replace-text <presentation_id> "{{placeholder}}" "Replacement"
+uvx gws-cli slides replace-text <presentation_id> "{{placeholder}}" "Replacement"
 
 # Insert image
-uv run gws-cli slides insert-image <presentation_id> <slide_id> "https://example.com/image.png" \
+uvx gws-cli slides insert-image <presentation_id> <slide_id> "https://example.com/image.png" \
     --x 100 --y 100 --width 300 --height 200
 
 # Delete element
-uv run gws-cli slides delete-element <presentation_id> <element_id>
+uvx gws-cli slides delete-element <presentation_id> <element_id>
 ```
 
 ## Text Formatting
 
 ```bash
 # Basic formatting
-uv run gws-cli slides format-text <presentation_id> <element_id> --bold --font-size 24
+uvx gws-cli slides format-text <presentation_id> <element_id> --bold --font-size 24
 
 # Extended formatting (full typography control)
-uv run gws-cli slides format-text-extended <presentation_id> <element_id> \
+uvx gws-cli slides format-text-extended <presentation_id> <element_id> \
     --bold --italic --underline --strikethrough \
     --font "Arial" --weight 700 --size 18 \
     --color "#1A237E" --bg-color "#E3F2FD"
 
 # Format specific text range (start_index to end_index)
-uv run gws-cli slides format-text-extended <presentation_id> <element_id> \
+uvx gws-cli slides format-text-extended <presentation_id> <element_id> \
     --start 0 --end 10 --bold --color "#FF0000"
 
 # Superscript/subscript
-uv run gws-cli slides format-text-extended <presentation_id> <element_id> \
+uvx gws-cli slides format-text-extended <presentation_id> <element_id> \
     --start 5 --end 7 --baseline SUPERSCRIPT
-uv run gws-cli slides format-text-extended <presentation_id> <element_id> \
+uvx gws-cli slides format-text-extended <presentation_id> <element_id> \
     --start 10 --end 12 --baseline SUBSCRIPT
 
 # Add hyperlink
-uv run gws-cli slides format-text-extended <presentation_id> <element_id> \
+uvx gws-cli slides format-text-extended <presentation_id> <element_id> \
     --start 0 --end 15 --link "https://example.com"
 
 # Small caps
-uv run gws-cli slides format-text-extended <presentation_id> <element_id> --small-caps
+uvx gws-cli slides format-text-extended <presentation_id> <element_id> --small-caps
 ```
 
 **Baseline offsets**: SUPERSCRIPT, SUBSCRIPT, NONE
@@ -101,18 +101,18 @@ uv run gws-cli slides format-text-extended <presentation_id> <element_id> --smal
 
 ```bash
 # Paragraph alignment
-uv run gws-cli slides format-paragraph <presentation_id> <element_id> --align CENTER
+uvx gws-cli slides format-paragraph <presentation_id> <element_id> --align CENTER
 
 # Line spacing and paragraph spacing (points)
-uv run gws-cli slides format-paragraph <presentation_id> <element_id> \
+uvx gws-cli slides format-paragraph <presentation_id> <element_id> \
     --line-spacing 150 --space-above 12 --space-below 6
 
 # Indentation (points)
-uv run gws-cli slides format-paragraph <presentation_id> <element_id> \
+uvx gws-cli slides format-paragraph <presentation_id> <element_id> \
     --indent-first 36 --indent-start 18 --indent-end 0
 
 # Format specific paragraph range
-uv run gws-cli slides format-paragraph <presentation_id> <element_id> \
+uvx gws-cli slides format-paragraph <presentation_id> <element_id> \
     --start 0 --end 100 --align JUSTIFIED
 ```
 
@@ -122,22 +122,22 @@ uv run gws-cli slides format-paragraph <presentation_id> <element_id> \
 
 ```bash
 # Create shape
-uv run gws-cli slides create-shape <presentation_id> <slide_id> RECTANGLE \
+uvx gws-cli slides create-shape <presentation_id> <slide_id> RECTANGLE \
     --x 100 --y 100 --width 200 --height 100
 
 # Create other shape types
-uv run gws-cli slides create-shape <presentation_id> <slide_id> ELLIPSE \
+uvx gws-cli slides create-shape <presentation_id> <slide_id> ELLIPSE \
     --x 350 --y 100 --width 150 --height 150
-uv run gws-cli slides create-shape <presentation_id> <slide_id> ROUND_RECTANGLE \
+uvx gws-cli slides create-shape <presentation_id> <slide_id> ROUND_RECTANGLE \
     --x 100 --y 250 --width 200 --height 80
 
 # Format shape appearance
-uv run gws-cli slides format-shape <presentation_id> <shape_id> \
+uvx gws-cli slides format-shape <presentation_id> <shape_id> \
     --fill-color "#4CAF50" --outline-color "#2E7D32" \
     --outline-weight 2 --outline-dash SOLID
 
 # Dashed outline
-uv run gws-cli slides format-shape <presentation_id> <shape_id> \
+uvx gws-cli slides format-shape <presentation_id> <shape_id> \
     --outline-dash DASH --outline-weight 3
 ```
 
@@ -149,49 +149,49 @@ uv run gws-cli slides format-shape <presentation_id> <shape_id> \
 
 ```bash
 # Insert table
-uv run gws-cli slides insert-table <presentation_id> <slide_id> 4 3 \
+uvx gws-cli slides insert-table <presentation_id> <slide_id> 4 3 \
     --x 100 --y 150 --width 500 --height 200
 
 # Insert text into table cell
-uv run gws-cli slides insert-table-text <presentation_id> <table_id> 0 0 "Header 1"
-uv run gws-cli slides insert-table-text <presentation_id> <table_id> 0 1 "Header 2"
-uv run gws-cli slides insert-table-text <presentation_id> <table_id> 1 0 "Row 1 Data"
+uvx gws-cli slides insert-table-text <presentation_id> <table_id> 0 0 "Header 1"
+uvx gws-cli slides insert-table-text <presentation_id> <table_id> 0 1 "Header 2"
+uvx gws-cli slides insert-table-text <presentation_id> <table_id> 1 0 "Row 1 Data"
 
 # Style table cell (background color)
-uv run gws-cli slides style-table-cell <presentation_id> <table_id> 0 0 \
+uvx gws-cli slides style-table-cell <presentation_id> <table_id> 0 0 \
     --bg-color "#1565C0"
 
 # Style header row
-uv run gws-cli slides style-table-cell <presentation_id> <table_id> 0 0 --bg-color "#E3F2FD"
-uv run gws-cli slides style-table-cell <presentation_id> <table_id> 0 1 --bg-color "#E3F2FD"
-uv run gws-cli slides style-table-cell <presentation_id> <table_id> 0 2 --bg-color "#E3F2FD"
+uvx gws-cli slides style-table-cell <presentation_id> <table_id> 0 0 --bg-color "#E3F2FD"
+uvx gws-cli slides style-table-cell <presentation_id> <table_id> 0 1 --bg-color "#E3F2FD"
+uvx gws-cli slides style-table-cell <presentation_id> <table_id> 0 2 --bg-color "#E3F2FD"
 
 # Insert row (below specified row index)
-uv run gws-cli slides insert-table-row <presentation_id> <table_id> 2
+uvx gws-cli slides insert-table-row <presentation_id> <table_id> 2
 
 # Insert row above
-uv run gws-cli slides insert-table-row <presentation_id> <table_id> 0 --above
+uvx gws-cli slides insert-table-row <presentation_id> <table_id> 0 --above
 
 # Insert column (right of specified column index)
-uv run gws-cli slides insert-table-column <presentation_id> <table_id> 1
+uvx gws-cli slides insert-table-column <presentation_id> <table_id> 1
 
 # Insert column to the left
-uv run gws-cli slides insert-table-column <presentation_id> <table_id> 0 --left
+uvx gws-cli slides insert-table-column <presentation_id> <table_id> 0 --left
 
 # Delete row
-uv run gws-cli slides delete-table-row <presentation_id> <table_id> 3
+uvx gws-cli slides delete-table-row <presentation_id> <table_id> 3
 
 # Delete column
-uv run gws-cli slides delete-table-column <presentation_id> <table_id> 2
+uvx gws-cli slides delete-table-column <presentation_id> <table_id> 2
 
 # Merge table cells
-uv run gws-cli slides merge-table-cells <presentation_id> <table_id> 0 0 2 2
+uvx gws-cli slides merge-table-cells <presentation_id> <table_id> 0 0 2 2
 
 # Unmerge table cells
-uv run gws-cli slides unmerge-table-cells <presentation_id> <table_id> 0 0 2 2
+uvx gws-cli slides unmerge-table-cells <presentation_id> <table_id> 0 0 2 2
 
 # Style table borders
-uv run gws-cli slides style-table-borders <presentation_id> <table_id> 0 0 \
+uvx gws-cli slides style-table-borders <presentation_id> <table_id> 0 0 \
     --rows 3 --cols 3 --color "#000000" --weight 2 --style SOLID --position ALL
 ```
 
@@ -201,10 +201,10 @@ uv run gws-cli slides style-table-borders <presentation_id> <table_id> 0 0 \
 
 ```bash
 # Set solid color background
-uv run gws-cli slides set-background <presentation_id> <slide_id> --color "#1565C0"
+uvx gws-cli slides set-background <presentation_id> <slide_id> --color "#1565C0"
 
 # Set image background
-uv run gws-cli slides set-background <presentation_id> <slide_id> \
+uvx gws-cli slides set-background <presentation_id> <slide_id> \
     --image "https://example.com/background.jpg"
 ```
 
@@ -212,15 +212,15 @@ uv run gws-cli slides set-background <presentation_id> <slide_id> \
 
 ```bash
 # Add bullet formatting to text
-uv run gws-cli slides create-bullets <presentation_id> <element_id> \
+uvx gws-cli slides create-bullets <presentation_id> <element_id> \
     --preset BULLET_DISC_CIRCLE_SQUARE
 
 # Apply bullets to specific text range
-uv run gws-cli slides create-bullets <presentation_id> <element_id> \
+uvx gws-cli slides create-bullets <presentation_id> <element_id> \
     --start 0 --end 100 --preset NUMBERED_DIGIT_ALPHA_ROMAN
 
 # Remove bullets
-uv run gws-cli slides remove-bullets <presentation_id> <element_id>
+uvx gws-cli slides remove-bullets <presentation_id> <element_id>
 ```
 
 **Bullet presets**: BULLET_DISC_CIRCLE_SQUARE, BULLET_DIAMONDX_ARROW3D_SQUARE, BULLET_CHECKBOX, BULLET_ARROW_DIAMOND_DISC, NUMBERED_DIGIT_ALPHA_ROMAN, NUMBERED_DIGIT_NESTED
@@ -229,16 +229,16 @@ uv run gws-cli slides remove-bullets <presentation_id> <element_id>
 
 ```bash
 # Create a line
-uv run gws-cli slides create-line <presentation_id> <slide_id> \
+uvx gws-cli slides create-line <presentation_id> <slide_id> \
     --start-x 100 --start-y 100 --end-x 400 --end-y 100
 
 # Create an arrow
-uv run gws-cli slides create-line <presentation_id> <slide_id> \
+uvx gws-cli slides create-line <presentation_id> <slide_id> \
     --start-x 100 --start-y 200 --end-x 400 --end-y 200 \
     --end-arrow FILL_ARROW --color "#FF0000" --weight 2
 
 # Create a dashed line
-uv run gws-cli slides create-line <presentation_id> <slide_id> \
+uvx gws-cli slides create-line <presentation_id> <slide_id> \
     --start-x 100 --start-y 300 --end-x 400 --end-y 400 \
     --style DASH --category STRAIGHT
 ```
@@ -250,28 +250,28 @@ uv run gws-cli slides create-line <presentation_id> <slide_id> \
 
 ```bash
 # Move slides to a new position
-uv run gws-cli slides reorder-slides <presentation_id> "slide_id1,slide_id2" 0
+uvx gws-cli slides reorder-slides <presentation_id> "slide_id1,slide_id2" 0
 ```
 
 ## Speaker Notes
 
 ```bash
 # Get speaker notes for a slide
-uv run gws-cli slides get-speaker-notes <presentation_id> <slide_id>
+uvx gws-cli slides get-speaker-notes <presentation_id> <slide_id>
 
 # Set speaker notes for a slide
-uv run gws-cli slides set-speaker-notes <presentation_id> <slide_id> "Notes for this slide"
+uvx gws-cli slides set-speaker-notes <presentation_id> <slide_id> "Notes for this slide"
 ```
 
 ## Videos
 
 ```bash
 # Insert a YouTube video
-uv run gws-cli slides insert-video <presentation_id> <slide_id> "dQw4w9WgXcQ" \
+uvx gws-cli slides insert-video <presentation_id> <slide_id> "dQw4w9WgXcQ" \
     --x 100 --y 100 --width 400 --height 225
 
 # Update video properties (autoplay, mute, start/end times)
-uv run gws-cli slides update-video-properties <presentation_id> <video_id> \
+uvx gws-cli slides update-video-properties <presentation_id> <video_id> \
     --autoplay --mute --start 10 --end 60
 ```
 
@@ -279,23 +279,23 @@ uv run gws-cli slides update-video-properties <presentation_id> <video_id> \
 
 ```bash
 # Scale an element (2x horizontal, 1.5x vertical)
-uv run gws-cli slides transform-element <presentation_id> <element_id> \
+uvx gws-cli slides transform-element <presentation_id> <element_id> \
     --scale-x 2.0 --scale-y 1.5
 
 # Translate (move) an element
-uv run gws-cli slides transform-element <presentation_id> <element_id> \
+uvx gws-cli slides transform-element <presentation_id> <element_id> \
     --translate-x 914400 --translate-y 457200
 
 # Rotate an element 45 degrees
-uv run gws-cli slides transform-element <presentation_id> <element_id> \
+uvx gws-cli slides transform-element <presentation_id> <element_id> \
     --rotate 45
 
 # Combine transformations (scale, translate, and rotate)
-uv run gws-cli slides transform-element <presentation_id> <element_id> \
+uvx gws-cli slides transform-element <presentation_id> <element_id> \
     --scale-x 1.5 --scale-y 1.5 --translate-x 100000 --rotate 30
 
 # Absolute transformation (replaces existing transform)
-uv run gws-cli slides transform-element <presentation_id> <element_id> \
+uvx gws-cli slides transform-element <presentation_id> <element_id> \
     --scale-x 1.0 --scale-y 1.0 --mode ABSOLUTE
 ```
 
@@ -306,27 +306,27 @@ uv run gws-cli slides transform-element <presentation_id> <element_id> \
 
 ```bash
 # Update image transparency (0.0 = opaque, 1.0 = fully transparent)
-uv run gws-cli slides update-image <presentation_id> <image_id> \
+uvx gws-cli slides update-image <presentation_id> <image_id> \
     --transparency 0.5
 
 # Add outline to image
-uv run gws-cli slides update-image <presentation_id> <image_id> \
+uvx gws-cli slides update-image <presentation_id> <image_id> \
     --outline-color "#000000" --outline-weight 2
 
 # Combine transparency and outline
-uv run gws-cli slides update-image <presentation_id> <image_id> \
+uvx gws-cli slides update-image <presentation_id> <image_id> \
     --transparency 0.3 --outline-color "#1565C0" --outline-weight 1.5
 
 # Replace placeholder shapes with images
-uv run gws-cli slides replace-shapes-with-image <presentation_id> "{{logo}}" \
+uvx gws-cli slides replace-shapes-with-image <presentation_id> "{{logo}}" \
     "https://example.com/logo.png"
 
 # Replace with specific scaling method
-uv run gws-cli slides replace-shapes-with-image <presentation_id> "{{photo}}" \
+uvx gws-cli slides replace-shapes-with-image <presentation_id> "{{photo}}" \
     "https://example.com/photo.jpg" --method CENTER_CROP
 
 # Replace only on specific pages
-uv run gws-cli slides replace-shapes-with-image <presentation_id> "{{chart}}" \
+uvx gws-cli slides replace-shapes-with-image <presentation_id> "{{chart}}" \
     "https://example.com/chart.png" --pages "slide_id1,slide_id2"
 ```
 
@@ -336,32 +336,32 @@ uv run gws-cli slides replace-shapes-with-image <presentation_id> "{{chart}}" \
 
 ```bash
 # Group multiple elements together
-uv run gws-cli slides group <presentation_id> "element_id1,element_id2,element_id3"
+uvx gws-cli slides group <presentation_id> "element_id1,element_id2,element_id3"
 
 # Group with a custom group ID
-uv run gws-cli slides group <presentation_id> "element_id1,element_id2" \
+uvx gws-cli slides group <presentation_id> "element_id1,element_id2" \
     --group-id "my_group_id"
 
 # Ungroup a group
-uv run gws-cli slides ungroup <presentation_id> "group_id"
+uvx gws-cli slides ungroup <presentation_id> "group_id"
 
 # Ungroup multiple groups at once
-uv run gws-cli slides ungroup <presentation_id> "group_id1,group_id2"
+uvx gws-cli slides ungroup <presentation_id> "group_id1,group_id2"
 ```
 
 ## Accessibility
 
 ```bash
 # Set alt text title only
-uv run gws-cli slides set-alt-text <presentation_id> <element_id> \
+uvx gws-cli slides set-alt-text <presentation_id> <element_id> \
     --title "Company Logo"
 
 # Set detailed description for screen readers
-uv run gws-cli slides set-alt-text <presentation_id> <element_id> \
+uvx gws-cli slides set-alt-text <presentation_id> <element_id> \
     --description "A bar chart showing quarterly revenue growth from Q1 to Q4 2024"
 
 # Set both title and description
-uv run gws-cli slides set-alt-text <presentation_id> <element_id> \
+uvx gws-cli slides set-alt-text <presentation_id> <element_id> \
     --title "Revenue Chart" \
     --description "Bar chart displaying quarterly revenue: Q1 $1.2M, Q2 $1.5M, Q3 $1.8M, Q4 $2.1M"
 ```
@@ -370,16 +370,16 @@ uv run gws-cli slides set-alt-text <presentation_id> <element_id> \
 
 ```bash
 # Insert a linked chart from Google Sheets
-uv run gws-cli slides insert-sheets-chart <presentation_id> <slide_id> \
+uvx gws-cli slides insert-sheets-chart <presentation_id> <slide_id> \
     <spreadsheet_id> <chart_id>
 
 # Insert with custom position and size
-uv run gws-cli slides insert-sheets-chart <presentation_id> <slide_id> \
+uvx gws-cli slides insert-sheets-chart <presentation_id> <slide_id> \
     <spreadsheet_id> <chart_id> \
     --x 50 --y 100 --width 500 --height 350
 
 # Insert as a static image (not linked to spreadsheet)
-uv run gws-cli slides insert-sheets-chart <presentation_id> <slide_id> \
+uvx gws-cli slides insert-sheets-chart <presentation_id> <slide_id> \
     <spreadsheet_id> <chart_id> --linking NOT_LINKED_IMAGE
 ```
 

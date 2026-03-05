@@ -94,16 +94,16 @@ Available services: `docs`, `sheets`, `slides`, `drive`, `gmail`, `calendar`, `c
 
 ```bash
 # Disable a service
-uv run gws-cli config disable gmail
+uvx gws-cli config disable gmail
 
 # Re-enable
-uv run gws-cli config enable gmail
+uvx gws-cli config enable gmail
 
 # List enabled services
-uv run gws-cli config list
+uvx gws-cli config list
 
 # Use a self-hosted Kroki server
-uv run gws-cli config set-kroki http://localhost:8000
+uvx gws-cli config set-kroki http://localhost:8000
 ```
 
 The Kroki URL can also be set via the `GWS_KROKI_URL` environment variable.
@@ -140,8 +140,8 @@ The [prompt-security-utils](https://github.com/your-username/prompt-security-uti
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `content_start_marker` | string | `"<<<EXTERNAL_CONTENT>>>"` | Marker before untrusted content |
-| `content_end_marker` | string | `"<<<END_EXTERNAL_CONTENT>>>"` | Marker after untrusted content |
+| `content_start_marker` | string | *(user-configured in prompt-security-utils)* | Marker before untrusted content |
+| `content_end_marker` | string | *(user-configured in prompt-security-utils)* | Marker after untrusted content |
 | `detection_enabled` | bool | `true` | Regex-based pattern detection |
 | `custom_patterns` | array | `[]` | User-defined detection patterns (`[regex, category, severity]`) |
 | `llm_screen_enabled` | bool | `false` | LLM-based content screening (uses Claude Haiku or Ollama) |
@@ -181,22 +181,22 @@ Configure named accounts to use different Google accounts. Multi-account is opt-
 
 ```bash
 # Add accounts (opens browser for OAuth)
-uv run gws-cli account add work
-uv run gws-cli account add personal
+uvx gws-cli account add work
+uvx gws-cli account add personal
 
 # Set display names (used in email From field)
-uv run gws-cli account update work --name "Jane Doe" --email "jane@company.com"
+uvx gws-cli account update work --name "Jane Doe" --email "jane@company.com"
 
 # Use a specific account with any command
-uv run gws-cli gmail --account personal search "is:inbox"
+uvx gws-cli gmail --account personal search "is:inbox"
 
 # Or via environment variable
-GWS_ACCOUNT=personal uv run gws-cli docs read <id>
+GWS_ACCOUNT=personal uvx gws-cli docs read <id>
 
 # Manage accounts
-uv run gws-cli account list          # Show all accounts
-uv run gws-cli account default work  # Change default
-uv run gws-cli account remove work   # Remove account
+uvx gws-cli account list          # Show all accounts
+uvx gws-cli account default work  # Change default
+uvx gws-cli account remove work   # Remove account
 ```
 
 ### Per-Account Configuration
@@ -204,10 +204,10 @@ uv run gws-cli account remove work   # Remove account
 Override global settings per account:
 
 ```bash
-uv run gws-cli account config work             # Show effective config
-uv run gws-cli account config-disable work gmail  # Disable a service
-uv run gws-cli account config-enable work gmail   # Re-enable
-uv run gws-cli account config-reset work          # Reset to global defaults
+uvx gws-cli account config work             # Show effective config
+uvx gws-cli account config-disable work gmail  # Disable a service
+uvx gws-cli account config-enable work gmail   # Re-enable
+uvx gws-cli account config-reset work          # Reset to global defaults
 ```
 
 ### Read-Only Accounts
@@ -215,8 +215,8 @@ uv run gws-cli account config-reset work          # Reset to global defaults
 Restrict an account to read-only operations (blocks send, create, delete, format, etc.):
 
 ```bash
-uv run gws-cli account set-readonly personal
-uv run gws-cli account unset-readonly personal
+uvx gws-cli account set-readonly personal
+uvx gws-cli account unset-readonly personal
 ```
 
 ## Credential Storage
