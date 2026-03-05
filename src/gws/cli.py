@@ -17,6 +17,7 @@ app = typer.Typer(
     help="Google Workspace CLI - Unified management for Google services.",
     no_args_is_help=True,
     add_completion=False,
+    pretty_exceptions_show_locals=False,
 )
 
 
