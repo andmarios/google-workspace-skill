@@ -671,7 +671,10 @@ class ServerAuthProvider:
 
         client_id = token_data.get("client_id", "server-managed")
         resolved_refresh = token_data.get("refresh_token", refresh_token)
-        expires_in = token_data.get("expires_in", 3600)
+        expires_in = token_data.get("expires_in", 0)
+        # expires_in=0 means the provider doesn't set expiry — default to 1 hour
+        if not expires_in:
+            expires_in = 3600
         # Use naive UTC to match google-auth's internal convention
         expiry = (datetime.now(timezone.utc) + timedelta(seconds=expires_in)).replace(tzinfo=None)
 
