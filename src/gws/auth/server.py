@@ -374,7 +374,10 @@ class ServerAuthProvider:
         from gws.auth.scopes import get_scopes_for_services
 
         server_token = self._ensure_server_token()
-        scopes = get_scopes_for_services(self.config.enabled_services)
+        scopes = get_scopes_for_services(
+            self.config.enabled_services,
+            read_only=self.config.read_only,
+        )
 
         # Discover relay provider from server health endpoint
         provider = self._discover_relay_provider()

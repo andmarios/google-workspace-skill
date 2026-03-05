@@ -18,7 +18,7 @@ def docs_service():
     mock_creds.valid = True
     mock_auth.get_credentials.return_value = mock_creds
 
-    with patch("gws.auth.provider.resolve_auth_provider", return_value=mock_auth), \
+    with patch("gws.services.base.resolve_auth_provider", return_value=mock_auth), \
          patch("gws.services.base.build") as mock_build:
 
         # Create mock APIs

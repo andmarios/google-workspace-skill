@@ -103,7 +103,10 @@ class LocalAuthProvider:
 
     def _get_required_scopes(self) -> list[str]:
         """Get OAuth scopes for enabled services."""
-        return get_scopes_for_services(self.config.enabled_services)
+        return get_scopes_for_services(
+            self.config.enabled_services,
+            read_only=self.config.read_only,
+        )
 
     def _find_available_port(self) -> int:
         """Find an available port for OAuth callback."""

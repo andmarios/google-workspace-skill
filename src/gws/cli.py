@@ -346,6 +346,10 @@ def account_add(
         bool,
         typer.Option("--force", "-f", help="Overwrite existing account."),
     ] = False,
+    no_auth: Annotated[
+        bool,
+        typer.Option("--no-auth", help="Register account without triggering authentication."),
+    ] = False,
 ) -> None:
     """Register and authenticate a new named account."""
     config = Config.load()
@@ -370,6 +374,16 @@ def account_add(
 
     config.add_account(name, display_name=display_name or "")
 
+    if no_auth:
+        output_success(
+            operation="account.add",
+            message=f"Account '{name}' registered (authentication deferred).",
+            account=name,
+            is_default=config.accounts.default_account == name if config.accounts else False,
+            hint="Run 'gws-cli auth -a {name}' or use any command with '-a {name}' to authenticate.".format(name=name),
+        )
+        return
+
     # Trigger authentication for the new account
     try:
         provider = resolve_auth_provider(account=name, config=config)
@@ -385,24 +399,23 @@ def account_add(
             result["token_path"] = str(provider.TOKEN_PATH)
             output_success(**result)
         else:
-            # Auth failed — remove the account to avoid ghost entries
-            config.remove_account(name)
-            output_error(
-                error_code="AUTH_FAILED",
+            # Auth didn't produce valid credentials — keep account, warn user
+            output_success(
                 operation="account.add",
-                message=f"Authentication failed. Account '{name}' was not added.",
+                message=f"Account '{name}' registered but authentication incomplete.",
+                account=name,
+                is_default=config.accounts.default_account == name if config.accounts else False,
+                hint=f"Authenticate later with 'gws-cli auth -a {name}' or any command with '-a {name}'.",
             )
-            raise typer.Exit(ExitCode.AUTH_ERROR)
     except AuthError as e:
-        # Auth failed — remove the account to avoid ghost entries
-        config.remove_account(name)
-        output_error(
-            error_code="AUTH_ERROR",
+        # Auth failed — keep account registered, warn user
+        output_success(
             operation="account.add",
-            message=str(e),
-            details=e.details if hasattr(e, "details") else None,
+            message=f"Account '{name}' registered (authentication skipped: {e}).",
+            account=name,
+            is_default=config.accounts.default_account == name if config.accounts else False,
+            hint=f"Authenticate later with 'gws-cli auth -a {name}' or any command with '-a {name}'.",
         )
-        raise typer.Exit(ExitCode.AUTH_ERROR)
 
 
 @account_app.command("update")
@@ -636,13 +649,19 @@ def account_set_readonly(
 
     overrides = config.load_account_config(name)
     overrides["allowed_operations"] = Config.READ_ONLY_OPS
+    overrides["read_only"] = True
     config.save_account_config(name, overrides)
+
+    from gws.crypto import delete_encrypted
+    token_path = config.get_account_dir(name) / "token.json"
+    delete_encrypted(token_path)
 
     output_success(
         operation="account.set-readonly",
         account=name,
         message=f"Account '{name}' is now read-only.",
         allowed_operations=Config.READ_ONLY_OPS,
+        note="Token cleared — next API call will re-authenticate with read-only scopes.",
     )
 
 
@@ -664,15 +683,22 @@ def account_unset_readonly(
     overrides = config.load_account_config(name)
     if "allowed_operations" in overrides:
         del overrides["allowed_operations"]
-        if overrides:
-            config.save_account_config(name, overrides)
-        else:
-            config.clear_account_config(name)
+    if "read_only" in overrides:
+        del overrides["read_only"]
+    if overrides:
+        config.save_account_config(name, overrides)
+    else:
+        config.clear_account_config(name)
+
+    from gws.crypto import delete_encrypted
+    token_path = config.get_account_dir(name) / "token.json"
+    delete_encrypted(token_path)
 
     output_success(
         operation="account.unset-readonly",
         account=name,
         message=f"Account '{name}' is no longer read-only. All operations allowed.",
+        note="Token cleared — next API call will re-authenticate with full scopes.",
     )
 
 
@@ -1024,14 +1050,18 @@ def config_set_mode(
     config = Config.load()
 
     if account:
-        # Per-account override
+        # Auto-create account if it doesn't exist (convenience for setup)
         if account not in (config.accounts.entries if config.accounts else {}):
-            output_error(
-                error_code="NOT_FOUND",
-                operation="config.set-mode",
-                message=f"Account '{account}' not found.",
-            )
-            raise typer.Exit(ExitCode.NOT_FOUND)
+            try:
+                Config.validate_account_name(account)
+            except ValueError as e:
+                output_error(
+                    error_code="INVALID_ARGS",
+                    operation="config.set-mode",
+                    message=str(e),
+                )
+                raise typer.Exit(ExitCode.INVALID_ARGS)
+            config.add_account(account)
 
         overrides = config.load_account_config(account)
         overrides["mode"] = mode

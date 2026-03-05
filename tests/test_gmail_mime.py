@@ -26,7 +26,7 @@ def gmail_service():
     mock_auth.config.get_account_display_name.return_value = ""
     mock_auth.account_name = None
 
-    with patch("gws.auth.provider.resolve_auth_provider", return_value=mock_auth), \
+    with patch("gws.services.base.resolve_auth_provider", return_value=mock_auth), \
          patch("gws.services.base.build") as mock_build:
 
         mock_gmail_api = MagicMock()

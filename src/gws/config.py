@@ -113,6 +113,9 @@ class Config:
     # Encryption salt for secret files (auto-generated on first use)
     encryption_salt: str = ""
 
+    # Read-only OAuth scopes (requests .readonly scopes instead of full access)
+    read_only: bool = False
+
     # Multi-account support (None = legacy single-account mode)
     accounts: AccountsRegistry | None = None
 
@@ -179,6 +182,8 @@ class Config:
             data.pop("server_provider", None)
         if self.mode == "local":
             data.pop("mode", None)
+        if not self.read_only:
+            data.pop("read_only", None)
         _write_secure_file(self.CONFIG_PATH, json.dumps(data, indent=2))
 
     _encryption_key_cache: bytes | None = None
@@ -320,6 +325,8 @@ class Config:
             effective.mode = overrides["mode"]
         if "server_url" in overrides:
             effective.server_url = overrides["server_url"]
+        if "read_only" in overrides:
+            effective.read_only = overrides["read_only"]
         return effective
 
     def add_account(self, name: str, display_name: str = "", email: str = "") -> None:
