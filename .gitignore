@@ -59,3 +59,4 @@ Thumbs.db
 *.log
 *.png
 .claude/
+docker-compose-kroki.yml
