@@ -195,11 +195,27 @@ class Config:
         return candidate
 
     @classmethod
+    def _persisted_field_names(cls) -> set[str]:
+        """Names of the fields stored in gws_config.json.
+
+        Used by both save() and _from_dict(), so writing and reading always
+        agree. Runtime-only state (the derived encryption key cache and its
+        "resolved" flag) must be excluded: persisting it crashes save() once a
+        key is derived, and reading back a stale "resolved" flag silently
+        disables encryption on every later run.
+        """
+        # Runtime-only fields are the underscore-prefixed ones. Excluding by
+        # convention fails safe: a new runtime field is never persisted by
+        # accident, whereas forgetting an opt-out marker would leak it.
+        return {f.name for f in fields(cls) if not f.name.startswith("_")}
+
+    @classmethod
     def _from_dict(cls, data: dict[str, Any]) -> "Config":
         """Deserialize config from dict, handling nested accounts structure."""
         accounts_data = data.pop("accounts", None)
-        # Filter to known fields to avoid TypeError on future/unknown keys
-        known_fields = {f.name for f in fields(cls)}
+        # Filter to persisted fields: ignores future/unknown keys (avoids a
+        # TypeError) and runtime-only state written by older versions.
+        known_fields = cls._persisted_field_names()
         filtered = {k: v for k, v in data.items() if k in known_fields}
         config = cls(**filtered)
 
@@ -223,7 +239,8 @@ class Config:
                 "and modify that instead."
             )
         self.CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        data = asdict(self)
+        persisted = self._persisted_field_names()
+        data = {k: v for k, v in asdict(self).items() if k in persisted}
         # Omit defaults for clean JSON
         if self.accounts is None:
             data.pop("accounts", None)
@@ -237,8 +254,10 @@ class Config:
             data.pop("read_only", None)
         _write_secure_file(self.CONFIG_PATH, json.dumps(data, indent=2))
 
-    _encryption_key_cache: bytes | None = None
-    _encryption_key_resolved: bool = False
+    # Runtime-only (never persisted; see _persisted_field_names). repr=False
+    # keeps the derived key out of reprs, logs and tracebacks.
+    _encryption_key_cache: bytes | None = field(default=None, repr=False)
+    _encryption_key_resolved: bool = field(default=False, repr=False)
 
     def get_encryption_key(self) -> bytes | None:
         """Return the Fernet encryption key, or None if encryption is disabled.
