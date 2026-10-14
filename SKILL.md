@@ -331,7 +331,7 @@ All commands use `uvx gws-cli <service> <command>`. Authentication is automatic 
 uvx gws-cli auth              # Authenticate using the configured mode (opens browser)
 uvx gws-cli auth --headless   # No browser launch; paste the full redirect URL
 uvx gws-cli auth status       # Check auth status — reports the active mode
-uvx gws-cli auth --force      # Force re-authentication (opens browser)
+uvx gws-cli auth --force      # Force re-authentication (current token kept until it succeeds)
 uvx gws-cli auth --headless --force -a work  # Headless named-account re-auth
 export GWS_HEADLESS=1         # Headless machine: make every login headless, incl. automatic ones
 uvx gws-cli auth logout       # Logout (best-effort revokes the token upstream)

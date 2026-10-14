@@ -29,7 +29,6 @@ def test_auth_force_headless_account_combination_is_forwarded() -> None:
     provider = MagicMock()
     provider.account_name = "work"
     provider.TOKEN_PATH = "accounts/work/token.json"
-    provider.delete_token.return_value = True
     provider.get_credentials.return_value.valid = True
 
     with patch("gws.commands.auth.resolve_auth_provider", return_value=provider) as resolve:
@@ -37,7 +36,8 @@ def test_auth_force_headless_account_combination_is_forwarded() -> None:
 
     assert result.exit_code == 0
     resolve.assert_called_once_with(account="work")
-    provider.delete_token.assert_called_once_with()
+    # --force replaces the token only once the new login succeeds; it never deletes up front.
+    provider.delete_token.assert_not_called()
     provider.get_credentials.assert_called_once_with(force_refresh=True, headless=True)
 
 

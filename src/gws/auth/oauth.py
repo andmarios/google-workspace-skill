@@ -175,7 +175,7 @@ class LocalAuthProvider:
 
         # Run auth flow if no valid credentials
         if not self._credentials or not self._credentials.valid:
-            self._run_auth_flow(scopes, headless=headless)
+            self._run_auth_flow(scopes, headless=headless, consent=force_refresh)
 
         return self._credentials  # type: ignore
 
@@ -197,8 +197,16 @@ class LocalAuthProvider:
                 continue
         raise AuthError("No available ports in range 8080-8099 for OAuth callback")
 
-    def _run_auth_flow(self, scopes: list[str], headless: bool = False) -> None:
-        """Run the OAuth loopback authentication flow."""
+    def _run_auth_flow(
+        self,
+        scopes: list[str],
+        headless: bool = False,
+        consent: bool = False,
+    ) -> None:
+        """Run the OAuth loopback authentication flow.
+
+        consent: force Google's consent screen (used by `auth --force`).
+        """
         import sys
 
         key = self.config.get_encryption_key()
@@ -210,6 +218,9 @@ class LocalAuthProvider:
             )
 
         port = self._find_available_port()
+        # A forced re-login keeps the old grant until it succeeds, and Google
+        # may then omit the refresh token; prompt=consent guarantees a new one.
+        auth_params = {"prompt": "consent"} if consent else {}
 
         if headless:
             # PKCE is what protects the pasted code. google-auth-oauthlib < 1.3
@@ -220,7 +231,7 @@ class LocalAuthProvider:
                 scopes=scopes,
                 autogenerate_code_verifier=True,
             )
-            self._run_headless_auth_flow(flow, port)
+            self._run_headless_auth_flow(flow, port, auth_params)
             self._save_credentials()
             return
 
@@ -247,18 +258,24 @@ class LocalAuthProvider:
                 "\n{url}\n\n" + "=" * 60 + "\nWaiting for authorization...\n"
             ),
             success_message="Authorization successful! You can close this window.",
+            **auth_params,
         )
 
         print("\n✓ Authorization successful! Token saved.\n", file=sys.stderr)
         self._save_credentials()
 
-    def _run_headless_auth_flow(self, flow: InstalledAppFlow, port: int) -> None:
+    def _run_headless_auth_flow(
+        self,
+        flow: InstalledAppFlow,
+        port: int,
+        auth_params: dict[str, str] | None = None,
+    ) -> None:
         """Complete local OAuth without a browser or callback HTTP server."""
         import sys
 
         redirect_uri = f"http://{self.LOOPBACK_IP}:{port}/"
         flow.redirect_uri = redirect_uri
-        authorization_url, state = flow.authorization_url()
+        authorization_url, state = flow.authorization_url(**(auth_params or {}))
 
         print("\n" + "=" * 60, file=sys.stderr)
         account_label = f" (account: {self._account_name})" if self._account_name else ""

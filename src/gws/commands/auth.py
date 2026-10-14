@@ -25,7 +25,11 @@ def auth_default(
     ctx: typer.Context,
     force: Annotated[
         bool,
-        typer.Option("--force", "-f", help="Force re-authentication by deleting existing token."),
+        typer.Option(
+            "--force",
+            "-f",
+            help="Force re-authentication. The current token is replaced only if it succeeds.",
+        ),
     ] = False,
     headless: Annotated[
         bool,
@@ -55,9 +59,13 @@ def auth_default(
         provider = resolve_auth_provider(account=account)
 
         if force:
-            deleted = provider.delete_token()
-            if deleted:
-                typer.echo("Deleted existing token. Starting fresh authentication...", err=True)
+            # The existing token is kept until the new login succeeds and is
+            # overwritten only then, so a cancelled or failed --force never
+            # logs the user out. `auth logout` is what revokes a token.
+            typer.echo(
+                "Starting fresh authentication (current token kept until it succeeds)...",
+                err=True,
+            )
 
         credentials = provider.get_credentials(force_refresh=force, headless=headless)
 

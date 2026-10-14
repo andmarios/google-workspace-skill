@@ -107,6 +107,10 @@ profile). It makes every login headless, including the automatic one a command
 starts when it finds no token, or when a relay refresh finds no server session.
 Without it, those automatic logins use the browser flow.
 
+`--force` keeps your current token until the new login succeeds, so a cancelled
+or failed re-authentication leaves you logged in. Run `gws-cli auth logout`
+first if you also want the old token revoked.
+
 ## Using with AI Assistants
 
 ### Claude Code
