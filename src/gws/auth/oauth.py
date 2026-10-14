@@ -208,16 +208,24 @@ class LocalAuthProvider:
             )
 
         port = self._find_available_port()
-        flow = InstalledAppFlow.from_client_config(
-            client_config,
-            scopes=scopes,
-            autogenerate_code_verifier=True,
-        )
 
         if headless:
+            # PKCE is what protects the pasted code. google-auth-oauthlib < 1.3
+            # only enables it when asked, so request it explicitly here; the
+            # browser flow below keeps the library default, as before.
+            flow = InstalledAppFlow.from_client_config(
+                client_config,
+                scopes=scopes,
+                autogenerate_code_verifier=True,
+            )
             self._run_headless_auth_flow(flow, port)
             self._save_credentials()
             return
+
+        flow = InstalledAppFlow.from_client_config(
+            client_config,
+            scopes=scopes,
+        )
 
         try:
             can_open_browser = webbrowser.get() is not None

@@ -26,6 +26,7 @@ def isolated_config(tmp_path, monkeypatch):
     monkeypatch.setattr(Config, "CONFIG_PATH", tmp_path / "gws_config.json")
     monkeypatch.setattr(Config, "_LEGACY_BASE_DIR", tmp_path / "legacy")
     monkeypatch.setattr(LocalAuthProvider, "_LEGACY_TOKEN_PATH", tmp_path / "token.json")
+    monkeypatch.setattr(LocalAuthProvider, "CREDENTIALS_PATH", tmp_path / "client_secret.json")
     monkeypatch.delenv("GWS_ACCOUNT", raising=False)
     return tmp_path
 
@@ -144,7 +145,9 @@ def test_default_flow_still_uses_local_server(provider: LocalAuthProvider) -> No
 
     with (
         patch("gws.auth.oauth.load_encrypted", return_value={"installed": {}}),
-        patch("gws.auth.oauth.InstalledAppFlow.from_client_config", return_value=flow),
+        patch(
+            "gws.auth.oauth.InstalledAppFlow.from_client_config", return_value=flow
+        ) as from_client_config,
         patch.object(provider, "_find_available_port", return_value=8080),
         patch.object(provider, "_save_credentials"),
     ):
@@ -152,6 +155,37 @@ def test_default_flow_still_uses_local_server(provider: LocalAuthProvider) -> No
 
     flow.run_local_server.assert_called_once()
     flow.fetch_token.assert_not_called()
+    # The browser flow must keep the library's PKCE default, exactly as before headless mode.
+    assert "autogenerate_code_verifier" not in from_client_config.call_args.kwargs
+
+
+def test_headless_flow_requests_pkce_on_real_flow(provider: LocalAuthProvider, capsys) -> None:
+    """google-auth-oauthlib < 1.3 only enables PKCE when asked; headless must always ask."""
+    client_config = {
+        "installed": {
+            "client_id": "test.apps.googleusercontent.com",
+            "client_secret": "test-secret",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
+    }
+
+    def fake_load(path, key):
+        return client_config if path == provider.CREDENTIALS_PATH else None
+
+    with (
+        patch("gws.auth.oauth.load_encrypted", side_effect=fake_load),
+        patch.object(provider, "_find_available_port", return_value=8080),
+        patch("gws.auth.oauth.getpass", side_effect=EOFError),
+        pytest.raises(AuthError, match="cancelled"),
+    ):
+        provider.get_credentials(headless=True)
+
+    printed = capsys.readouterr().err.split()
+    authorization_url = next(word for word in printed if word.startswith("https://accounts"))
+    query = parse_qs(urlparse(authorization_url).query)
+    assert query["code_challenge_method"] == ["S256"]
+    assert query["redirect_uri"] == ["http://127.0.0.1:8080/"]
 
 
 @pytest.mark.parametrize(
