@@ -16,6 +16,7 @@ from urllib.parse import urlencode, urlparse
 import httpx
 from google.oauth2.credentials import Credentials
 
+from gws.auth.provider import headless_requested
 from gws.config import Config
 from gws.crypto import delete_encrypted, load_encrypted, save_encrypted
 from gws.exceptions import AuthError
@@ -131,6 +132,7 @@ class ServerAuthProvider:
         4. If no credentials, initiate full flow via server
         5. Save credentials locally
         """
+        headless = headless_requested(headless)
         if self._credentials and self._credentials.valid and not force_refresh:
             return self._credentials
 
@@ -141,7 +143,7 @@ class ServerAuthProvider:
         # Refresh if expired
         if self._credentials and self._credentials.expired and self._credentials.refresh_token:
             try:
-                self._refresh_via_server(self._credentials.refresh_token)
+                self._refresh_via_server(self._credentials.refresh_token, headless=headless)
                 return self._credentials  # Set by _refresh_via_server
             except (
                 httpx.RequestError,
@@ -483,9 +485,12 @@ class ServerAuthProvider:
 
         raise AuthError("Authorization timed out. Please try again.")
 
-    def _refresh_via_server(self, refresh_token: str) -> None:
-        """Refresh Google API token via the server relay."""
-        server_token = self._ensure_server_token()
+    def _refresh_via_server(self, refresh_token: str, headless: bool = False) -> None:
+        """Refresh Google API token via the server relay.
+
+        headless: if the relay session is missing, log in with device flow.
+        """
+        server_token = self._ensure_server_token(headless=headless)
 
         resp = self._server_request(
             "POST",

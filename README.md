@@ -102,6 +102,11 @@ input and you should not log or share it. In server-relay mode, `--headless` use
 the relay's device flow for the initial server login, then prints the upstream
 authorization URL and polls the relay; no loopback URL is pasted into the CLI.
 
+On a headless machine, also set `GWS_HEADLESS=1` (for example in your shell
+profile). It makes every login headless, including the automatic one a command
+starts when it finds no token, or when a relay refresh finds no server session.
+Without it, those automatic logins use the browser flow.
+
 ## Using with AI Assistants
 
 ### Claude Code

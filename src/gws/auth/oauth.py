@@ -15,6 +15,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from oauthlib.oauth2 import OAuth2Error
 from requests.exceptions import RequestException
 
+from gws.auth.provider import headless_requested
 from gws.auth.scopes import get_scopes_for_services
 from gws.config import Config
 from gws.crypto import delete_encrypted, load_encrypted, save_encrypted
@@ -137,6 +138,7 @@ class LocalAuthProvider:
         headless: bool = False,
     ) -> Credentials:
         """Get valid credentials, triggering auth flow if needed."""
+        headless = headless_requested(headless)
         if self._credentials and self._credentials.valid and not force_refresh:
             return self._credentials
 

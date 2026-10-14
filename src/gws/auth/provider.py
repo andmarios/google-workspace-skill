@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 from urllib.parse import urlparse
@@ -46,6 +47,17 @@ class AuthProvider(Protocol):
     def account_name(self) -> str | None:
         """The resolved account name, or None for legacy mode."""
         ...
+
+
+def headless_requested(explicit: bool = False) -> bool:
+    """Whether to use headless auth flows: the --headless flag or GWS_HEADLESS.
+
+    GWS_HEADLESS (1/true/yes/on) also covers implicit logins — a command that
+    finds no token, or a relay refresh that finds no server session — which
+    would otherwise wait for a browser callback that can never arrive.
+    """
+    value = os.environ.get("GWS_HEADLESS", "").strip().lower()
+    return explicit or value in {"1", "true", "yes", "on"}
 
 
 def _validate_server_url(url: str) -> None:
