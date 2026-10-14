@@ -143,14 +143,14 @@ def save_encrypted(path: Path, data: dict[str, Any], key: bytes | None) -> None:
         dest = _enc_path(path)
         fernet = Fernet(key)
         ciphertext = fernet.encrypt(json.dumps(data, indent=2).encode())
-        fd = os.open(str(dest), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+        fd = os.open(str(dest), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0), 0o600)
         with os.fdopen(fd, "wb") as f:
             f.write(ciphertext)
         # Remove plaintext leftover from before encryption was enabled
         if path.exists():
             path.unlink()
     else:
-        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0), 0o600)
         with os.fdopen(fd, "w") as f:
             json.dump(data, f, indent=2)
 

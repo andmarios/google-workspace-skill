@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -94,9 +95,10 @@ def test_save_load_encrypted_roundtrip(tmp_path, key):
     assert _enc_path(base).exists()
     assert not base.exists()
 
-    # Permissions should be 0o600
-    mode = _enc_path(base).stat().st_mode & 0o777
-    assert mode == 0o600
+    # Permissions should be 0o600 (POSIX only)
+    if sys.platform != "win32":
+        mode = _enc_path(base).stat().st_mode & 0o777
+        assert mode == 0o600
 
     loaded = load_encrypted(base, key)
     assert loaded == data
@@ -117,9 +119,10 @@ def test_save_load_no_key(tmp_path):
     with open(base) as f:
         assert json.load(f) == data
 
-    # Permissions should be 0o600
-    mode = base.stat().st_mode & 0o777
-    assert mode == 0o600
+    # Permissions should be 0o600 (POSIX only)
+    if sys.platform != "win32":
+        mode = base.stat().st_mode & 0o777
+        assert mode == 0o600
 
     loaded = load_encrypted(base, None)
     assert loaded == data
@@ -235,6 +238,21 @@ def test_delete_encrypted_only_plaintext(tmp_path):
     assert not base.exists()
 
 
+def test_save_encrypted_without_o_nofollow(tmp_path, monkeypatch):
+    """O_NOFOLLOW is POSIX-only; saving must still work on Windows."""
+    monkeypatch.delattr(os, "O_NOFOLLOW", raising=False)
+    key = derive_key(generate_salt(), "test-app")
+
+    encrypted = tmp_path / "token.json"
+    save_encrypted(encrypted, {"a": 1}, key)
+    assert load_encrypted(encrypted, key) == {"a": 1}
+
+    plain = tmp_path / "config.json"
+    save_encrypted(plain, {"b": 2}, None)
+    assert load_encrypted(plain, None) == {"b": 2}
+
+
+@pytest.mark.skipif(not hasattr(os, "O_NOFOLLOW"), reason="O_NOFOLLOW is POSIX-only")
 def test_save_encrypted_plaintext_refuses_symlink(tmp_path):
     """A symlink planted at the token path must not be followed (O_NOFOLLOW)."""
     import pytest

@@ -2,6 +2,7 @@
 
 import json
 import stat
+import sys
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, PropertyMock
 
@@ -129,6 +130,7 @@ class TestServerAuthTokenHandling:
 
         assert server_token_path.exists()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits are not enforced on Windows")
     def test_save_server_token_permissions(self, provider, tmp_path):
         """Saved server token file should have 0o600 permissions."""
         server_token_path = tmp_path / "server_token.json"
@@ -312,6 +314,7 @@ class TestServerAuthTokenHandling:
 
         assert token_path.exists()
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits are not enforced on Windows")
     def test_save_google_token_permissions(self, provider, tmp_path):
         """Saved Google token should have 0o600 permissions."""
         token_path = tmp_path / "token.json"

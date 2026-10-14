@@ -21,8 +21,9 @@ def _write_secure_file(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp")
     try:
-        os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w") as f:
+            if hasattr(os, "fchmod"):
+                os.fchmod(f.fileno(), 0o600)
             f.write(content)
             f.flush()
             os.fsync(f.fileno())

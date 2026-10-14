@@ -1,6 +1,8 @@
 """Tests for multi-account configuration support."""
 
 import json
+import sys
+
 import pytest
 
 from gws.config import Config, AccountEntry, AccountsRegistry
@@ -376,6 +378,36 @@ class TestAtomicAndCorruptConfig:
         leftovers = [p for p in config_dir.iterdir() if ".tmp" in p.name]
         assert not leftovers
 
+    def test_write_works_without_fchmod(self, config_dir, monkeypatch):
+        """os.fchmod is POSIX-only; writes must still succeed on Windows."""
+        import os as _os
+
+        from gws.config import _write_secure_file
+
+        monkeypatch.delattr(_os, "fchmod", raising=False)
+        path = config_dir / "gws_config.json"
+        _write_secure_file(path, '{"new": true}')
+
+        assert path.read_text() == '{"new": true}'
+        leftovers = [p for p in config_dir.iterdir() if ".tmp" in p.name]
+        assert not leftovers
+
+    def test_fchmod_failure_leaves_no_temp_file(self, config_dir, monkeypatch):
+        """The temp fd must be closed before cleanup (Windows can't unlink open files)."""
+        import os as _os
+
+        from gws.config import _write_secure_file
+
+        def boom(*args, **kwargs):
+            raise OSError("simulated fchmod failure")
+
+        monkeypatch.setattr(_os, "fchmod", boom, raising=False)
+        with pytest.raises(OSError):
+            _write_secure_file(config_dir / "gws_config.json", '{"new": true}')
+
+        leftovers = [p for p in config_dir.iterdir() if ".tmp" in p.name]
+        assert not leftovers
+
     def test_corrupt_config_is_backed_up_not_silently_destroyed(self, config_dir):
         # A config that contains account data but is syntactically broken
         Config.CONFIG_PATH.write_text('{"accounts": {"entries": {"work": {')
@@ -403,6 +435,7 @@ class TestAccountNameHardening:
 class TestAccountDirPermissions:
     """Security: per-account dirs (holding tokens) must be private (0o700)."""
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits are not enforced on Windows")
     def test_account_dir_is_owner_only(self, config_dir):
         import stat
         config = Config()
