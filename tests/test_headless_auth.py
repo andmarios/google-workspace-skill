@@ -19,6 +19,17 @@ from gws.config import Config
 from gws.exceptions import AuthError
 
 
+@pytest.fixture(autouse=True)
+def isolated_config(tmp_path, monkeypatch):
+    """Keep tests away from the real ~/.config/gws-cli (config, salt, tokens)."""
+    monkeypatch.setattr(Config, "BASE_DIR", tmp_path)
+    monkeypatch.setattr(Config, "CONFIG_PATH", tmp_path / "gws_config.json")
+    monkeypatch.setattr(Config, "_LEGACY_BASE_DIR", tmp_path / "legacy")
+    monkeypatch.setattr(LocalAuthProvider, "_LEGACY_TOKEN_PATH", tmp_path / "token.json")
+    monkeypatch.delenv("GWS_ACCOUNT", raising=False)
+    return tmp_path
+
+
 @pytest.fixture
 def provider() -> LocalAuthProvider:
     return LocalAuthProvider(config=Config())

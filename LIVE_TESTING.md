@@ -9,9 +9,9 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | Metric | Count | Notes |
 |--------|-------|-------|
 | Pass | 210 | |
-| Skip | 6 | Destructive or require external setup (e.g. target email, ownership transfer) |
+| Skip | 7 | Destructive or require external setup (e.g. target email, ownership transfer) |
 | Expected fail | 1 | API correctly rejects the operation (e.g. unsubscribe from owned calendar) |
-| **Total** | **217** | |
+| **Total** | **218** | |
 
 ---
 
@@ -236,6 +236,7 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 215 | Convert |`convert md-to-doc /tmp/test.md -t "Title"`|PASS| 2026-02-06 |Markdown to Google Doc|
 | 216 | Convert |`convert md-to-pdf /tmp/test.md /tmp/out.pdf`|PASS| 2026-02-06 |Markdown to PDF (35KB)|
 | 217 | Convert |`convert md-to-slides /tmp/test.md -t "Title"`|PASS| 2026-02-06 |Markdown to Slides|
+| 218 | Infra |`gws-cli auth --headless`|SKIP| 2026-10-14 |Needs interactive browser consent; covered by unit tests. Contributor-verified on a headless server|
 
 ---
 
@@ -273,21 +274,4 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 |------|-------------|
 | 2026-02-05 | Initial test run: Infra, Drive, Docs, Sheets, Slides, Gmail. Fixed 10 bugs. |
 | 2026-02-06 | Completed: Calendar, Contacts, Convert. Fixed 2 bugs (Slides). All 217 tests done. |
-# Headless OAuth authentication
-
-Run this check on a Linux headless server with an imported **Desktop application**
-OAuth client. Do not paste the final redirect URL into logs, tickets, or chat.
-
-```bash
-uvx gws-cli auth --headless --force
-```
-
-1. Open the printed Google authorization URL on another computer.
-2. Complete consent. A connection failure at `127.0.0.1` is expected.
-3. Copy the entire browser address and paste it into the hidden CLI prompt.
-4. Verify `uvx gws-cli auth status` reports authenticated.
-5. Run one read-only command, then `uvx gws-cli auth logout` if this was a test account.
-
-Expected security behavior: wrong state, wrong loopback port, missing/multiple code,
-fragment, malformed URL, and provider denial are rejected without printing the
-pasted URL or authorization code.
+| 2026-10-14 | Added `auth --headless` (#218) from PR #1. Unit-tested (redirect validation, PKCE exchange, no secret echo); live test pending. |

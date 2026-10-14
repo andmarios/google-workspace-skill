@@ -83,7 +83,11 @@ uvx gws-cli auth
 # Headless server: open the printed URL elsewhere, then paste the full redirect URL
 uvx gws-cli auth --headless
 
-# Named account and forced re-authentication are supported
+# Headless + new named account: register it without auth, then authenticate
+uvx gws-cli account add work --no-auth
+uvx gws-cli auth --headless --account work
+
+# Forced re-authentication is supported too
 uvx gws-cli auth --headless --force --account work
 ```
 

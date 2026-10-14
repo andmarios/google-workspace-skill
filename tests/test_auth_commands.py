@@ -42,7 +42,8 @@ def test_auth_force_headless_account_combination_is_forwarded() -> None:
 
 
 def test_auth_help_documents_headless_option() -> None:
-    result = runner.invoke(app, ["auth", "--help"])
+    # Rich wraps help text to the terminal width; pin it so the phrase stays on one line.
+    result = runner.invoke(app, ["auth", "--help"], env={"COLUMNS": "200"})
 
     assert result.exit_code == 0
     assert "--headless" in result.stdout

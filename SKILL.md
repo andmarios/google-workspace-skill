@@ -325,7 +325,7 @@ All commands use `uvx gws-cli <service> <command>`. Authentication is automatic 
 
 ## Authentication
 
-> **Important**: Authentication must be completed by the user. Normal mode opens a browser. On a headless server, use `--headless`. Local mode asks the user to paste the complete final loopback redirect URL; treat it as a one-time secret. Server-relay mode uses device login and relay polling instead, without pasting a loopback URL.
+> **Important**: `gws-cli auth` (including `--force` and `--headless`) must be run by the user in their own terminal, not from Claude Code. Normal mode opens a browser. On a headless server, use `--headless`: in local mode the user pastes the final loopback redirect URL into the CLI's hidden prompt; in server-relay mode it uses device login instead. That redirect URL contains a one-time authorization code, so **never ask the user to paste it into the chat**.
 
 ```bash
 uvx gws-cli auth              # Authenticate using the configured mode (opens browser)
