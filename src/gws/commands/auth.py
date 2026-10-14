@@ -1,15 +1,14 @@
 """Auth command group for gws-cli (login, status, logout, server relay)."""
 
 import os
+from typing import Annotated, Any, Optional
 
 import typer
-from typing import Annotated, Any, Optional
 
 from gws.auth.provider import resolve_auth_provider
 from gws.config import Config
-from gws.output import output_json, output_success, output_error
-from gws.exceptions import ExitCode, AuthError
-
+from gws.exceptions import AuthError, ExitCode
+from gws.output import output_error, output_json, output_success
 
 app = typer.Typer(
     help=(
@@ -28,9 +27,21 @@ def auth_default(
         bool,
         typer.Option("--force", "-f", help="Force re-authentication by deleting existing token."),
     ] = False,
+    headless: Annotated[
+        bool,
+        typer.Option(
+            "--headless",
+            help="Do not launch a local browser; use the provider's headless flow.",
+        ),
+    ] = False,
     account: Annotated[
         Optional[str],
-        typer.Option("--account", "-a", envvar="GWS_ACCOUNT", help="Named account to authenticate."),
+        typer.Option(
+            "--account",
+            "-a",
+            envvar="GWS_ACCOUNT",
+            help="Named account to authenticate.",
+        ),
     ] = None,
 ) -> None:
     """Authenticate with Google services."""
@@ -48,7 +59,7 @@ def auth_default(
             if deleted:
                 typer.echo("Deleted existing token. Starting fresh authentication...", err=True)
 
-        credentials = provider.get_credentials(force_refresh=force)
+        credentials = provider.get_credentials(force_refresh=force, headless=headless)
 
         if credentials and credentials.valid:
             result: dict[str, Any] = {
@@ -194,7 +205,11 @@ def auth_server_login(
         raise typer.Exit(ExitCode.INVALID_ARGS)
 
     try:
-        provider = ServerAuthProvider(server_url=server_url, account=resolved_account, config=effective)
+        provider = ServerAuthProvider(
+            server_url=server_url,
+            account=resolved_account,
+            config=effective,
+        )
         provider.server_login(device_flow=device)
         output_success(
             operation="auth.server-login",
@@ -283,6 +298,7 @@ def auth_import_credentials(
     """Import OAuth client credentials and encrypt them for secure storage."""
     import json
     from pathlib import Path
+
     from gws.auth.oauth import LocalAuthProvider
     from gws.crypto import save_encrypted
 

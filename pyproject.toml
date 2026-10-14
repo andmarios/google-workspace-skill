@@ -31,6 +31,9 @@ dependencies = [
     "google-api-python-client>=2.100.0",
     "google-auth>=2.23.0",
     "google-auth-oauthlib>=1.1.0",
+    # Imported directly by the headless OAuth flow; same bounds requests-oauthlib requires.
+    "oauthlib>=3.0.0",
+    "requests>=2.0.0",
     "httpx>=0.25.0",
     "prompt-security-utils>=1.3.0",
     "cryptography>=46.0.4",
@@ -46,6 +49,8 @@ dev = [
     "pytest-cov>=4.0.0",
     "mypy>=1.0.0",
     "ruff>=0.1.0",
+    "types-oauthlib",
+    "types-requests",
 ]
 
 [project.scripts]

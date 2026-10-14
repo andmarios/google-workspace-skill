@@ -79,9 +79,28 @@ All commands output JSON for easy scripting and integration.
 ```bash
 # Opens browser for Google sign-in
 uvx gws-cli auth
+
+# Headless server: open the printed URL elsewhere, then paste the full redirect URL
+uvx gws-cli auth --headless
+
+# Headless + new named account: register it without auth, then authenticate
+uvx gws-cli account add work --no-auth
+uvx gws-cli auth --headless --account work
+
+# Forced re-authentication is supported too
+uvx gws-cli auth --headless --force --account work
 ```
 
 That's it. Authentication is automatic on subsequent uses.
+
+In local mode, `--headless` keeps Google's desktop-app loopback redirect and PKCE
+protection; it does not use the deprecated OAuth out-of-band flow. After consent,
+the browser's loopback page may fail to load. Copy the complete
+`http://127.0.0.1:<port>/...` address from the browser bar and paste it into the
+CLI. The pasted URL contains a one-time authorization code, so the CLI hides the
+input and you should not log or share it. In server-relay mode, `--headless` uses
+the relay's device flow for the initial server login, then prints the upstream
+authorization URL and polls the relay; no loopback URL is pasted into the CLI.
 
 ## Using with AI Assistants
 

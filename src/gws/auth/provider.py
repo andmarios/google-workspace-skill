@@ -17,7 +17,11 @@ class AuthProvider(Protocol):
     ServerAuthProvider: delegates to an oauth-token-relay server.
     """
 
-    def get_credentials(self, force_refresh: bool = False) -> Credentials:
+    def get_credentials(
+        self,
+        force_refresh: bool = False,
+        headless: bool = False,
+    ) -> Credentials:
         """Get valid Google API credentials, triggering auth if needed."""
         ...
 

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import secrets
-import base64
 import sys
 import time
 import webbrowser
@@ -17,9 +17,8 @@ import httpx
 from google.oauth2.credentials import Credentials
 
 from gws.config import Config
-from gws.crypto import save_encrypted, load_encrypted, delete_encrypted
+from gws.crypto import delete_encrypted, load_encrypted, save_encrypted
 from gws.exceptions import AuthError
-
 
 # Recognised Google OAuth consent hosts the relay may legitimately return.
 _KNOWN_AUTH_HOSTS = {"accounts.google.com"}
@@ -118,7 +117,11 @@ class ServerAuthProvider:
 
     # ── AuthProvider protocol methods ─────────────────────────────────
 
-    def get_credentials(self, force_refresh: bool = False) -> Credentials:
+    def get_credentials(
+        self,
+        force_refresh: bool = False,
+        headless: bool = False,
+    ) -> Credentials:
         """Get valid Google API credentials via the server relay.
 
         Flow:
@@ -140,14 +143,20 @@ class ServerAuthProvider:
             try:
                 self._refresh_via_server(self._credentials.refresh_token)
                 return self._credentials  # Set by _refresh_via_server
-            except (httpx.RequestError, httpx.HTTPStatusError, AuthError, json.JSONDecodeError, KeyError) as e:
+            except (
+                httpx.RequestError,
+                httpx.HTTPStatusError,
+                AuthError,
+                json.JSONDecodeError,
+                KeyError,
+            ) as e:
                 import sys
                 print(f"[gws-cli] Warning: server token refresh failed: {e}", file=sys.stderr)
                 self._credentials = None
 
         # Full flow: start → browser → complete
         if not self._credentials or not self._credentials.valid:
-            self._run_server_auth_flow()
+            self._run_server_auth_flow(headless=headless)
 
         return self._credentials  # type: ignore[return-value]
 
@@ -392,7 +401,7 @@ class ServerAuthProvider:
 
     # ── Private: Google token relay ───────────────────────────────────
 
-    def _run_server_auth_flow(self) -> None:
+    def _run_server_auth_flow(self, headless: bool = False) -> None:
         """Initiate upstream OAuth via the server relay.
 
         The CLI sends full scope URLs directly — the server is scope-agnostic
@@ -400,7 +409,7 @@ class ServerAuthProvider:
         """
         from gws.auth.scopes import get_scopes_for_services
 
-        server_token = self._ensure_server_token()
+        server_token = self._ensure_server_token(headless=headless)
         scopes = get_scopes_for_services(
             self.config.enabled_services,
             read_only=self.config.read_only,
@@ -438,7 +447,7 @@ class ServerAuthProvider:
         except webbrowser.Error:
             can_open = False
 
-        if can_open:
+        if can_open and not headless:
             print(f"\nOpening browser to:\n{auth_url}\n", file=sys.stderr)
             webbrowser.open(auth_url)
         else:
@@ -618,7 +627,11 @@ class ServerAuthProvider:
         save_encrypted(self._server_token_path, token_data, self.config.get_encryption_key())
         self._server_token = token_data
 
-    def _ensure_server_token(self, auto_login: bool = True) -> dict[str, Any]:
+    def _ensure_server_token(
+        self,
+        auto_login: bool = True,
+        headless: bool = False,
+    ) -> dict[str, Any]:
         """Load server token, auto-triggering login if needed.
 
         When auto_login is True (the default), missing server tokens trigger
@@ -637,7 +650,7 @@ class ServerAuthProvider:
 
         # Auto-trigger server login — one fewer manual step for the user
         print("No server token found — starting server authentication...\n", file=sys.stderr)
-        self.server_login()
+        self.server_login(device_flow=headless)
 
         token = self._load_server_token()
         if not token:

@@ -9,9 +9,9 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | Metric | Count | Notes |
 |--------|-------|-------|
 | Pass | 210 | |
-| Skip | 6 | Destructive or require external setup (e.g. target email, ownership transfer) |
+| Skip | 7 | Destructive or require external setup (e.g. target email, ownership transfer) |
 | Expected fail | 1 | API correctly rejects the operation (e.g. unsubscribe from owned calendar) |
-| **Total** | **217** | |
+| **Total** | **218** | |
 
 ---
 
@@ -236,6 +236,7 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 215 | Convert |`convert md-to-doc /tmp/test.md -t "Title"`|PASS| 2026-02-06 |Markdown to Google Doc|
 | 216 | Convert |`convert md-to-pdf /tmp/test.md /tmp/out.pdf`|PASS| 2026-02-06 |Markdown to PDF (35KB)|
 | 217 | Convert |`convert md-to-slides /tmp/test.md -t "Title"`|PASS| 2026-02-06 |Markdown to Slides|
+| 218 | Infra |`gws-cli auth --headless`|SKIP| 2026-10-14 |Needs interactive browser consent; covered by unit tests. Contributor-verified on a headless server|
 
 ---
 
@@ -273,3 +274,4 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 |------|-------------|
 | 2026-02-05 | Initial test run: Infra, Drive, Docs, Sheets, Slides, Gmail. Fixed 10 bugs. |
 | 2026-02-06 | Completed: Calendar, Contacts, Convert. Fixed 2 bugs (Slides). All 217 tests done. |
+| 2026-10-14 | Added `auth --headless` (#218) from PR #1. Unit-tested (redirect validation, PKCE exchange, no secret echo); live test pending. |

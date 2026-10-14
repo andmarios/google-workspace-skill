@@ -13,6 +13,7 @@
 | `gws-cli --version` | ✅ Pass | Returns `{"version": "1.0.0"}` |
 | `gws-cli --help` | ✅ Pass | Shows all commands |
 | `gws-cli auth` | ✅ Pass | OAuth loopback flow works, token saved |
+| `gws-cli auth --headless` | ✅ Unit | Browser suppressed; full redirect URL validated and exchanged with PKCE |
 | `gws-cli auth status` | ✅ Pass | Non-interactive check works |
 | `gws-cli auth logout` | ✅ Pass | Deletes token |
 
