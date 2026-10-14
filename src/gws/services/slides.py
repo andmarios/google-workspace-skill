@@ -585,7 +585,7 @@ class SlidesService(BaseService):
         bold: bool | None = None,
         italic: bool | None = None,
         underline: bool | None = None,
-        font_size: int | None = None,
+        font_size: float | None = None,
         foreground_color: str | None = None,
     ) -> dict[str, Any]:
         """Apply formatting to text in an element."""
@@ -663,7 +663,7 @@ class SlidesService(BaseService):
         small_caps: bool | None = None,
         font_family: str | None = None,
         font_weight: int | None = None,
-        font_size: int | None = None,
+        font_size: float | None = None,
         foreground_color: str | None = None,
         background_color: str | None = None,
         baseline_offset: str | None = None,

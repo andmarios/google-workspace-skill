@@ -310,7 +310,7 @@ def format_text(
         typer.Option("--underline/--no-underline", "-u", help="Underline formatting."),
     ] = None,
     font_size: Annotated[
-        Optional[int],
+        Optional[float],
         typer.Option("--font-size", "-s", help="Font size in points."),
     ] = None,
     color: Annotated[
@@ -819,7 +819,7 @@ def format_text_extended(
         typer.Option("--weight", help="Font weight (100-900, 400=normal, 700=bold)."),
     ] = None,
     size: Annotated[
-        Optional[int],
+        Optional[float],
         typer.Option("--size", "-s", help="Font size in points."),
     ] = None,
     color: Annotated[
