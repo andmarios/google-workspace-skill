@@ -63,6 +63,21 @@ Repository = "https://github.com/andmarios/google-workspace-skill"
 [tool.hatch.build.targets.wheel]
 packages = ["src/gws"]
 
+# Allowlist: by default hatchling ships every file that is not gitignored,
+# including untracked local notes that were never committed.
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/reference",
+  "/README.md",
+  "/LICENSE",
+  "/CLAUDE.md",
+  "/SKILL*.md",
+  "/TESTING.md",
+  "/LIVE_TESTING.md",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
