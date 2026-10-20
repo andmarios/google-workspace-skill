@@ -5,7 +5,12 @@ SCOPES: dict[str, list[str]] = {
     "sheets": ["https://www.googleapis.com/auth/spreadsheets"],
     "slides": ["https://www.googleapis.com/auth/presentations"],
     "drive": ["https://www.googleapis.com/auth/drive"],
-    "gmail": ["https://www.googleapis.com/auth/gmail.modify"],
+    "gmail": [
+        "https://www.googleapis.com/auth/gmail.modify",
+        # Filter, vacation and signature writes (users.settings.*) need this;
+        # gmail.modify only covers settings reads.
+        "https://www.googleapis.com/auth/gmail.settings.basic",
+    ],
     "calendar": ["https://www.googleapis.com/auth/calendar"],
     "contacts": [
         "https://www.googleapis.com/auth/contacts",
