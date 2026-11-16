@@ -8,10 +8,10 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 
 | Metric | Count | Notes |
 |--------|-------|-------|
-| Pass | 210 | |
+| Pass | 221 | |
 | Skip | 7 | Destructive or require external setup (e.g. target email, ownership transfer) |
 | Expected fail | 1 | API correctly rejects the operation (e.g. unsubscribe from owned calendar) |
-| **Total** | **218** | |
+| **Total** | **229** | |
 
 ---
 
@@ -25,10 +25,10 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 4 | Infra |`gws-cli config`|PASS| 2026-02-05 |Shows all config including multi-account|
 | 5 | Infra |`gws-cli config list`|PASS| 2026-02-05 |8/8 services enabled|
 | 6 | Drive |`drive list --max 5`|PASS| 2026-02-05 |Pagination works|
-| 7 | Drive |`drive search "name contains 'GWS-Test'"`|PASS| 2026-02-05 |Query works|
-| 8 | Drive |`drive get <file_id>`|PASS| 2026-02-05 |Full metadata|
+| 7 | Drive |`drive search "name contains 'GWS-Test'"`|PASS| 2026-11-16 |Query works|
+| 8 | Drive |`drive get <file_id>`|PASS| 2026-11-16 |Full metadata incl. `last_modifying_user`|
 | 9 | Drive |`drive download <file_id> /tmp/...`|PASS| 2026-02-05 |File downloaded|
-| 10 | Drive |`drive export <doc_id> --format "application/pdf"`|PASS| 2026-02-05 |PDF exported|
+| 10 | Drive |`drive export <doc_id> --format "application/pdf"`|PASS| 2026-11-16 |PDF and xlsx exported|
 | 11 | Drive |`drive changes-token`|PASS| 2026-02-05 |Returns start_page_token|
 | 12 | Drive |`drive list-changes <token>`|PASS| 2026-02-05 |Lists changes|
 | 13 | Drive |`drive list-trash --max 5`|PASS| 2026-02-05 |Shows trashed files|
@@ -38,16 +38,16 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 17 | Drive |`drive list-revisions <file_id>`|FIXED| 2026-02-05 |Bug: `supportsAllDrives` not valid for revisions API|
 | 18 | Drive |`drive list-comments <file_id>`|PASS| 2026-02-05 |Works|
 | 19 | Drive |`drive list-replies <file_id> <comment_id>`|PASS| 2026-02-05 |Lists comment replies|
-| 20 | Drive |`drive create-folder "..."`|PASS| 2026-02-05 |Created test folder|
-| 21 | Drive |`drive upload <path> --folder <id>`|PASS| 2026-02-05 |File uploaded|
+| 20 | Drive |`drive create-folder "..."`|PASS| 2026-11-16 |Created test folder|
+| 21 | Drive |`drive upload <path> --folder <id>`|PASS| 2026-11-16 |File uploaded|
 | 22 | Drive |`drive copy <id> --name "..."`|PASS| 2026-02-05 |File copied|
-| 23 | Drive |`drive move <id> <folder_id>`|PASS| 2026-02-05 |File moved|
+| 23 | Drive |`drive move <id> <folder_id>`|PASS| 2026-11-16 |File moved|
 | 24 | Drive |`drive update <id> <path>`|PASS| 2026-02-05 |Content updated|
 | 25 | Drive |`drive add-comment <id> "..."`|PASS| 2026-02-05 |Comment added|
 | 26 | Drive |`drive reply-to-comment <id> <cid> "..."`|PASS| 2026-02-05 |Reply created|
 | 27 | Drive |`drive resolve-comment <id> <cid>`|FIXED| 2026-02-05 |Bug: was using `comments().update()`, fixed to `replies().create()` with `action: "resolve"`|
 | 28 | Drive |`drive delete-comment <id> <cid>`|PASS| 2026-02-05 |Comment deleted|
-| 29 | Drive |`drive delete <id>`|PASS| 2026-02-05 |File trashed|
+| 29 | Drive |`drive delete <id>`|PASS| 2026-11-16 |File trashed|
 | 30 | Drive |`drive restore <id>`|PASS| 2026-02-05 |File restored|
 | 31 | Drive |`drive share`|SKIP| 2026-02-05 |Requires target email|
 | 32 | Drive |`drive update-permission`|SKIP| 2026-02-05 |Requires target email|
@@ -99,10 +99,10 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 78 | Docs |`docs rename-tab <id> <tab_id> "New"`|FIXED| 2026-02-05 |Bug: `tabId` placed outside `tabProperties`|
 | 79 | Docs |`docs reorder-tab <id> <tab_id> 0`|FIXED| 2026-02-05 |Bug: same `tabId` placement issue|
 | 80 | Docs |`docs delete-tab <id> <tab_id>`|PASS| 2026-02-05 |Tab deleted|
-| 81 | Sheets |`sheets metadata <id>`|PASS| 2026-02-05 |Full metadata|
+| 81 | Sheets |`sheets metadata <id>`|PASS| 2026-11-16 |Full metadata incl. `last_modifying_user`|
 | 82 | Sheets |`sheets read <id> "Sheet1\!A1:C5"`|PASS| 2026-02-05 |Read range|
-| 83 | Sheets |`sheets batch-get <id> "A1:B2,C1:D2"`|PASS| 2026-02-05 |Batch read|
-| 84 | Sheets |`sheets create "Title" --sheets "S1,S2"`|PASS| 2026-02-05 |Creates spreadsheet|
+| 83 | Sheets |`sheets batch-get <id> "A1:B2,C1:D2"`|PASS| 2026-11-16 |Batch read|
+| 84 | Sheets |`sheets create "Title" --sheets "S1,S2"`|PASS| 2026-11-16 |Creates spreadsheet|
 | 85 | Sheets |`sheets write <id> "A1:C3" --values '[...]'`|PASS| 2026-02-05 |Write values|
 | 86 | Sheets |`sheets append <id> "A:C" --values '[...]'`|PASS| 2026-02-05 |Append values|
 | 87 | Sheets |`sheets clear <id> "A10:C10"`|PASS| 2026-02-05 |Clear range|
@@ -190,8 +190,8 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 169 | Gmail |`gmail search "subject:GWS-Test"`|PASS| 2026-02-05 |Search works|
 | 170 | Gmail |`gmail get-label INBOX`|PASS| 2026-02-05 |Returns label details with counts|
 | 171 | Gmail |`gmail history <history_id> --max 5`|PASS| 2026-02-05 |Returns history|
-| 172 | Gmail |`gmail send <to> "Subject" "Body"`|PASS| 2026-02-05 |Email sent|
-| 173 | Gmail |`gmail reply <message_id> "Reply body"`|FIXED| 2026-02-05 |Bug: case-insensitive headers + format="full" needed|
+| 172 | Gmail |`gmail send <to> "Subject" "Body"`|PASS| 2026-11-16 |Email sent|
+| 173 | Gmail |`gmail reply <message_id> "Reply body"`|FIXED| 2026-11-16 |Bug: case-insensitive headers + format="full" needed|
 | 174 | Gmail |`gmail mark-read <message_id>`|PASS| 2026-02-05 |Marked read|
 | 175 | Gmail |`gmail mark-unread <message_id>`|PASS| 2026-02-05 |Marked unread|
 | 176 | Gmail |`gmail add-star <message_id>`|PASS| 2026-02-05 |Starred|
@@ -237,6 +237,17 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 216 | Convert |`convert md-to-pdf /tmp/test.md /tmp/out.pdf`|PASS| 2026-02-06 |Markdown to PDF (35KB)|
 | 217 | Convert |`convert md-to-slides /tmp/test.md -t "Title"`|PASS| 2026-02-06 |Markdown to Slides|
 | 218 | Infra |`gws-cli auth --headless`|SKIP| 2026-10-14 |Needs interactive browser consent; covered by unit tests. Contributor-verified on a headless server|
+| 219 | Infra |implicit login, no TTY (`drive list` with no token)|PASS| 2026-11-16 |Fails fast: `AUTH_ERROR` JSON, exit 1, ~1s (previously hung waiting for OAuth)|
+| 220 | Drive |`drive list -f <empty_folder_id>`|PASS| 2026-11-16 |Visible empty folder: success, `file_count` 0|
+| 221 | Drive |`drive list -f <inaccessible_id>`|PASS| 2026-11-16 |`NOT_FOUND`, exit 4 (previously empty success)|
+| 222 | Sheets |`sheets batch-write <id> --stdin`|PASS| 2026-11-16 |Two disjoint ranges in one call; `USER_ENTERED` evaluates formulas|
+| 223 | Sheets |`sheets metadata <xlsx_file_id>`|PASS| 2026-11-16 |Office file in Drive: `API_ERROR` with `drive download` hint|
+| 224 | Gmail |`gmail reply <message_id> "Body" --draft`|PASS| 2026-11-16 |Draft created in the original thread; nothing sent|
+| 225 | Gmail |`gmail get-draft <draft_id>`|PASS| 2026-11-16 |Returns draft body and recipients|
+| 226 | Gmail |`gmail update-draft <reply_draft_id> --body "..."`|PASS| 2026-11-16 |Edited reply draft stays in its thread|
+| 227 | Gmail |`gmail get-thread <thread_id>`|PASS| 2026-11-16 |Lists original + draft|
+| 228 | Gmail |`gmail delete-draft <draft_id>`|PASS| 2026-11-16 |Draft deleted|
+| 229 | Gmail |`gmail trash-thread <thread_id>`|PASS| 2026-11-16 |Thread trashed|
 
 ---
 
@@ -256,6 +267,9 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 10 | Docs | paragraph-border | Missing required `padding` field in border style | Added `padding: {magnitude: 6.0, unit: "PT"}` |
 | 11 | Slides | set-speaker-notes | `deleteText` fails when notes are empty | Check text existence before deleting |
 | 12 | Slides | transform-element | Non-invertible matrix when only `scaleX` set | Default unset `scaleX`/`scaleY` to 1.0 |
+| 13 | Infra | any command | Revoked/missing token started an OAuth flow that hung forever without a terminal | Implicit logins fail fast with `AUTH_ERROR` when stderr is not a TTY |
+| 14 | Drive | list -f | Folder not visible to the account returned an empty success | Empty first page checks the folder; `NOT_FOUND` if not visible |
+| 15 | Gmail | update-draft | Rebuilt message dropped `threadId`/`In-Reply-To`/`References` | Carry them over from the current draft |
 
 ---
 
@@ -275,3 +289,4 @@ Manual testing of all CLI operations against real Google Workspace accounts.
 | 2026-02-05 | Initial test run: Infra, Drive, Docs, Sheets, Slides, Gmail. Fixed 10 bugs. |
 | 2026-02-06 | Completed: Calendar, Contacts, Convert. Fixed 2 bugs (Slides). All 217 tests done. |
 | 2026-10-14 | Added `auth --headless` (#218) from PR #1. Unit-tested (redirect validation, PKCE exchange, no secret echo); live test pending. |
+| 2026-11-16 | Live-tested agent-feedback fixes (#219-#229) on throwaway files and a self-addressed email, all cleaned up: implicit-login fail-fast, `drive list -f` visibility check, `last_modifying_user`, `sheets batch-write`, Office-file hint, `gmail reply --draft`, `update-draft` keeps threading. Re-tested related commands. Fixed a doubled period in the Office-file hint. |
