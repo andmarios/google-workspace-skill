@@ -125,6 +125,68 @@ def write_values(
     )
 
 
+@app.command("batch-write")
+def batch_write(
+    spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],
+    stdin: Annotated[
+        bool,
+        typer.Option("--stdin", help="Read the range map as JSON from stdin."),
+    ] = False,
+    values: Annotated[
+        Optional[str],
+        typer.Option("--values", "-v", help="JSON object mapping A1 range to rows."),
+    ] = None,
+) -> None:
+    """Write values to multiple ranges in one request.
+
+    Values should be a JSON object mapping A1 range to an array of rows,
+    e.g., '{"Sheet1!A1:B1": [["a", "b"]], "Sheet1!D5": [["x"]]}'
+    """
+    if stdin:
+        raw = sys.stdin.read()
+    elif values:
+        raw = values
+    else:
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="sheets.batch_write",
+            message="Either --stdin or --values required",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="sheets.batch_write",
+            message=f"Invalid JSON input: {e}",
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    # JSON object keys are always strings, so only the container and value shapes need checking.
+    if not (
+        isinstance(data, dict)
+        and data
+        and all(
+            isinstance(rows, list) and all(isinstance(row, list) for row in rows)
+            for rows in data.values()
+        )
+    ):
+        output_error(
+            error_code="INVALID_ARGS",
+            operation="sheets.batch_write",
+            message=(
+                "Expected a non-empty JSON object mapping A1 range to an array of rows, "
+                'e.g. {"Sheet1!A1:B1": [["a", "b"]], "Sheet1!D5": [["x"]]}'
+            ),
+        )
+        raise typer.Exit(ExitCode.INVALID_ARGS)
+
+    service = SheetsService()
+    service.batch_write(spreadsheet_id=spreadsheet_id, data=data)
+
+
 @app.command("append")
 def append_values(
     spreadsheet_id: Annotated[str, typer.Argument(help="Spreadsheet ID.")],

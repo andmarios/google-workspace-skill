@@ -53,6 +53,14 @@ EOF
 jq -n '[["Name","Score"],["Alice",95],["Bob",87]]' | \
     uvx gws-cli sheets write <spreadsheet_id> "A1:B3" --stdin
 
+# Write several disjoint ranges in one request (JSON object: A1 range -> array of rows)
+cat <<'EOF' | uvx gws-cli sheets batch-write <spreadsheet_id> --stdin
+{
+  "Sheet1!B2:C3": [["Widget A", 15000], ["Widget B", 22000]],
+  "Sheet1!E23": [["=SUM(C2:C3)"]]
+}
+EOF
+
 # Append rows
 uvx gws-cli sheets append <spreadsheet_id> "A1:C1" --values '[["New","Row","Data"]]'
 
@@ -62,6 +70,10 @@ uvx gws-cli sheets clear <spreadsheet_id> "A1:C10"
 # Batch get multiple ranges
 uvx gws-cli sheets batch-get <spreadsheet_id> "A1:B5,C1:D5"
 ```
+
+`batch-write` takes the range map via `--stdin` or `--values '<json>'` and sends every range in one `spreadsheets.values.batchUpdate` call. Like `write`, values use `USER_ENTERED` input (formulas are evaluated and strings like `"15000"` are parsed as numbers). It returns `ranges` (the updated ranges) and the `updated_rows`/`updated_columns`/`updated_cells` totals.
+
+If `metadata`, `read` or `batch-get` fail with "This operation is not supported for this document", the file is probably an Office file (e.g. `.xlsx`) stored in Drive rather than a Google Sheet; the error includes a hint to fetch it with `gws-cli drive download <id> <output_path>`.
 
 ## Sheet Management
 

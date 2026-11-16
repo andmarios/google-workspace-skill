@@ -235,6 +235,9 @@ cat <<'EOF' | uvx gws-cli sheets write <spreadsheet_id> "A1:C4" --stdin
 ]
 EOF
 
+# Write several disjoint ranges in one call (JSON: range -> rows)
+echo '{"Sheet1!B2:C2": [["a","b"]], "Sheet1!E23": [["x"]]}' | uvx gws-cli sheets batch-write <spreadsheet_id> --stdin
+
 # Read data back
 uvx gws-cli sheets read <spreadsheet_id> "A1:C10"
 

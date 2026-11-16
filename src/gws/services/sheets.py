@@ -11,6 +11,17 @@ from gws.exceptions import ExitCode
 from gws.utils.colors import parse_hex_color
 
 
+def _read_error_message(e: HttpError, spreadsheet_id: str) -> str:
+    """Build the API error message, with a hint when the file is not a Google Sheet."""
+    message = f"Google Sheets API error: {e.reason}"
+    if e.resp.status == 400 and "not supported for this document" in str(e.reason).lower():
+        message = message.rstrip(".") + (
+            ". This is probably an Office file (e.g. .xlsx) stored in Drive, not a Google Sheet;"
+            f" use `gws-cli drive download {spreadsheet_id} <output_path>` to get the file."
+        )
+    return message
+
+
 class SheetsService(BaseService):
     """Google Sheets operations."""
 
@@ -63,7 +74,7 @@ class SheetsService(BaseService):
             output_error(
                 error_code="API_ERROR",
                 operation="sheets.metadata",
-                message=f"Google Sheets API error: {e.reason}",
+                message=_read_error_message(e, spreadsheet_id),
             )
             raise SystemExit(ExitCode.API_ERROR)
 
@@ -135,7 +146,7 @@ class SheetsService(BaseService):
             output_error(
                 error_code="API_ERROR",
                 operation="sheets.read",
-                message=f"Google Sheets API error: {e.reason}",
+                message=_read_error_message(e, spreadsheet_id),
             )
             raise SystemExit(ExitCode.API_ERROR)
 
@@ -229,6 +240,45 @@ class SheetsService(BaseService):
             output_error(
                 error_code="API_ERROR",
                 operation="sheets.write",
+                message=f"Google Sheets API error: {e.reason}",
+            )
+            raise SystemExit(ExitCode.API_ERROR)
+
+    def batch_write(
+        self,
+        spreadsheet_id: str,
+        data: dict[str, list[list[Any]]],
+        input_option: str = "USER_ENTERED",
+    ) -> dict[str, Any]:
+        """Write values to multiple ranges in one request."""
+        try:
+            # Unescape shell-escaped characters in ranges
+            body = {
+                "valueInputOption": input_option,
+                "data": [
+                    {"range": self._unescape_text(r), "values": v}
+                    for r, v in data.items()
+                ],
+            }
+            result = self.execute(
+                self.service.spreadsheets()
+                .values()
+                .batchUpdate(spreadsheetId=spreadsheet_id, body=body)
+            )
+
+            output_success(
+                operation="sheets.batch_write",
+                spreadsheet_id=spreadsheet_id,
+                ranges=[r.get("updatedRange") for r in result.get("responses", [])],
+                updated_rows=result.get("totalUpdatedRows", 0),
+                updated_columns=result.get("totalUpdatedColumns", 0),
+                updated_cells=result.get("totalUpdatedCells", 0),
+            )
+            return result
+        except HttpError as e:
+            output_error(
+                error_code="API_ERROR",
+                operation="sheets.batch_write",
                 message=f"Google Sheets API error: {e.reason}",
             )
             raise SystemExit(ExitCode.API_ERROR)
@@ -536,7 +586,7 @@ class SheetsService(BaseService):
             output_error(
                 error_code="API_ERROR",
                 operation="sheets.batch_get",
-                message=f"Google Sheets API error: {e.reason}",
+                message=_read_error_message(e, spreadsheet_id),
             )
             raise SystemExit(ExitCode.API_ERROR)
 
