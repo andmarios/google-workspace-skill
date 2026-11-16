@@ -344,12 +344,15 @@ class GmailService(BaseService):
         cc: str | None = None,
         bcc: str | None = None,
         reply_all: bool = False,
+        draft: bool = False,
     ) -> dict[str, Any]:
         """Reply to an existing message (stays threaded via In-Reply-To/References).
 
         By default replies only to the sender. With reply_all=True, also
         addresses the original To recipients and Cc's the original Cc list,
         excluding your own address. Explicit cc/bcc are unioned in.
+        With draft=True, saves the reply as a draft in the thread instead of
+        sending it.
         """
         try:
             # Unescape shell-escaped characters
@@ -419,13 +422,35 @@ class GmailService(BaseService):
                 if bcc_value:
                     message["bcc"] = bcc_value
 
-            # Set references for threading
+            # Set references for threading (RFC 5322: parent's References + its Message-ID)
             message_id_header = ci_headers.get("message-id", "")
             if message_id_header:
                 message["In-Reply-To"] = message_id_header
-                message["References"] = message_id_header
+                parent_refs = ci_headers.get("references", "")
+                message["References"] = f"{parent_refs} {message_id_header}".strip()
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
+            if draft:
+                result = self.execute(
+                    self.service.users()
+                    .drafts()
+                    .create(
+                        userId="me",
+                        body={"message": {"raw": raw, "threadId": thread_id}},
+                    )
+                )
+                draft_message = result.get("message", {})
+                output_success(
+                    operation="gmail.reply",
+                    draft=True,
+                    draft_id=result["id"],
+                    message_id=draft_message.get("id"),
+                    thread_id=draft_message.get("threadId", thread_id),
+                    to=reply_to,
+                    subject=message["subject"],
+                )
+                return result
 
             result = self.execute(
                 self.service.users()
@@ -937,7 +962,16 @@ class GmailService(BaseService):
             if final_bcc:
                 message["bcc"] = final_bcc
 
+            # Keep reply drafts (from `reply --draft`) in their thread
+            if current_headers.get("in-reply-to"):
+                message["In-Reply-To"] = current_headers["in-reply-to"]
+            if current_headers.get("references"):
+                message["References"] = current_headers["references"]
+
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+            draft_message = {"raw": raw}
+            if current_msg.get("threadId"):
+                draft_message["threadId"] = current_msg["threadId"]
 
             result = self.execute(
                 self.service.users()
@@ -945,7 +979,7 @@ class GmailService(BaseService):
                 .update(
                     userId="me",
                     id=draft_id,
-                    body={"message": {"raw": raw}},
+                    body={"message": draft_message},
                 )
             )
 

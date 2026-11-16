@@ -59,6 +59,10 @@ uvx gws-cli gmail reply <message_id> "Reply body" --cc "a@x.com,b@y.com" --bcc "
 uvx gws-cli gmail reply <message_id> "Reply body" --all
 uvx gws-cli gmail reply <message_id> "Reply body" --all --cc "extra@x.com"
 
+# Draft a reply in the thread instead of sending (works with --all/--cc/--bcc).
+# Output includes draft_id and "draft": true; send later with send-draft.
+uvx gws-cli gmail reply <message_id> "Reply body" --draft
+
 # Mark as read/unread
 uvx gws-cli gmail mark-read <message_id>
 uvx gws-cli gmail mark-unread <message_id>
@@ -158,6 +162,8 @@ spanning multiple lines.
 
 Add formatting as needed.
 EOF
+
+# To draft a reply in an existing thread, use `reply --draft` (see Basic Operations)
 
 # Update a draft
 uvx gws-cli gmail update-draft <draft_id> --subject "New Subject" --body "Updated body"

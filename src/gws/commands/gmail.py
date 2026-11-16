@@ -150,11 +150,16 @@ def reply_to_message(
         bool,
         typer.Option("--all", help="Reply to all: include original To/Cc (minus yourself)."),
     ] = False,
+    draft: Annotated[
+        bool,
+        typer.Option("--draft", help="Save the reply as a draft in the thread instead of sending."),
+    ] = False,
 ) -> None:
     """Reply to an existing message (HTML by default, stays in-thread).
 
     Use --all to reply to everyone (original To + Cc, excluding yourself);
     --cc/--bcc add recipients and are unioned with --all.
+    Use --draft to save the threaded reply as a draft instead of sending it.
     """
     if stdin:
         body = sys.stdin.read()
@@ -176,6 +181,7 @@ def reply_to_message(
         cc=cc,
         bcc=bcc,
         reply_all=reply_all,
+        draft=draft,
     )
 
 
