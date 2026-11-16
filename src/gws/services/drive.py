@@ -276,6 +276,12 @@ class DriveService(BaseService):
 
             files = [self._file_to_dict(f) for f in result.get("files", [])]
 
+            if folder_id and not files and page_token is None:
+                # Drive returns an empty list (not 404) for a folder this account can't see.
+                self.execute(self.service.files().get(
+                    fileId=folder_id, fields="id", supportsAllDrives=True
+                ))
+
             output_external_content(
                 operation="drive.list",
                 source_type="document",
@@ -286,6 +292,13 @@ class DriveService(BaseService):
             )
             return result
         except HttpError as e:
+            if folder_id and e.resp.status == 404:
+                output_error(
+                    error_code="NOT_FOUND",
+                    operation="drive.list",
+                    message=f"Folder not found or not accessible to this account: {folder_id}",
+                )
+                raise SystemExit(ExitCode.NOT_FOUND)
             output_error(
                 error_code="API_ERROR",
                 operation="drive.list",
@@ -341,7 +354,7 @@ class DriveService(BaseService):
             fields = (
                 "id, name, mimeType, webViewLink, webContentLink, parents, "
                 "createdTime, modifiedTime, size, description, starred, trashed, "
-                "owners, permissions"
+                "owners, permissions, lastModifyingUser(displayName,emailAddress)"
             )
             file = self.execute(self.service.files().get(
                 fileId=file_id, fields=fields, supportsAllDrives=True
@@ -368,6 +381,11 @@ class DriveService(BaseService):
             file_data["trashed"] = file.get("trashed")
             file_data["owners"] = owners
             file_data["permissions"] = permissions
+            modifier = file.get("lastModifyingUser")
+            file_data["last_modifying_user"] = (
+                {"email": modifier.get("emailAddress"), "name": modifier.get("displayName")}
+                if modifier else None
+            )
 
             output_external_content(
                 operation="drive.get_metadata",

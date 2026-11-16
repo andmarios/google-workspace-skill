@@ -18,10 +18,13 @@
 # List files (default: 10)
 uvx gws-cli drive list --max 20
 
+# List a folder's contents (NOT_FOUND, exit 4, if the folder is missing or not visible to this account)
+uvx gws-cli drive list -f <folder_id>
+
 # Search files
 uvx gws-cli drive search "name contains 'report'"
 
-# Get file metadata
+# Get file metadata (includes last_modifying_user; owners/permissions are empty for shared-drive files)
 uvx gws-cli drive get <file_id>
 
 # Download file (--force to skip prompt-injection screening)
