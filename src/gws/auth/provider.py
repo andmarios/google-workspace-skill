@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 from urllib.parse import urlparse
@@ -22,8 +23,13 @@ class AuthProvider(Protocol):
         self,
         force_refresh: bool = False,
         headless: bool = False,
+        implicit: bool = False,
     ) -> Credentials:
-        """Get valid Google API credentials, triggering auth if needed."""
+        """Get valid Google API credentials, triggering auth if needed.
+
+        implicit: called by a service command rather than `auth`; a login that
+        needs a human then fails fast when stderr is not a terminal.
+        """
         ...
 
     def delete_token(self) -> bool:
@@ -58,6 +64,23 @@ def headless_requested(explicit: bool = False) -> bool:
     """
     value = os.environ.get("GWS_HEADLESS", "").strip().lower()
     return explicit or value in {"1", "true", "yes", "on"}
+
+
+def guard_implicit_login(implicit: bool, account: str | None) -> None:
+    """Refuse an implicit login nobody can complete (agent, CI: stderr not a TTY).
+
+    Without this, a command with a revoked token waits forever for a browser
+    callback or pasted URL. Call right before each step that needs a human.
+    """
+    if not implicit or sys.stderr.isatty():
+        return
+    from gws.exceptions import AuthError
+
+    command = f"gws-cli auth --account {account}" if account else "gws-cli auth"
+    raise AuthError(
+        "Not authenticated (token missing, expired or revoked).",
+        f"Run '{command}' in your own terminal to authenticate.",
+    )
 
 
 def _validate_server_url(url: str) -> None:

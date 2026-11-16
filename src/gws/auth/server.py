@@ -16,7 +16,7 @@ from urllib.parse import urlencode, urlparse
 import httpx
 from google.oauth2.credentials import Credentials
 
-from gws.auth.provider import headless_requested
+from gws.auth.provider import guard_implicit_login, headless_requested
 from gws.config import Config
 from gws.crypto import delete_encrypted, load_encrypted, save_encrypted
 from gws.exceptions import AuthError
@@ -122,6 +122,7 @@ class ServerAuthProvider:
         self,
         force_refresh: bool = False,
         headless: bool = False,
+        implicit: bool = False,
     ) -> Credentials:
         """Get valid Google API credentials via the server relay.
 
@@ -142,6 +143,9 @@ class ServerAuthProvider:
 
         # Refresh if expired
         if self._credentials and self._credentials.expired and self._credentials.refresh_token:
+            if not self._load_server_token():
+                # The refresh would first auto-start an interactive relay login.
+                guard_implicit_login(implicit, self._account_name)
             try:
                 self._refresh_via_server(self._credentials.refresh_token, headless=headless)
                 return self._credentials  # Set by _refresh_via_server
@@ -158,6 +162,7 @@ class ServerAuthProvider:
 
         # Full flow: start → browser → complete
         if not self._credentials or not self._credentials.valid:
+            guard_implicit_login(implicit, self._account_name)
             self._run_server_auth_flow(headless=headless)
 
         return self._credentials  # type: ignore[return-value]

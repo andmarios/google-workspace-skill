@@ -32,7 +32,7 @@ class ConvertService(BaseService):
     def docs_service(self) -> Resource:
         """Lazy-load Docs service for document manipulation."""
         if self._docs_service is None:
-            credentials = self.auth_manager.get_credentials()
+            credentials = self._get_credentials()
             self._docs_service = build("docs", "v1", credentials=credentials)
         return self._docs_service
 
@@ -40,7 +40,7 @@ class ConvertService(BaseService):
     def slides_service(self) -> Resource:
         """Lazy-load Slides service for presentation creation."""
         if self._slides_service is None:
-            credentials = self.auth_manager.get_credentials()
+            credentials = self._get_credentials()
             self._slides_service = build("slides", "v1", credentials=credentials)
         return self._slides_service
 
